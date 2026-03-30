@@ -7,6 +7,7 @@ import {
 } from './models.js';
 import { DuplicateProjectError, NotFoundError, InvalidInputError, findClosestMatch } from './errors.js';
 import { writeFields, deserializeFieldValue } from './fields.js';
+import { discoverPortsInPath, type DiscoveredPort } from './port-discovery.js';
 
 export const PORT_RANGE_MIN = 3000;
 export const PORT_RANGE_MAX = 9999;
@@ -455,6 +456,56 @@ export class Registry {
       const project = db.prepare('SELECT id FROM projects WHERE name = ?').get(projectName) as { id: number } | undefined;
       if (!project) return [];
       return this.loadPorts(db, project.id);
+    } finally {
+      db.close();
+    }
+  }
+
+  discoverPorts(projectName: string): { claimed: DiscoveredPort[]; skipped: { port: number; reason: string }[]; summary: string } {
+    const db = this.open();
+    try {
+      const project = db.prepare('SELECT id FROM projects WHERE name = ?').get(projectName) as { id: number } | undefined;
+      if (!project) throw new NotFoundError(projectName);
+
+      const pathRows = db.prepare('SELECT path FROM project_paths WHERE project_id = ?').all(project.id) as { path: string }[];
+      if (pathRows.length === 0) {
+        return { claimed: [], skipped: [], summary: 'No filesystem paths registered for this project.' };
+      }
+
+      const claimed: DiscoveredPort[] = [];
+      const skipped: { port: number; reason: string }[] = [];
+
+      for (const { path } of pathRows) {
+        const discovered = discoverPortsInPath(path);
+        for (const dp of discovered) {
+          if (dp.port < PORT_RANGE_MIN || dp.port > PORT_RANGE_MAX) {
+            skipped.push({ port: dp.port, reason: `Out of range (${PORT_RANGE_MIN}-${PORT_RANGE_MAX})` });
+            continue;
+          }
+
+          const existing = db.prepare(
+            'SELECT pp.port, p.name FROM project_ports pp JOIN projects p ON p.id = pp.project_id WHERE pp.port = ?'
+          ).get(dp.port) as { port: number; name: string } | undefined;
+
+          if (existing) {
+            if (existing.name === projectName) {
+              // Already claimed by this project — idempotent skip
+              continue;
+            }
+            skipped.push({ port: dp.port, reason: `Already claimed by ${existing.name}` });
+            continue;
+          }
+
+          db.prepare(
+            'INSERT INTO project_ports (project_id, port, service_label, protocol, claimed_by) VALUES (?, ?, ?, ?, ?)'
+          ).run(project.id, dp.port, dp.service_label, 'tcp', 'discovery');
+
+          claimed.push(dp);
+        }
+      }
+
+      const summary = `Discovered ${claimed.length + skipped.length} port(s): ${claimed.length} claimed, ${skipped.length} skipped.`;
+      return { claimed, skipped, summary };
     } finally {
       db.close();
     }
