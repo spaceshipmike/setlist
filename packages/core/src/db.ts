@@ -202,11 +202,10 @@ CREATE TABLE IF NOT EXISTS recall_audit (
 );
 
 CREATE VIRTUAL TABLE IF NOT EXISTS memory_fts USING fts5(
+    memory_id,
     content,
     content_l0,
-    content_l1,
-    content='memories',
-    content_rowid='rowid'
+    content_l1
 );
 
 -- Indexes
@@ -240,20 +239,18 @@ CREATE INDEX IF NOT EXISTS idx_memories_pinned ON memories(is_pinned, status);
 // FTS5 triggers for keeping the index in sync
 const FTS_TRIGGERS_SQL = `
 CREATE TRIGGER IF NOT EXISTS memory_fts_insert AFTER INSERT ON memories BEGIN
-    INSERT INTO memory_fts(rowid, content, content_l0, content_l1)
-    VALUES (new.rowid, new.content, new.content_l0, new.content_l1);
+    INSERT INTO memory_fts(memory_id, content, content_l0, content_l1)
+    VALUES (new.id, new.content, new.content_l0, new.content_l1);
 END;
 
 CREATE TRIGGER IF NOT EXISTS memory_fts_delete BEFORE DELETE ON memories BEGIN
-    INSERT INTO memory_fts(memory_fts, rowid, content, content_l0, content_l1)
-    VALUES ('delete', old.rowid, old.content, old.content_l0, old.content_l1);
+    DELETE FROM memory_fts WHERE memory_id = old.id;
 END;
 
 CREATE TRIGGER IF NOT EXISTS memory_fts_update AFTER UPDATE OF content, content_l0, content_l1 ON memories BEGIN
-    INSERT INTO memory_fts(memory_fts, rowid, content, content_l0, content_l1)
-    VALUES ('delete', old.rowid, old.content, old.content_l0, old.content_l1);
-    INSERT INTO memory_fts(rowid, content, content_l0, content_l1)
-    VALUES (new.rowid, new.content, new.content_l0, new.content_l1);
+    DELETE FROM memory_fts WHERE memory_id = old.id;
+    INSERT INTO memory_fts(memory_id, content, content_l0, content_l1)
+    VALUES (new.id, new.content, new.content_l0, new.content_l1);
 END;
 `;
 
@@ -291,16 +288,17 @@ const TEMPLATE_SEED: Record<string, { description: string; fields: string[] }> =
 };
 
 function createFtsTriggers(db: Database.Database): void {
-  // Split into individual trigger statements since better-sqlite3 exec handles multiple
-  const triggers = FTS_TRIGGERS_SQL.split(';')
+  // Split on END; boundaries to get individual trigger statements
+  const triggers = FTS_TRIGGERS_SQL.split(/END;/i)
     .map(s => s.trim())
-    .filter(s => s.length > 0);
+    .filter(s => s.length > 0)
+    .map(s => s + ' END;');
 
   for (const trigger of triggers) {
     try {
-      db.exec(trigger + ';');
+      db.exec(trigger);
     } catch {
-      // Trigger may already exist — CREATE TRIGGER IF NOT EXISTS handles this
+      // Trigger may already exist
     }
   }
 }
