@@ -340,11 +340,12 @@ function upgradeSchema(db: Database.Database): void {
   // from older versions. Since Setlist starts fresh at v8, we only need to handle
   // the case of opening an older Python-created database.
 
-  if (currentVersion > 0 && currentVersion < 4) {
+  if (currentVersion < 4) {
     // v0-v3 → v4: add display_name
-    try {
+    const cols = db.prepare("PRAGMA table_info(projects)").all() as { name: string }[];
+    if (!cols.some(c => c.name === 'display_name')) {
       db.exec(`ALTER TABLE projects ADD COLUMN display_name TEXT NOT NULL DEFAULT ''`);
-    } catch { /* column may already exist */ }
+    }
   }
 
   if (currentVersion < 5) {
