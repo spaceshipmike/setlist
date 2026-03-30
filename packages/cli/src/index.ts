@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { Registry, initDb, scanLocations, applyProposals } from '@setlist/core';
+import { Registry, initDb, scanLocations, applyProposals, scanMemories, applyMemoryMigration } from '@setlist/core';
 import { runWorker, installWorker, uninstallWorker, workerStatus } from './worker.js';
 
 const args = process.argv.slice(2);
@@ -63,6 +63,27 @@ switch (command) {
     break;
   }
 
+  case 'migrate-memories': {
+    const apply = hasFlag('apply');
+    const proposals = scanMemories();
+
+    console.log(`Found ${proposals.length} memory file(s):\n`);
+    for (const p of proposals) {
+      const proj = p.project_id ?? '(global)';
+      console.log(`  [${p.type}] ${proj} — ${p.content.slice(0, 80)}...`);
+      console.log(`    Source: ${p.source}`);
+    }
+
+    if (!apply) {
+      console.log('\nDry run — no changes applied. Use --apply to migrate.');
+      break;
+    }
+
+    const result = applyMemoryMigration(proposals);
+    console.log(`\nMigrated: ${result.migrated}, Skipped (dedup): ${result.skipped}`);
+    break;
+  }
+
   case 'update': {
     const name = args[1];
     if (!name || name.startsWith('--')) {
@@ -120,6 +141,7 @@ switch (command) {
 Commands:
   init                           Initialize the registry database
   migrate [--dry-run] [--yes]    Scan ~/Code and ~/Projects, register projects
+  migrate-memories [--apply]     Import CC auto-memory and fctry memory into registry
   update <name> [--status ...]   Update a project's core fields
   archive <name>                 Archive a project
   worker run [--dry-run]         Run one worker cycle
