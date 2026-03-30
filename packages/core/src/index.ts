@@ -8,3 +8,4 @@ export { MemoryRetrieval, type RecallResult } from './memory-retrieval.js';
 export { CrossQuery } from './cross-query.js';
 export { discoverPortsInPath, type DiscoveredPort } from './port-discovery.js';
 export { MemoryReflection, type ReflectionResult } from './memory-reflection.js';
+export { scanLocations, applyProposals, type MigrationProposal } from './migration.js';
