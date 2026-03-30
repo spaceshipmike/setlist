@@ -111,7 +111,7 @@ export class MemoryRetrieval {
       sql += ` AND (project_id = ? OR scope IN ('portfolio', 'global'))`;
       params.push(projectId);
     } else {
-      sql += ` AND scope IN ('portfolio', 'global')`;
+      // No project filter — return all scopes
     }
 
     sql += ` ORDER BY is_pinned DESC, importance DESC, reinforcement_count DESC, updated_at DESC LIMIT 50`;
@@ -155,7 +155,6 @@ export class MemoryRetrieval {
           JOIN memories m ON m.id = fts.memory_id
           WHERE memory_fts MATCH ?
             AND m.status = 'active'
-            AND m.scope IN ('portfolio', 'global')
           ORDER BY fts.rank
           LIMIT 50
         `;

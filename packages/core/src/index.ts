@@ -5,3 +5,4 @@ export { serializeFieldValue, deserializeFieldValue, writeFields } from './field
 export { Registry, PORT_RANGE_MIN, PORT_RANGE_MAX } from './registry.js';
 export { MemoryStore } from './memory.js';
 export { MemoryRetrieval, type RecallResult } from './memory-retrieval.js';
+export { CrossQuery } from './cross-query.js';
