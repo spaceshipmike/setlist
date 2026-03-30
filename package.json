@@ -1,0 +1,26 @@
+{
+  "name": "setlist",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "workspaces": [
+    "packages/core",
+    "packages/mcp",
+    "packages/cli"
+  ],
+  "scripts": {
+    "build": "npm run build -w packages/core && npm run build -w packages/mcp && npm run build -w packages/cli",
+    "build:core": "npm run build -w packages/core",
+    "build:mcp": "npm run build -w packages/mcp",
+    "build:cli": "npm run build -w packages/cli",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit -p packages/core/tsconfig.json && tsc --noEmit -p packages/mcp/tsconfig.json && tsc --noEmit -p packages/cli/tsconfig.json"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.0",
+    "vitest": "^3.0.0",
+    "@types/better-sqlite3": "^7.6.0",
+    "@types/node": "^22.0.0"
+  }
+}

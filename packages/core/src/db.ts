@@ -1,0 +1,437 @@
+import Database from 'better-sqlite3';
+import { existsSync, mkdirSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { homedir } from 'node:os';
+
+export const SCHEMA_VERSION = 8;
+
+const DEFAULT_DB_DIR = join(homedir(), '.local', 'share', 'project-registry');
+const DEFAULT_DB_NAME = 'registry.db';
+
+export function getDbPath(): string {
+  return join(DEFAULT_DB_DIR, DEFAULT_DB_NAME);
+}
+
+const SCHEMA_SQL = `
+CREATE TABLE IF NOT EXISTS projects (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL UNIQUE,
+    display_name TEXT NOT NULL DEFAULT '',
+    type TEXT NOT NULL CHECK (type IN ('project', 'area_of_focus')),
+    status TEXT NOT NULL,
+    description TEXT NOT NULL DEFAULT '',
+    goals TEXT NOT NULL DEFAULT '',
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS project_paths (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    project_id INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+    path TEXT NOT NULL,
+    added_at TEXT NOT NULL DEFAULT (datetime('now')),
+    added_by TEXT NOT NULL DEFAULT 'system',
+    UNIQUE(project_id, path)
+);
+
+CREATE TABLE IF NOT EXISTS project_fields (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    project_id INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+    field_name TEXT NOT NULL,
+    field_value TEXT NOT NULL,
+    producer TEXT NOT NULL,
+    updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+    UNIQUE(project_id, field_name)
+);
+
+CREATE TABLE IF NOT EXISTS field_catalog (
+    name TEXT PRIMARY KEY,
+    field_type TEXT NOT NULL DEFAULT 'string',
+    category TEXT NOT NULL DEFAULT 'custom',
+    description TEXT NOT NULL DEFAULT '',
+    is_list INTEGER NOT NULL DEFAULT 0
+);
+
+CREATE TABLE IF NOT EXISTS templates (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL UNIQUE,
+    description TEXT NOT NULL DEFAULT ''
+);
+
+CREATE TABLE IF NOT EXISTS template_fields (
+    template_id INTEGER NOT NULL REFERENCES templates(id) ON DELETE CASCADE,
+    field_name TEXT NOT NULL,
+    PRIMARY KEY (template_id, field_name)
+);
+
+CREATE TABLE IF NOT EXISTS schema_meta (
+    key TEXT PRIMARY KEY,
+    value TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS tasks (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    project_name TEXT,
+    description TEXT NOT NULL,
+    schedule TEXT NOT NULL CHECK (schedule IN ('now', 'tonight', 'weekly')),
+    status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'running', 'completed', 'failed')),
+    session_reference TEXT,
+    error_message TEXT,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    started_at TEXT,
+    completed_at TEXT
+);
+
+CREATE TABLE IF NOT EXISTS project_ports (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    project_id INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+    port INTEGER NOT NULL UNIQUE,
+    service_label TEXT NOT NULL,
+    protocol TEXT NOT NULL DEFAULT 'tcp' CHECK (protocol IN ('tcp', 'udp')),
+    claimed_by TEXT NOT NULL DEFAULT 'system',
+    claimed_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS project_capabilities (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    project_id INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+    name TEXT NOT NULL,
+    capability_type TEXT NOT NULL,
+    description TEXT NOT NULL DEFAULT '',
+    inputs TEXT NOT NULL DEFAULT '',
+    outputs TEXT NOT NULL DEFAULT '',
+    producer TEXT NOT NULL DEFAULT 'system',
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    requires_auth INTEGER,
+    invocation_model TEXT NOT NULL DEFAULT '',
+    audience TEXT NOT NULL DEFAULT '',
+    UNIQUE(project_id, name)
+);
+
+CREATE TABLE IF NOT EXISTS memories (
+    id TEXT PRIMARY KEY,
+    content TEXT NOT NULL,
+    content_l0 TEXT,
+    content_l1 TEXT,
+    type TEXT NOT NULL CHECK (type IN ('decision', 'outcome', 'pattern', 'preference', 'dependency', 'correction', 'skill')),
+    importance REAL DEFAULT 0.5,
+    confidence REAL DEFAULT 0.5,
+    status TEXT DEFAULT 'active' CHECK (status IN ('active', 'consolidating', 'archived', 'superseded')),
+    project_id TEXT,
+    scope TEXT DEFAULT 'project' CHECK (scope IN ('project', 'area_of_focus', 'portfolio', 'global')),
+    agent_role TEXT,
+    session_id TEXT,
+    tags TEXT,
+    content_hash TEXT NOT NULL,
+    embedding BLOB,
+    embedding_model TEXT,
+    embedding_new BLOB,
+    embedding_model_new TEXT,
+    reinforcement_count INTEGER DEFAULT 1,
+    outcome_score REAL DEFAULT 0.0,
+    is_static INTEGER DEFAULT 0,
+    is_inference INTEGER DEFAULT 0,
+    is_pinned INTEGER DEFAULT 0,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    last_accessed TEXT,
+    forget_after TEXT,
+    forget_reason TEXT,
+    UNIQUE(content_hash, project_id, scope)
+);
+
+CREATE TABLE IF NOT EXISTS memory_versions (
+    id TEXT PRIMARY KEY,
+    memory_id TEXT NOT NULL REFERENCES memories(id),
+    previous_content TEXT,
+    author TEXT NOT NULL CHECK (author IN ('agent', 'user', 'system')),
+    change_type TEXT NOT NULL CHECK (change_type IN ('created', 'updated', 'corrected', 'archived', 'superseded')),
+    timestamp TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS memory_edges (
+    id TEXT PRIMARY KEY,
+    source_id TEXT NOT NULL REFERENCES memories(id),
+    target_id TEXT NOT NULL REFERENCES memories(id),
+    relationship_type TEXT NOT NULL CHECK (relationship_type IN ('updates', 'extends', 'derives', 'contradicts', 'caused_by', 'related_to')),
+    weight REAL DEFAULT 1.0,
+    confidence REAL DEFAULT 0.5,
+    observation_count INTEGER DEFAULT 1,
+    created_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS memory_sources (
+    id TEXT PRIMARY KEY,
+    memory_id TEXT NOT NULL REFERENCES memories(id),
+    project_id TEXT,
+    session_id TEXT,
+    agent_role TEXT,
+    context_snippet TEXT,
+    timestamp TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS summary_blocks (
+    id TEXT PRIMARY KEY,
+    scope TEXT NOT NULL,
+    label TEXT NOT NULL,
+    content TEXT NOT NULL,
+    char_limit INTEGER DEFAULT 2000,
+    tier TEXT DEFAULT 'dynamic' CHECK (tier IN ('static', 'dynamic')),
+    updated_at TEXT NOT NULL,
+    UNIQUE(scope, label)
+);
+
+CREATE TABLE IF NOT EXISTS enrichment_log (
+    id TEXT PRIMARY KEY,
+    memory_id TEXT NOT NULL REFERENCES memories(id),
+    engine_kind TEXT NOT NULL,
+    engine_version TEXT NOT NULL,
+    created_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS recall_audit (
+    id TEXT PRIMARY KEY,
+    query TEXT,
+    mode TEXT CHECK (mode IN ('search', 'bootstrap', 'profile')),
+    budget_tokens INTEGER,
+    scope TEXT,
+    project_id TEXT,
+    memory_ids_returned TEXT,
+    scores TEXT,
+    timestamp TEXT NOT NULL
+);
+
+CREATE VIRTUAL TABLE IF NOT EXISTS memory_fts USING fts5(
+    content,
+    content_l0,
+    content_l1,
+    content='memories',
+    content_rowid='rowid'
+);
+
+-- Indexes
+CREATE INDEX IF NOT EXISTS idx_projects_type ON projects(type);
+CREATE INDEX IF NOT EXISTS idx_projects_status ON projects(status);
+CREATE INDEX IF NOT EXISTS idx_projects_type_status ON projects(type, status);
+CREATE INDEX IF NOT EXISTS idx_project_fields_project_id ON project_fields(project_id);
+CREATE INDEX IF NOT EXISTS idx_project_fields_field_name ON project_fields(field_name);
+CREATE INDEX IF NOT EXISTS idx_project_paths_project_id ON project_paths(project_id);
+CREATE INDEX IF NOT EXISTS idx_project_paths_path ON project_paths(path);
+CREATE INDEX IF NOT EXISTS idx_tasks_status ON tasks(status);
+CREATE INDEX IF NOT EXISTS idx_tasks_project_name ON tasks(project_name);
+CREATE INDEX IF NOT EXISTS idx_tasks_schedule ON tasks(schedule);
+CREATE INDEX IF NOT EXISTS idx_project_ports_project_id ON project_ports(project_id);
+CREATE INDEX IF NOT EXISTS idx_project_ports_port ON project_ports(port);
+CREATE INDEX IF NOT EXISTS idx_project_capabilities_project_id ON project_capabilities(project_id);
+CREATE INDEX IF NOT EXISTS idx_project_capabilities_type ON project_capabilities(capability_type);
+CREATE INDEX IF NOT EXISTS idx_memories_project ON memories(project_id, status);
+CREATE INDEX IF NOT EXISTS idx_memories_scope ON memories(scope, status);
+CREATE INDEX IF NOT EXISTS idx_memories_type ON memories(type, status);
+CREATE INDEX IF NOT EXISTS idx_memories_hash ON memories(content_hash);
+CREATE INDEX IF NOT EXISTS idx_versions_memory ON memory_versions(memory_id);
+CREATE INDEX IF NOT EXISTS idx_edges_source ON memory_edges(source_id);
+CREATE INDEX IF NOT EXISTS idx_edges_target ON memory_edges(target_id);
+CREATE INDEX IF NOT EXISTS idx_edges_type ON memory_edges(relationship_type);
+CREATE INDEX IF NOT EXISTS idx_sources_memory ON memory_sources(memory_id);
+CREATE INDEX IF NOT EXISTS idx_enrichment_memory ON enrichment_log(memory_id, engine_kind);
+CREATE INDEX IF NOT EXISTS idx_memories_pinned ON memories(is_pinned, status);
+`;
+
+// FTS5 triggers for keeping the index in sync
+const FTS_TRIGGERS_SQL = `
+CREATE TRIGGER IF NOT EXISTS memory_fts_insert AFTER INSERT ON memories BEGIN
+    INSERT INTO memory_fts(rowid, content, content_l0, content_l1)
+    VALUES (new.rowid, new.content, new.content_l0, new.content_l1);
+END;
+
+CREATE TRIGGER IF NOT EXISTS memory_fts_delete BEFORE DELETE ON memories BEGIN
+    INSERT INTO memory_fts(memory_fts, rowid, content, content_l0, content_l1)
+    VALUES ('delete', old.rowid, old.content, old.content_l0, old.content_l1);
+END;
+
+CREATE TRIGGER IF NOT EXISTS memory_fts_update AFTER UPDATE OF content, content_l0, content_l1 ON memories BEGIN
+    INSERT INTO memory_fts(memory_fts, rowid, content, content_l0, content_l1)
+    VALUES ('delete', old.rowid, old.content, old.content_l0, old.content_l1);
+    INSERT INTO memory_fts(rowid, content, content_l0, content_l1)
+    VALUES (new.rowid, new.content, new.content_l0, new.content_l1);
+END;
+`;
+
+// Default field catalog entries
+const FIELD_CATALOG_SEED = [
+  ['tech_stack', 'list', 'technical', 'Technology stack', 1],
+  ['patterns', 'list', 'technical', 'Architectural patterns', 1],
+  ['keywords', 'list', 'technical', 'Keywords for search', 1],
+  ['ide', 'string', 'tooling', 'IDE or editor', 0],
+  ['terminal_profile', 'string', 'tooling', 'Terminal profile name', 0],
+  ['mcp_servers', 'list', 'tooling', 'MCP server configurations', 1],
+  ['urls', 'list', 'tooling', 'Associated URLs', 1],
+  ['stakeholders', 'text', 'context', 'Key stakeholders', 0],
+  ['timeline', 'text', 'context', 'Timeline or milestones', 0],
+  ['domain', 'text', 'context', 'Domain context', 0],
+  ['short_description', 'string', 'identity', 'Short description', 0],
+  ['medium_description', 'text', 'identity', 'Medium description', 0],
+  ['readme_description', 'text', 'identity', 'README description', 0],
+] as const;
+
+// Template definitions
+const TEMPLATE_SEED: Record<string, { description: string; fields: string[] }> = {
+  code_project: {
+    description: 'Template for code projects with technical fields',
+    fields: ['tech_stack', 'patterns', 'mcp_servers', 'urls', 'keywords', 'short_description', 'medium_description', 'readme_description'],
+  },
+  non_code_project: {
+    description: 'Template for non-code projects with context fields',
+    fields: ['stakeholders', 'timeline', 'domain', 'keywords', 'short_description', 'medium_description'],
+  },
+  area_of_focus: {
+    description: 'Template for areas of focus',
+    fields: ['keywords', 'short_description', 'medium_description'],
+  },
+};
+
+function createFtsTriggers(db: Database.Database): void {
+  // Split into individual trigger statements since better-sqlite3 exec handles multiple
+  const triggers = FTS_TRIGGERS_SQL.split(';')
+    .map(s => s.trim())
+    .filter(s => s.length > 0);
+
+  for (const trigger of triggers) {
+    try {
+      db.exec(trigger + ';');
+    } catch {
+      // Trigger may already exist — CREATE TRIGGER IF NOT EXISTS handles this
+    }
+  }
+}
+
+function seedFieldCatalog(db: Database.Database): void {
+  const stmt = db.prepare(
+    `INSERT OR IGNORE INTO field_catalog (name, field_type, category, description, is_list) VALUES (?, ?, ?, ?, ?)`
+  );
+  for (const entry of FIELD_CATALOG_SEED) {
+    stmt.run(...entry);
+  }
+}
+
+function seedTemplates(db: Database.Database): void {
+  for (const [name, config] of Object.entries(TEMPLATE_SEED)) {
+    const existing = db.prepare('SELECT id FROM templates WHERE name = ?').get(name) as { id: number } | undefined;
+    let templateId: number;
+    if (existing) {
+      templateId = existing.id;
+    } else {
+      const result = db.prepare('INSERT INTO templates (name, description) VALUES (?, ?)').run(name, config.description);
+      templateId = Number(result.lastInsertRowid);
+    }
+    const insertField = db.prepare('INSERT OR IGNORE INTO template_fields (template_id, field_name) VALUES (?, ?)');
+    for (const field of config.fields) {
+      insertField.run(templateId, field);
+    }
+  }
+}
+
+function upgradeSchema(db: Database.Database): void {
+  const meta = db.prepare("SELECT value FROM schema_meta WHERE key = 'schema_version'").get() as { value: string } | undefined;
+  const currentVersion = meta ? parseInt(meta.value, 10) : 0;
+
+  if (currentVersion >= SCHEMA_VERSION) return;
+
+  // Schema upgrades are handled by CREATE IF NOT EXISTS in the main schema.
+  // The Python implementation uses incremental ALTER TABLE statements for upgrades
+  // from older versions. Since Setlist starts fresh at v8, we only need to handle
+  // the case of opening an older Python-created database.
+
+  if (currentVersion > 0 && currentVersion < 4) {
+    // v0-v3 → v4: add display_name
+    try {
+      db.exec(`ALTER TABLE projects ADD COLUMN display_name TEXT NOT NULL DEFAULT ''`);
+    } catch { /* column may already exist */ }
+  }
+
+  if (currentVersion < 5) {
+    // v4 → v5: capabilities table (handled by CREATE IF NOT EXISTS)
+  }
+
+  if (currentVersion < 6) {
+    // v5 → v6: add invocation metadata to capabilities
+    try {
+      db.exec(`ALTER TABLE project_capabilities ADD COLUMN requires_auth INTEGER`);
+      db.exec(`ALTER TABLE project_capabilities ADD COLUMN invocation_model TEXT NOT NULL DEFAULT ''`);
+      db.exec(`ALTER TABLE project_capabilities ADD COLUMN audience TEXT NOT NULL DEFAULT ''`);
+    } catch { /* columns may already exist */ }
+  }
+
+  if (currentVersion < 7) {
+    // v6 → v7: memory subsystem (handled by CREATE IF NOT EXISTS)
+  }
+
+  if (currentVersion < 8) {
+    // v7 → v8: add is_pinned to memories
+    try {
+      db.exec(`ALTER TABLE memories ADD COLUMN is_pinned INTEGER DEFAULT 0`);
+      db.exec(`CREATE INDEX IF NOT EXISTS idx_memories_pinned ON memories(is_pinned, status)`);
+    } catch { /* column may already exist */ }
+  }
+
+  db.prepare("INSERT OR REPLACE INTO schema_meta (key, value) VALUES ('schema_version', ?)").run(String(SCHEMA_VERSION));
+}
+
+/**
+ * Open a database connection with proper settings (WAL mode, foreign keys).
+ */
+export function connect(dbPath?: string): Database.Database {
+  const path = dbPath ?? getDbPath();
+  const db = new Database(path);
+  db.pragma('journal_mode = WAL');
+  db.pragma('foreign_keys = ON');
+  return db;
+}
+
+/**
+ * Initialize the database: create tables, apply schema, seed catalog and templates.
+ * Returns the path to the initialized database.
+ */
+export function initDb(dbPath?: string): string {
+  const path = dbPath ?? getDbPath();
+  const dir = dirname(path);
+  if (!existsSync(dir)) {
+    mkdirSync(dir, { recursive: true });
+  }
+
+  const db = connect(path);
+  try {
+    db.exec(SCHEMA_SQL);
+    createFtsTriggers(db);
+    upgradeSchema(db);
+    seedFieldCatalog(db);
+    seedTemplates(db);
+  } finally {
+    db.close();
+  }
+
+  return path;
+}
+
+/**
+ * Get the template fields for a project type.
+ */
+export function getTemplateFields(db: Database.Database, projectType: string): Set<string> {
+  // Map project type to template name
+  let templateName: string;
+  if (projectType === 'area_of_focus') {
+    templateName = 'area_of_focus';
+  } else {
+    // Default to code_project; could be determined by field presence
+    templateName = 'code_project';
+  }
+
+  const rows = db.prepare(`
+    SELECT tf.field_name
+    FROM template_fields tf
+    JOIN templates t ON t.id = tf.template_id
+    WHERE t.name = ?
+  `).all(templateName) as { field_name: string }[];
+
+  return new Set(rows.map(r => r.field_name));
+}
