@@ -1,2 +1,5 @@
 export { initDb, connect, getDbPath, getTemplateFields, SCHEMA_VERSION } from './db.js';
 export * from './models.js';
+export * from './errors.js';
+export { serializeFieldValue, deserializeFieldValue, writeFields } from './fields.js';
+export { Registry, PORT_RANGE_MIN, PORT_RANGE_MAX } from './registry.js';
