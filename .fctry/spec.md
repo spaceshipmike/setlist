@@ -584,22 +584,11 @@ The library API in @setlist/core exposes each capability as a method on the `Reg
 
 **Memory configuration.** Sets runtime memory configuration. Changes take effect immediately.
 
-**Producer helpers.** @setlist/core provides typed producer interfaces that enforce field domain isolation:
+**Producer-scoped field writing.** The `Registry.updateFields()` method enforces field domain isolation via the `producer` parameter. Each field tracks which producer last wrote it, and a write from producer A cannot overwrite a field owned by producer B. This is implemented via `ON CONFLICT ... WHERE producer = excluded.producer` in the upsert. Producers pass their identity (e.g., 'fctry', 'chorus', 'migration') on every write. Shared fields (short_description, medium_description, keywords) use first-producer-wins semantics.
 
-- `fctryRegister()` / `fctryUpdate()` -- Register or update a code project with fctry-owned fields: tech_stack, patterns, short_description, medium_description, readme_description, keywords, ide, terminal_profile, mcp_servers, urls.
-- `chorusRegister()` / `chorusUpdate()` -- Register or update a project with Chorus-owned fields: stakeholders, timeline, domain, short_description, medium_description, keywords.
+The fctry-owned field domain includes: tech_stack, patterns, short_description, medium_description, readme_description, keywords, ide, terminal_profile, mcp_servers, urls. The Chorus-owned domain includes: stakeholders, timeline, domain, short_description, medium_description, keywords.
 
-Shared fields (short_description, medium_description, keywords) use first-producer-wins semantics -- the first producer to write them owns them. This prevents merge conflicts between producers.
-
-**Consumer reader interface.** @setlist/core provides a `RegistryReader` class with convenience methods for common consumer patterns:
-
-- `getAgentContext()` -- Summary depth for ambient awareness (compact, agent-friendly)
-- `getAllProjectMetadata()` -- Standard depth for all projects (used by Knowmarks)
-- `getProjectMetadata(name)` -- Standard depth for one project
-- `getFullLandscape()` -- Full depth for all projects
-- `getActiveProjectsSummary()` -- Summary of active projects only
-- `getProjectForDeepContext(name)` -- Full depth for one project
-- `projectCount()` / `projectExists()` -- Simple queries
+**Consumer querying.** The `Registry` class provides all consumer query patterns directly: `listProjects()` at variable depth for ambient awareness, `getProject()` for single-project detail, `searchProjects()` for keyword search, `switchProject()` for workspace context, `getRegistryStats()` for portfolio overview.
 
 **Memory migration utility.** A utility to migrate existing CC auto-memory files (`~/.claude/projects/*/memory/*.md`) and fctry global memory (`~/.fctry/memory.md`) into the registry's memory store. Maps CC memory types (feedback, project, user, reference) to registry memory types (preference, decision, correction, etc.). Available as `setlist migrate-memories` CLI command with `--apply` flag (dry-run by default).
 
@@ -674,15 +663,15 @@ See [Appendix D](#appendix-d-mcp-tool-reference) for the complete tool reference
 
 - **Capability declarations** -- Structured descriptions of a project's integration surfaces. Each has: name, type (open string), description, inputs, outputs, project, and optional invocation metadata (requires_auth, invocation_model, audience).
 
-- **Memories** -- Structured knowledge entries. Each has: ID, content (L0/L1/L2 tiers), type, importance, confidence, status, project, scope, agent_role, tags, content_hash, embedding, reinforcement_count, outcome_score, is_pinned, is_static (non-decaying, exempt from archival), is_inference (derived vs. directly observed), timestamps.
+- **Memories** -- Structured knowledge entries. Each has: ID, content, content_l0 (one-sentence abstract), content_l1 (structural overview), type, importance, confidence, status, project_id (FK to projects), scope, agent_role, session_id, tags (JSON array), content_hash, embedding (BLOB), embedding_model, embedding_new (BLOB for migration), embedding_model_new, reinforcement_count, outcome_score, is_pinned, is_static (non-decaying, exempt from archival), is_inference (derived vs. directly observed), forget_after, forget_reason, timestamps (created_at, updated_at, last_accessed).
 
 - **Memory versions** -- Historical snapshots of memory content.
 
-- **Memory edges** -- Typed relationships between memories (relates_to, contradicts, supports, derived_from, depends_on) with weight.
+- **Memory edges** -- Typed relationships between memories (updates, extends, derives, contradicts, caused_by, related_to) with weight and confidence.
 
 - **Memory sources** -- Provenance records linking memories to their origin session and agent.
 
-- **Summary blocks** -- Precomputed context summaries per scope level, rewritten during reflection.
+- **Summary blocks** -- Precomputed context summaries per scope level, rewritten during reflection. Each has: id, scope, label, content, char_limit, tier (static/dynamic), updated_at. Unique on (scope, label).
 
 - **Enrichment log entries** -- Records of async enrichment operations.
 
@@ -867,21 +856,18 @@ setlist/
 │   ├── core/                        # @setlist/core
 │   │   ├── src/
 │   │   │   ├── index.ts             # Public API exports
-│   │   │   ├── registry.ts          # Core Registry class
-│   │   │   ├── db.ts                # Schema init, migrations, connections
+│   │   │   ├── registry.ts          # Core Registry class (identity, fields, ports, capabilities, tasks, batch)
+│   │   │   ├── db.ts                # Schema init, migrations, connections, templates, field catalog
 │   │   │   ├── models.ts            # Interfaces, enums, type definitions
-│   │   │   ├── fields.ts            # Field serialization and catalog
-│   │   │   ├── templates.ts         # Template management
-│   │   │   ├── producers.ts         # Producer-scoped field writing
-│   │   │   ├── consumers.ts         # Consumer query helpers
-│   │   │   ├── migration.ts         # Filesystem scan and bootstrap
+│   │   │   ├── fields.ts            # Field serialization and producer-scoped writes
+│   │   │   ├── errors.ts            # Structured errors with fuzzy match suggestions
+│   │   │   ├── migration.ts         # Filesystem scan and bootstrap (4 richness tiers)
 │   │   │   ├── port-discovery.ts    # Config file port scanning
-│   │   │   ├── memory.ts            # Memory store (retain, feedback)
-│   │   │   ├── memory-retrieval.ts  # Hybrid retrieval (recall)
-│   │   │   ├── memory-reflection.ts # Background consolidation (reflect)
-│   │   │   ├── memory-embeddings.ts # Embedding provider abstraction
-│   │   │   ├── cross-query.ts       # Cross-project search
-│   │   │   └── tasks.ts             # Task queue CRUD
+│   │   │   ├── yaml-parse.ts        # Minimal YAML parser for NLSpec frontmatter
+│   │   │   ├── memory.ts            # Memory store (retain, feedback, correct, forget, inspect, configure)
+│   │   │   ├── memory-retrieval.ts  # Hybrid retrieval (recall, FTS5, budget control)
+│   │   │   ├── memory-reflection.ts # Background consolidation (reflect, triple-gate archival)
+│   │   │   └── cross-query.ts       # Cross-project search (3 scopes)
 │   │   ├── tests/                   # Ported from 786 Python tests
 │   │   ├── package.json
 │   │   └── tsconfig.json
@@ -910,20 +896,20 @@ The SQLite schema v8 is the shared contract. Setlist's `db.ts` must produce iden
 
 **Tables (18):**
 - `projects` — core identity columns (name PK, display_name, type, status, description, goals, created_at, updated_at)
-- `project_paths` — filesystem paths (project_name FK, path, added_at)
-- `project_fields` — EAV table for extended fields (project_name FK, field_name, field_value, producer, updated_at)
+- `project_paths` — filesystem paths (project_id FK, path, added_at, added_by)
+- `project_fields` — EAV table for extended fields (project_id FK, field_name, field_value, producer, updated_at)
 - `field_catalog` — master list of known fields (name PK, type, category, description). Advisory — fields not in the catalog are still accepted.
 - `templates` — project type templates (name PK, description). Three canonical templates: code_project, non_code_project, area_of_focus.
 - `template_fields` — maps templates to field names (template_name FK, field_name FK). Governs which fields appear at standard depth.
 - `schema_meta` — schema version tracking (key PK, value). Stores `schema_version = 8`.
-- `project_ports` — port allocations (port PK, project_name FK, service_label, protocol, claimed_at)
-- `project_capabilities` — capability declarations (id PK, project_name FK, name, type, description, inputs, outputs, requires_auth, invocation_model, audience)
-- `tasks` — async work queue (id PK, project_name FK, description, schedule, status, session_reference, error_message, created_at, started_at, completed_at)
-- `memories` — knowledge entries (id PK, content, type, importance, confidence, status, project_name FK, scope, agent_role, tags, content_hash, embedding, embedding_new, reinforcement_count, outcome_score, l0_summary, l1_summary, is_pinned, is_static, is_inference, created_at, updated_at, last_reinforced, last_accessed)
-- `memory_versions` — version history (id PK, memory_id FK, content, operation, created_at)
-- `memory_edges` — inter-memory relationships (id PK, source_id FK, target_id FK, relationship, weight)
+- `project_ports` — port allocations (id PK, project_id FK, port UNIQUE, service_label, protocol, claimed_by, claimed_at)
+- `project_capabilities` — capability declarations (id PK, project_id FK, name, capability_type, description, inputs, outputs, producer, requires_auth, invocation_model, audience, UNIQUE(project_id, name))
+- `tasks` — async work queue (id PK, project_name TEXT, description, schedule, status, session_reference, error_message, created_at, started_at, completed_at)
+- `memories` — knowledge entries (id TEXT PK, content, content_l0, content_l1, type, importance, confidence, status, project_id TEXT, scope, agent_role, session_id, tags, content_hash, embedding BLOB, embedding_model, embedding_new BLOB, embedding_model_new, reinforcement_count, outcome_score, is_static, is_inference, is_pinned, created_at, updated_at, last_accessed, forget_after, forget_reason, UNIQUE(content_hash, project_id, scope))
+- `memory_versions` — version history (id PK, memory_id FK, previous_content, author CHECK(agent|user|system), change_type CHECK(created|updated|corrected|archived|superseded), timestamp)
+- `memory_edges` — inter-memory relationships (id PK, source_id FK, target_id FK, relationship_type CHECK(updates|extends|derives|contradicts|caused_by|related_to), weight, confidence, observation_count, created_at)
 - `memory_sources` — provenance records (id PK, memory_id FK, session_id, agent_role, tool_name, created_at)
-- `summary_blocks` — precomputed context summaries (scope_key PK, content, updated_at)
+- `summary_blocks` — precomputed context summaries (id PK, scope, label, content, char_limit, tier, updated_at, UNIQUE(scope, label))
 - `enrichment_log` — enrichment operation records (id PK, memory_id FK, operation, result, created_at)
 - `recall_audit` — recall operation log (id PK, query, project_name, token_budget, results_json, created_at)
 - `memory_fts` — FTS5 virtual table for memory full-text search
@@ -987,27 +973,26 @@ The port follows a strict behavioral contract: every Python test, translated to 
 
 **Module mapping:**
 
-| Python module | TypeScript module | Package |
-|--------------|------------------|---------|
-| db.py | db.ts | @setlist/core |
-| models.py | models.ts | @setlist/core |
-| registry.py | registry.ts | @setlist/core |
-| fields.py | fields.ts | @setlist/core |
-| templates.py | templates.ts | @setlist/core |
-| producers.py | producers.ts | @setlist/core |
-| consumers.py | consumers.ts | @setlist/core |
-| migration.py | migration.ts | @setlist/core |
-| port_discovery.py | port-discovery.ts | @setlist/core |
-| memory.py | memory.ts | @setlist/core |
-| memory_retrieval.py | memory-retrieval.ts | @setlist/core |
-| memory_reflection.py | memory-reflection.ts | @setlist/core |
-| memory_embeddings.py | memory-embeddings.ts | @setlist/core |
-| cross_query.py | cross-query.ts | @setlist/core |
-| tasks.py | tasks.ts | @setlist/core |
-| server.py | server.ts | @setlist/mcp |
-| cli.py | commands/*.ts | @setlist/cli |
-| worker.py | worker.ts | @setlist/cli |
-| scripts/migrate_memories.py | commands/migrate-memories.ts | @setlist/cli |
+| Python module | TypeScript module | Notes |
+|--------------|------------------|-------|
+| db.py | db.ts | Schema, templates, field catalog consolidated |
+| models.py | models.ts | Interfaces + enums |
+| registry.py | registry.ts | Identity, fields, ports, capabilities, tasks, batch consolidated |
+| fields.py | fields.ts | Serialization + producer-scoped writes |
+| templates.py | db.ts | Consolidated into schema init |
+| producers.py | registry.ts + fields.ts | Producer isolation via `updateFields(producer)` |
+| consumers.py | registry.ts | Consumer queries via Registry methods directly |
+| migration.py | migration.ts | 4 richness tiers + yaml-parse.ts helper |
+| port_discovery.py | port-discovery.ts | Config file scanning |
+| memory.py | memory.ts | retain, feedback, correct, forget, inspect, configure, status |
+| memory_retrieval.py | memory-retrieval.ts | FTS5 recall, budget control, bootstrap |
+| memory_reflection.py | memory-reflection.ts | Triple-gate archival, summary blocks |
+| memory_embeddings.py | (deferred) | Embedding provider abstraction — FTS5-only for now |
+| cross_query.py | cross-query.ts | 3 scopes, freshness+importance scoring |
+| tasks.py | registry.ts | Task CRUD consolidated into Registry |
+| server.py | server.ts | 27 MCP tools via @modelcontextprotocol/sdk |
+| cli.py | index.ts | CLI entry point |
+| worker.py | worker.ts | Launchd integration |
 
 **Test mapping:**
 

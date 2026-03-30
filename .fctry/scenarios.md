@@ -14,11 +14,11 @@ concerns unique to the Setlist implementation.
 **Given** a fresh system with no registry database
 **When** @setlist/core initializes the database
 **Then** the SQLite file is created at `~/.local/share/project-registry/registry.db` with schema v8,
-all 14 tables exist with correct columns and indexes, WAL mode is enabled, and FTS5 virtual table
+all 18 tables exist with correct columns and indexes, WAL mode is enabled, and FTS5 virtual table
 for memory search is created.
 
 **Satisfaction criteria:**
-- Table list matches: projects, project_fields, project_paths, project_ports, project_capabilities, tasks, memories, memory_versions, memory_edges, memory_sources, summary_blocks, enrichment_log, recall_audit, memory_fts
+- Table list matches: projects, project_paths, project_fields, field_catalog, templates, template_fields, schema_meta, tasks, project_ports, project_capabilities, memories, memory_versions, memory_edges, memory_sources, summary_blocks, enrichment_log, recall_audit, memory_fts
 - Schema version stored as 8
 - WAL mode confirmed via `PRAGMA journal_mode`
 - FTS5 table responds to `SELECT * FROM memory_fts WHERE memory_fts MATCH 'test'` without error
