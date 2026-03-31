@@ -5,7 +5,7 @@
 title: Setlist
 spec-version: "0.1"
 date: 2026-03-30
-status: active
+status: stable
 author: Mike (via fctry interview, experience-ported from project-registry-service)
 spec-format: nlspec-v2
 experience-source: project-registry-service/.fctry/spec.md (v1.3)
@@ -867,7 +867,8 @@ setlist/
 │   │   │   ├── memory.ts            # Memory store (retain, feedback, correct, forget, inspect, configure)
 │   │   │   ├── memory-retrieval.ts  # Hybrid retrieval (recall, FTS5, budget control)
 │   │   │   ├── memory-reflection.ts # Background consolidation (reflect, triple-gate archival)
-│   │   │   └── cross-query.ts       # Cross-project search (3 scopes)
+│   │   │   ├── cross-query.ts       # Cross-project search (3 scopes)
+│   │   │   └── migrate-memories.ts  # Memory migration (CC auto-memory + fctry memory → registry)
 │   │   ├── tests/                   # Ported from 786 Python tests
 │   │   ├── package.json
 │   │   └── tsconfig.json
@@ -990,6 +991,7 @@ The port follows a strict behavioral contract: every Python test, translated to 
 | memory_embeddings.py | (deferred) | Embedding provider abstraction — FTS5-only for now |
 | cross_query.py | cross-query.ts | 3 scopes, freshness+importance scoring |
 | tasks.py | registry.ts | Task CRUD consolidated into Registry |
+| scripts/migrate_memories.py | migrate-memories.ts | CC auto-memory + fctry memory migration |
 | server.py | server.ts | 27 MCP tools via @modelcontextprotocol/sdk |
 | cli.py | index.ts | CLI entry point |
 | worker.py | worker.ts | Launchd integration |
