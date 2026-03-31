@@ -475,5 +475,84 @@ describe('Registry', () => {
       const tasks = registry.listTasks({ status_filter: 'pending' });
       expect(tasks.length).toBe(6);
     });
+
+    it('tasks have all required fields (S29)', () => {
+      registry.queueTask({
+        description: 'Research pricing',
+        project_name: 'task-proj',
+        schedule: 'tonight',
+      });
+
+      const tasks = registry.listTasks({});
+      expect(tasks.length).toBe(1);
+      const task = tasks[0] as Record<string, unknown>;
+      expect(task.id).toBeDefined();
+      expect(task.project_name).toBe('task-proj');
+      expect(task.description).toBe('Research pricing');
+      expect(task.schedule).toBe('tonight');
+      expect(task.status).toBe('pending');
+      expect(task.created_at).toBeTruthy();
+      expect(task.session_reference).toBeNull();
+    });
+
+    it('list_tasks filters by project_name (S29)', () => {
+      registry.register({ name: 'other-task-proj', type: 'project', status: 'active' });
+
+      registry.queueTask({ description: 'Task A', project_name: 'task-proj', schedule: 'now' });
+      registry.queueTask({ description: 'Task B', project_name: 'other-task-proj', schedule: 'now' });
+
+      const filtered = registry.listTasks({ project_name: 'task-proj' });
+      expect(filtered.length).toBe(1);
+      expect((filtered[0] as Record<string, unknown>).description).toBe('Task A');
+    });
+
+    it('supports all three schedule types (S29)', () => {
+      registry.queueTask({ description: 'Now task', project_name: 'task-proj', schedule: 'now' });
+      registry.queueTask({ description: 'Tonight task', project_name: 'task-proj', schedule: 'tonight' });
+      registry.queueTask({ description: 'Weekly task', project_name: 'task-proj', schedule: 'weekly' });
+
+      const tasks = registry.listTasks({});
+      expect(tasks.length).toBe(3);
+      const schedules = tasks.map((t: Record<string, unknown>) => t.schedule);
+      expect(schedules).toContain('now');
+      expect(schedules).toContain('tonight');
+      expect(schedules).toContain('weekly');
+    });
+
+    it('global tasks have null project_name (S29)', () => {
+      registry.queueTask({ description: 'Global task', schedule: 'now' });
+
+      const tasks = registry.listTasks({});
+      expect(tasks.length).toBe(1);
+      expect((tasks[0] as Record<string, unknown>).project_name).toBeNull();
+    });
+  });
+
+  // ── S17: Batch atomicity ───────────────────────────────────
+
+  describe('batchUpdate atomicity (S17)', () => {
+    it('batch archive releases ports and clears capabilities', () => {
+      registry.register({ name: 'ba-1', type: 'project', status: 'paused' });
+      registry.register({ name: 'ba-2', type: 'project', status: 'paused' });
+      registry.claimPort('ba-1', 'dev', 5500);
+      registry.claimPort('ba-2', 'dev', 5501);
+      registry.registerCapabilities('ba-1', [{ name: 'tool1', capability_type: 'mcp', description: 'test' }]);
+
+      const result = registry.batchUpdate({ status_filter: 'paused', status: 'archived' });
+      expect(result.count).toBe(2);
+
+      // Ports should be released
+      expect(registry.checkPort(5500).available).toBe(true);
+      expect(registry.checkPort(5501).available).toBe(true);
+
+      // Capabilities should be cleared
+      const caps = registry.queryCapabilities({ project_name: 'ba-1' });
+      expect(caps.length).toBe(0);
+    });
+
+    it('batch requires at least one field to update', () => {
+      expect(() => registry.batchUpdate({ status_filter: 'active' }))
+        .toThrow('at least one field');
+    });
   });
 });

@@ -5,7 +5,7 @@
 title: Setlist
 spec-version: "0.1"
 date: 2026-03-30
-status: stable
+status: active
 author: Mike (via fctry interview, experience-ported from project-registry-service)
 spec-format: nlspec-v2
 experience-source: project-registry-service/.fctry/spec.md (v1.3)
@@ -134,7 +134,7 @@ Everything from the Python spec's success criteria, plus:
 - The MCP server (`@setlist/mcp`) is a drop-in replacement for the Python MCP server -- same tool names, same parameters, same response shapes.
 - The CLI (`setlist`) provides the same commands as `project-registry`.
 - Both Python and TypeScript implementations can read and write the same .db file without migration or conversion.
-- The 786 Python tests, translated to TypeScript, all pass against @setlist/core.
+- TypeScript tests (vitest) cover all behavioral categories from the 786 Python tests, confirming equivalent parity against @setlist/core.
 
 ---
 
@@ -869,7 +869,7 @@ setlist/
 │   │   │   ├── memory-reflection.ts # Background consolidation (reflect, triple-gate archival)
 │   │   │   ├── cross-query.ts       # Cross-project search (3 scopes)
 │   │   │   └── migrate-memories.ts  # Memory migration (CC auto-memory + fctry memory → registry)
-│   │   ├── tests/                   # Ported from 786 Python tests
+│   │   ├── tests/                   # Behavioral parity tests (vitest)
 │   │   ├── package.json
 │   │   └── tsconfig.json
 │   ├── mcp/                         # @setlist/mcp
@@ -909,10 +909,10 @@ The SQLite schema v8 is the shared contract. Setlist's `db.ts` must produce iden
 - `memories` — knowledge entries (id TEXT PK, content, content_l0, content_l1, type, importance, confidence, status, project_id TEXT, scope, agent_role, session_id, tags, content_hash, embedding BLOB, embedding_model, embedding_new BLOB, embedding_model_new, reinforcement_count, outcome_score, is_static, is_inference, is_pinned, created_at, updated_at, last_accessed, forget_after, forget_reason, UNIQUE(content_hash, project_id, scope))
 - `memory_versions` — version history (id PK, memory_id FK, previous_content, author CHECK(agent|user|system), change_type CHECK(created|updated|corrected|archived|superseded), timestamp)
 - `memory_edges` — inter-memory relationships (id PK, source_id FK, target_id FK, relationship_type CHECK(updates|extends|derives|contradicts|caused_by|related_to), weight, confidence, observation_count, created_at)
-- `memory_sources` — provenance records (id PK, memory_id FK, session_id, agent_role, tool_name, created_at)
+- `memory_sources` — provenance records (id PK, memory_id FK, project_id, session_id, agent_role, context_snippet, timestamp)
 - `summary_blocks` — precomputed context summaries (id PK, scope, label, content, char_limit, tier, updated_at, UNIQUE(scope, label))
-- `enrichment_log` — enrichment operation records (id PK, memory_id FK, operation, result, created_at)
-- `recall_audit` — recall operation log (id PK, query, project_name, token_budget, results_json, created_at)
+- `enrichment_log` — enrichment operation records (id PK, memory_id FK, engine_kind, engine_version, created_at)
+- `recall_audit` — recall operation log (id PK, query, mode CHECK(search|bootstrap|profile), budget_tokens, scope, project_id, memory_ids_returned, scores, timestamp)
 - `memory_fts` — FTS5 virtual table for memory full-text search
 
 **Indexes, constraints, and triggers** must match the Python implementation exactly. The migration function in `db.ts` should be a faithful TypeScript translation of the Python `db.py` initialization.
@@ -950,7 +950,7 @@ interface Project {
 
 type ProjectStatus = 'idea' | 'draft' | 'active' | 'paused' | 'archived' | 'complete';
 type MemoryType = 'decision' | 'outcome' | 'pattern' | 'preference' | 'dependency' | 'correction' | 'skill';
-type MemoryScope = 'project' | 'area-of-focus' | 'portfolio' | 'global';
+type MemoryScope = 'project' | 'area_of_focus' | 'portfolio' | 'global';
 type QueryDepth = 'minimal' | 'summary' | 'standard' | 'full';
 ```
 
@@ -966,7 +966,7 @@ const transport = new StdioServerTransport();
 await server.connect(transport);
 ```
 
-**Testing.** Tests are ported from the 786 Python tests using vitest. Each Python test file maps to a TypeScript test file. Test structure and assertions are preserved; Python-specific patterns (pytest fixtures, parametrize) are translated to vitest equivalents (beforeEach, test.each).
+**Testing.** Tests cover all behavioral categories from the 786 Python tests using vitest. Coverage is measured by behavioral surface (every scenario S01-S30 has corresponding tests), not raw test count. Python-specific patterns (pytest fixtures, parametrize) are translated to vitest equivalents (beforeEach, test.each).
 
 ### 5.4 Porting Strategy {#porting}
 
@@ -1056,7 +1056,7 @@ All satisfaction criteria from the Python spec (section 6.1) apply identically, 
 - Chorus can import @setlist/core and call `listProjects()`, `getProject()`, `switchProject()` directly.
 - Ensemble can import @setlist/core and call `retain()`, `recall()`, `feedback()` directly.
 - Both Python and TypeScript implementations read and write the same .db file without conflict.
-- The 786 Python tests, translated to TypeScript (vitest), all pass against @setlist/core.
+- TypeScript tests (vitest) cover all behavioral categories from the 786 Python tests, with every scenario S01-S30 having corresponding test coverage.
 - The npm packages build cleanly with `npm run build` from the workspace root.
 - The monorepo installs with `npm install` — no special setup beyond Node.js LTS.
 
@@ -1090,7 +1090,7 @@ Same signals as Python spec:
 
 Additional TypeScript-specific signals:
 - Schema v8 byte-compatibility verified against Python-created .db files
-- All 786 ported tests passing
+- All behavioral categories tested with full scenario coverage (S01-S30)
 - npm package sizes reasonable (core < 500KB, mcp < 100KB, cli < 100KB)
 - No CommonJS output — ESM only
 

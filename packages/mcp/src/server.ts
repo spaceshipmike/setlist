@@ -1,7 +1,7 @@
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { CallToolRequestSchema, ListToolsRequestSchema } from '@modelcontextprotocol/sdk/types.js';
 import {
-  Registry, MemoryStore, MemoryRetrieval, CrossQuery,
+  Registry, MemoryStore, MemoryRetrieval, MemoryReflection, CrossQuery,
   type CapabilityDeclaration, type QueryDepth,
 } from '@setlist/core';
 
@@ -10,6 +10,7 @@ export function createServer(dbPath?: string): Server {
   const memoryStore = new MemoryStore(dbPath);
   const memoryRetrieval = new MemoryRetrieval(dbPath);
   const crossQuery = new CrossQuery(dbPath);
+  const memoryReflection = new MemoryReflection(dbPath);
 
   const server = new Server(
     { name: 'setlist', version: '0.1.0' },
@@ -188,7 +189,7 @@ export function createServer(dbPath?: string): Server {
 
         // Memory Admin
         case 'reflect':
-          result = { result: 'Reflection not yet implemented in this version.' };
+          result = memoryReflection.reflect();
           break;
         case 'correct':
           result = memoryStore.correct({
@@ -231,7 +232,7 @@ export function createServer(dbPath?: string): Server {
           result = registry.checkPort(a.port as number);
           break;
         case 'discover_ports':
-          result = { result: `Port discovery for '${a.project_name}' not yet implemented.` };
+          result = registry.discoverPorts(a.project_name as string);
           break;
 
         // Tasks

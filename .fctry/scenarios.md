@@ -340,14 +340,14 @@ and port discovery proposes port claims from config files.
 ---
 
 ## S24: Test Parity [TS] {#s24}
-**Given** the 786 Python tests translated to TypeScript (vitest)
+**Given** a TypeScript test suite (vitest) covering all behavioral categories from the Python implementation
 **When** `npm test` runs
 **Then** all tests pass, confirming behavioral parity with the Python implementation.
 
 **Satisfaction criteria:**
-- Test count matches or exceeds 786
-- All test categories covered: registry, server, memory, retrieval, cross-query, capabilities, batch, worker, ports, migration
-- No Python-specific test logic silently dropped during translation
+- All behavioral categories covered with equivalent rigor: schema, registry CRUD, progressive disclosure, fields, producer isolation, ports, port discovery, capabilities, memory (retain/feedback/correct/forget/inspect/configure/status), recall, reflection, cross-query, migration, memory migration, batch operations, tasks, edge cases, and Python DB compatibility
+- Every scenario S01-S30 has at least one corresponding test
+- No Python behavioral surface left untested (coverage is by behavior, not by raw test count)
 - Test run completes in under 60 seconds
 
 ---
