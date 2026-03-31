@@ -39,9 +39,9 @@ describe('MCP Server (S21)', () => {
 
   // ── Tool Registration ──────────────────────────────────────
 
-  it('registers exactly 27 tools', async () => {
+  it('registers exactly 28 tools', async () => {
     const tools = await listTools(server);
-    expect(tools).toHaveLength(27);
+    expect(tools).toHaveLength(28);
   });
 
   it('registers all expected tool names', async () => {
@@ -53,8 +53,8 @@ describe('MCP Server (S21)', () => {
       'feedback', 'forget', 'get_project', 'get_registry_stats',
       'inspect_memory', 'list_projects', 'list_tasks', 'memory_status',
       'queue_task', 'recall', 'reflect', 'register_capabilities',
-      'register_project', 'release_port', 'retain', 'search_projects',
-      'switch_project', 'update_project', 'query_capabilities',
+      'register_project', 'release_port', 'rename_project', 'retain',
+      'search_projects', 'switch_project', 'update_project', 'query_capabilities',
     ].sort());
   });
 
@@ -141,6 +141,23 @@ describe('MCP Server (S21)', () => {
     const result = await callTool(server, 'archive_project', { name: 'arch' }) as Record<string, unknown>;
     expect(result.ports_released).toBe(1);
     expect(result.capabilities_cleared).toBe(1);
+  });
+
+  it('rename_project renames and rewrites all references', async () => {
+    await callTool(server, 'register_project', { name: 'old-proj', description: 'Test' });
+    await callTool(server, 'claim_port', { project_name: 'old-proj', service_label: 'dev', port: 4100 });
+
+    const result = await callTool(server, 'rename_project', { name: 'old-proj', new_name: 'new-proj' }) as Record<string, unknown>;
+    expect(result.result).toContain('renamed');
+
+    const proj = await callTool(server, 'get_project', { name: 'new-proj' }) as Record<string, unknown>;
+    expect(proj.name).toBe('new-proj');
+
+    const check = await callTool(server, 'check_port', { port: 4100 }) as Record<string, unknown>;
+    expect(check.project).toBe('new-proj');
+
+    const oldResult = await callTool(server, 'get_project', { name: 'old-proj' }) as string;
+    expect(oldResult).toContain('NOT_FOUND');
   });
 
   it('batch_update applies changes to filtered projects', async () => {

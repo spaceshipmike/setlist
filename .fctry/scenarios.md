@@ -432,3 +432,23 @@ and port discovery proposes port claims from config files.
 - Total project count is accurate
 - Type distribution (projects vs. areas of focus) is accurate
 - Status distribution (active, paused, archived, etc.) is accurate
+
+---
+
+## S31: Project Rename {#s31}
+**Given** a registered project with ports, capabilities, tasks, and memories
+**When** `renameProject('old-name', 'new-name')` is called
+**Then** the project is immediately queryable under the new name with all associated data intact.
+
+**Satisfaction criteria:**
+- `renameProject('old-name', 'new-name')` succeeds and the project is queryable as 'new-name'
+- `getProject('old-name')` returns NOT_FOUND after rename
+- All port claims now reference the new name
+- All capability declarations now reference the new name
+- All tasks (pending, completed, failed) now reference the new name
+- All memories with the old project_id now reference the new name
+- All filesystem paths are preserved under the new name
+- All extended fields and producer attributions are preserved
+- Renaming to an existing project name fails with a clear error
+- The rename is atomic: if any step fails, no changes are committed
+- The old name becomes available for re-registration after rename

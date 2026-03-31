@@ -4,7 +4,7 @@
 
 Setlist is the TypeScript implementation of the Project Registry — the active intelligence hub for the user's personal ecosystem. It provides project identity, capability declarations, portfolio memory, port allocation, task routing, batch operations, and cross-project intelligence via a local SQLite database and MCP server.
 
-This is a direct port of `project-registry-service` (Python). Same experience, same schema (v8), same 27 MCP tools. Different language (TypeScript), different packaging (npm monorepo).
+This is a direct port of `project-registry-service` (Python). Same experience, same schema (v8), same 27 Python MCP tools plus `rename_project`. Different language (TypeScript), different packaging (npm monorepo).
 
 ## Factory Contract
 
@@ -40,7 +40,7 @@ npm run typecheck
 ```
 packages/
 ├── core/    # @setlist/core — library (all registry logic)
-├── mcp/     # @setlist/mcp — MCP server (27 tools, stdio)
+├── mcp/     # @setlist/mcp — MCP server (28 tools, stdio)
 └── cli/     # @setlist/cli — CLI commands + async worker
 ```
 
@@ -59,7 +59,7 @@ Location: `~/.local/share/project-registry/registry.db`
 
 ### 27 MCP Tools
 
-**Identity (9):** list_projects, get_project, switch_project, search_projects, get_registry_stats, register_project, update_project, archive_project, batch_update
+**Identity (10):** list_projects, get_project, switch_project, search_projects, get_registry_stats, register_project, update_project, archive_project, rename_project, batch_update
 
 **Capabilities (2):** register_capabilities, query_capabilities
 

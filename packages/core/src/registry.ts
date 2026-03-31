@@ -285,6 +285,39 @@ export class Registry {
     }
   }
 
+  renameProject(oldName: string, newName: string): void {
+    const db = this.open();
+    try {
+      const row = db.prepare('SELECT id FROM projects WHERE name = ?').get(oldName) as { id: number } | undefined;
+      if (!row) {
+        const allNames = db.prepare('SELECT name FROM projects').all() as { name: string }[];
+        const closest = findClosestMatch(oldName, allNames.map(r => r.name));
+        throw new NotFoundError(oldName, closest);
+      }
+
+      const existing = db.prepare('SELECT id FROM projects WHERE name = ?').get(newName);
+      if (existing) throw new DuplicateProjectError(newName);
+
+      const doRename = db.transaction(() => {
+        // Update the project name
+        db.prepare("UPDATE projects SET name = ?, updated_at = datetime('now') WHERE id = ?").run(newName, row.id);
+
+        // Rewrite tasks.project_name (TEXT, not FK)
+        db.prepare('UPDATE tasks SET project_name = ? WHERE project_name = ?').run(newName, oldName);
+
+        // Rewrite memories.project_id (TEXT, not FK)
+        db.prepare('UPDATE memories SET project_id = ? WHERE project_id = ?').run(newName, oldName);
+
+        // Rewrite memory_sources.project_id (TEXT)
+        db.prepare('UPDATE memory_sources SET project_id = ? WHERE project_id = ?').run(newName, oldName);
+      });
+
+      doRename();
+    } finally {
+      db.close();
+    }
+  }
+
   // ── Fields ────────────────────────────────────────────────────
 
   updateFields(name: string, fields: Record<string, unknown>, producer: string, paths?: string[]): void {

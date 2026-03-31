@@ -3,7 +3,7 @@
 ```yaml
 ---
 title: Setlist
-spec-version: "0.1"
+spec-version: "0.3"
 date: 2026-03-30
 status: active
 author: Mike (via fctry interview, experience-ported from project-registry-service)
@@ -11,8 +11,8 @@ spec-format: nlspec-v2
 experience-source: project-registry-service/.fctry/spec.md (v1.3)
 ---
 synopsis:
-  short: "TypeScript implementation of the project registry — active intelligence hub for project identity, capabilities, memory, and cross-project awareness"
-  medium: "TypeScript monorepo (@setlist/core, @setlist/mcp, @setlist/cli) implementing the project registry as npm-packageable infrastructure. Local SQLite (better-sqlite3) + MCP server (@modelcontextprotocol/sdk) providing project identity, capability declarations, portfolio memory with hybrid retrieval and outcome-aware reinforcement, port allocation, async task dispatch, batch operations, and cross-project intelligence. Same schema v8, same 27 MCP tools, same experience as the Python implementation — repackaged for the Node.js ecosystem."
+  short: "TypeScript implementation of the project registry — active intelligence hub for project identity, capabilities, memory, and cross-project awareness (28 MCP tools)"
+  medium: "TypeScript monorepo (@setlist/core, @setlist/mcp, @setlist/cli) implementing the project registry as npm-packageable infrastructure. Local SQLite (better-sqlite3) + MCP server (@modelcontextprotocol/sdk) providing project identity, capability declarations, portfolio memory with hybrid retrieval and outcome-aware reinforcement, port allocation, async task dispatch, batch operations, and cross-project intelligence. Same schema v8, same 27 Python MCP tools plus rename_project, same experience as the Python implementation — repackaged for the Node.js ecosystem."
   readme: "Setlist is the TypeScript implementation of the Project Registry — invisible infrastructure at the center of the user's personal ecosystem. It provides structured, queryable identity for every project and area of focus, with programmatic administration tools for updating project metadata and archiving projects. Projects declare their capabilities — MCP tools, CLI commands, API endpoints, databases, library functions — and other projects and agents discover those capabilities through a dedicated query tool. Setlist maintains a portfolio memory: agents retain decisions, outcomes, patterns, preferences, and corrections as typed memories that are enriched with embeddings and importance scores, then recalled via budget-controlled hybrid retrieval (FTS5 + vector + graph) with outcome-aware reinforcement. It manages globally-unique port allocation with automatic discovery from project config files. Beyond single-project operations, Setlist acts as an active hub: batch_update applies field changes atomically across filtered project sets, and cross-project task dispatch fans out work items simultaneously via the async worker. Distributed as npm packages (@setlist/core, @setlist/mcp, @setlist/cli), Setlist is directly consumable by Chorus, Ensemble, and any Node.js tool in the ecosystem."
   tech-stack: [typescript, better-sqlite3, "@modelcontextprotocol/sdk", node, npm-monorepo]
   patterns: [atomized-fields, progressive-disclosure, producer-consumer, registration-not-discovery, invisible-infrastructure, config-file-scanning, hub-and-spoke, capability-declaration, definition-is-truth, fuzzy-match-suggestions, archive-triggered-cleanup, producer-attribution, summary-compactness, freshness-importance-scoring, invocation-metadata, retain-recall-reflect, outcome-aware-reinforcement, content-hash-dedup, embedding-provider-abstraction, budget-controlled-recall, four-level-scoping, hybrid-retrieval]
@@ -95,7 +95,7 @@ Setlist is a TypeScript monorepo providing the Project Registry as three npm pac
 
 - **@setlist/core** -- The library. All registry logic: project identity, field model, variable-depth querying, filtering, migration, port management, capability declarations, portfolio memory (retain/recall/reflect), task queue, cross-project queries, batch operations. Importable from any Node.js process. This is what Chorus and Ensemble consume directly.
 
-- **@setlist/mcp** -- The MCP server. A thin translation layer wrapping @setlist/core as 27 MCP tools via @modelcontextprotocol/sdk, using stdio transport managed by Claude Code's lifecycle. Identical tool surface to the Python server.
+- **@setlist/mcp** -- The MCP server. A thin translation layer wrapping @setlist/core as 28 MCP tools via @modelcontextprotocol/sdk, using stdio transport managed by Claude Code's lifecycle. The original 27 tools match the Python server identically; `rename_project` is a Setlist-specific addition.
 
 - **@setlist/cli** -- The CLI. Terminal commands for project management, migration, worker installation, and diagnostics. Entry point: `setlist`.
 
@@ -454,6 +454,8 @@ If the same content has been retained before (determined by a content hash of th
 
 Implementation note: better-sqlite3 is synchronous, which simplifies the hot path for retain (no async overhead for the database write). Enrichment still runs asynchronously via Node.js mechanisms (worker threads, setTimeout callbacks, or similar).
 
+**Proactive contradiction detection:** During retain, after dedup checking, the system searches for existing active memories with the same project scope and high content similarity that may contradict the new memory. This applies to preference and correction types -- the most likely to represent superseding knowledge (e.g., "use Postgres" followed by "use MySQL" for the same project). When embeddings are available and similarity exceeds 0.85 with a different conclusion, the older memory is automatically superseded (same mechanism as the explicit correction flow: `contradicts` edge, original archived). When in FTS5-only mode, exact contradiction detection is unreliable, so potential conflicts are flagged in the retain response for admin review via `inspect_memory` rather than auto-resolved. This complements the explicit correction flow -- corrections handle "I'm telling you this is wrong," while proactive detection handles "I just said something that conflicts with what I said before."
+
 **Memory types:**
 
 - **decision** -- An explicit choice made during development.
@@ -463,6 +465,8 @@ Implementation note: better-sqlite3 is synchronous, which simplifies the hot pat
 - **dependency** -- A relationship between this project and something external.
 - **correction** -- An explicit "don't do that" or "actually, use this instead."
 - **skill** -- A capability or technique the agent has demonstrated.
+
+**Per-type decay rates:** Different memory types fade at different rates during recall scoring. Corrections and preferences represent durable knowledge that should persist indefinitely -- they decay very slowly (rate 0.25). Decisions and dependencies decay at baseline rate (1.0). Outcomes and patterns decay faster (1.5) -- they are naturally ephemeral and should be displaced by newer observations. Skills decay at baseline (1.0). The decay rate multiplies the time-decay exponent in recall scoring: a memory with rate 0.25 takes 4x longer to fade than one with rate 1.0. This prevents important conventions from being buried by recent but trivial observations.
 
 **Four-level scoping:**
 
@@ -483,7 +487,9 @@ The recall response fills the caller's token budget with the highest-scored memo
 
 **Bootstrap mode:** An agent starting a new session calls recall with no query and a project scope. This returns the project's memory profile -- its key decisions, active patterns, preferences, and recent outcomes -- suitable for injection into the agent's context at session start. Pinned memories (memories with `is_pinned` set) always surface at the top of bootstrap recall regardless of score.
 
-**Query intent classification:** The recall system classifies incoming queries by intent -- temporal, relational, factual, or exploratory -- and adjusts retrieval weights accordingly.
+**Query intent classification:** The recall system classifies incoming queries by intent -- temporal, relational, factual, or exploratory -- and adjusts retrieval weights accordingly. Each intent maps to a weight profile that shifts emphasis across retrieval legs: temporal queries boost recency weight, factual queries boost FTS5/exact-match weight, relational queries boost graph traversal weight, exploratory queries use balanced weights. This ensures that "what did we decide last week?" emphasizes time while "do we use Postgres or MySQL?" emphasizes precision.
+
+**Type-priority budget allocation:** When filling a caller's token budget, the recall system allocates in priority order across memory types: corrections and preferences claim budget first (they directly shape agent behavior), then recent outcomes (they prevent repeated mistakes), then patterns and skills (they save time). Within each priority tier, memories expand from L0 to L2 as budget allows. This ensures that a tight budget always contains the knowledge most likely to affect the agent's next action.
 
 **Reflect: background consolidation.**
 
@@ -560,7 +566,7 @@ The library API in @setlist/core exposes each capability as a method on the `Reg
 
 **Batch operations.** Applies field changes to multiple projects matching a filter in a single atomic operation. Supports `dry_run` flag for previewing impact.
 
-**Project administration.** Updates core identity fields on existing projects and archives projects. `update_project` changes display_name, status, description, or goals. `archive_project` is a convenience shorthand for setting status to "archived" with automatic port and capability cleanup.
+**Project administration.** Updates core identity fields on existing projects and archives projects. `update_project` changes display_name, status, description, or goals. `archive_project` is a convenience shorthand for setting status to "archived" with automatic port and capability cleanup. `rename_project` changes the project's name (the slug-style identifier used for all lookups) atomically -- updating the `projects` row, all `tasks.project_name` references, all `memories.project_id` references, all port claims, capability declarations, and paths in a single transaction. The old name ceases to exist and becomes available for re-use. Renaming to an existing name fails with a clear error.
 
 **Capability declaration writing.** Accepts a project name and a complete set of capability declarations, replacing the project's previous capability set. Replace semantics ensure the registry reflects current code reality.
 
@@ -592,7 +598,7 @@ The fctry-owned field domain includes: tech_stack, patterns, short_description, 
 
 **Memory migration utility.** A utility to migrate existing CC auto-memory files (`~/.claude/projects/*/memory/*.md`) and fctry global memory (`~/.fctry/memory.md`) into the registry's memory store. Maps CC memory types (feedback, project, user, reference) to registry memory types (preference, decision, correction, etc.). Available as `setlist migrate-memories` CLI command with `--apply` flag (dry-run by default).
 
-**MCP server access.** @setlist/mcp wraps @setlist/core as 27 MCP tools via @modelcontextprotocol/sdk using stdio transport managed by Claude Code's lifecycle. The server provides:
+**MCP server access.** @setlist/mcp wraps @setlist/core as 28 MCP tools via @modelcontextprotocol/sdk using stdio transport managed by Claude Code's lifecycle. The 27 original tools match the Python server; `rename_project` is a Setlist-specific addition. The server provides:
 
 - `list_projects` -- List projects at a given depth with optional filters.
 - `get_project` -- Get a single project by name at a given depth.
@@ -602,6 +608,7 @@ The fctry-owned field domain includes: tech_stack, patterns, short_description, 
 - `register_project` -- Register a new project.
 - `update_project` -- Update core identity fields.
 - `archive_project` -- Archive a project.
+- `rename_project` -- Rename a project atomically (rewrites all references).
 - `batch_update` -- Apply field changes to filtered project sets. Supports `dry_run`.
 - `register_capabilities` -- Write a project's complete capability set.
 - `query_capabilities` -- Discover capabilities across the ecosystem.
@@ -710,7 +717,7 @@ See [Appendix D](#appendix-d-mcp-tool-reference) for the complete tool reference
 - Service labels during discovery derived from context (config file type, service name, variable name).
 - Port discovery requires the project to be registered with at least one filesystem path.
 - Archiving a project preserves all metadata but releases port claims and clears capability declarations. Status transitions to "archived." Archived projects remain queryable.
-- `update_project` only modifies fields explicitly provided. Name and type are not updatable through `update_project`.
+- `update_project` only modifies fields explicitly provided. Name and type are not updatable through `update_project`. Name is updatable only through the dedicated `rename_project` operation, which atomically rewrites all references. Type is never updatable.
 - `batch_update` is atomic: all matching projects are updated in a single transaction, or none are. Requires at least one filter criterion.
 - `batch_update` with `dry_run=true` returns match list and proposed changes without committing.
 - Cross-project task dispatch via `queue_task` with a project filter fans out into independent tasks. Requires at least one filter criterion.
@@ -733,6 +740,10 @@ See [Appendix D](#appendix-d-mcp-tool-reference) for the complete tool reference
 - Reflection runs on internal schedule, separate from async task worker. Triggers: cumulative importance threshold, periodic schedule, or manual invocation.
 - Embedding provider is runtime configuration. Changing does not invalidate existing embeddings. Dual-column pattern supports gradual migration.
 - Memory types are a closed set: decision, outcome, pattern, preference, dependency, correction, skill. Unknown types rejected at retain time.
+- Per-type decay rates multiply the time-decay exponent: correction=0.25, preference=0.25, decision=1.0, dependency=1.0, skill=1.0, outcome=1.5, pattern=1.5. Lower rate = slower fade.
+- Query intent classification maps to retrieval weight profiles: temporal boosts recency, factual boosts FTS5/exact-match, relational boosts graph traversal, exploratory uses balanced weights.
+- Type-priority budget allocation fills in order: corrections/preferences first, then outcomes, then patterns/skills/decisions/dependencies. Within each tier, L0 → L1 → L2 expansion.
+- Proactive contradiction detection runs during retain for preference and correction types. Auto-resolves when embeddings available (similarity > 0.85 with different conclusion). Flags for review in FTS5-only mode.
 - Every memory must have content and type. Project, scope, tags, session_id, agent_role are optional. Scope defaults to "project" when project provided, "global" when not.
 
 **TypeScript-specific rules:**
@@ -828,7 +839,7 @@ All Python spec hard constraints apply, plus:
 
 - **Schema v8 compatibility.** The SQLite schema must be byte-compatible with the Python implementation's schema v8. Both implementations read and write the same .db file. Schema migrations in Setlist must produce identical tables, indexes, and constraints as the Python implementation.
 
-- **Same 27 MCP tools, same parameters, same response shapes.** The MCP server is a drop-in replacement for the Python server. Tool names, parameter names, parameter types, and response structures are identical. An agent that works with the Python MCP server must work identically with Setlist's MCP server.
+- **Same 27 MCP tools, same parameters, same response shapes, plus Setlist-specific additions.** The original 27 tools are a drop-in replacement for the Python server. Tool names, parameter names, parameter types, and response structures are identical. An agent that works with the Python MCP server must work identically with Setlist's MCP server. Setlist adds `rename_project` as a 28th tool not present in the Python implementation.
 
 - **ESM-only.** All packages produce ESM output. No CommonJS dual-publishing.
 
@@ -1026,6 +1037,8 @@ All inspirations from the Python spec apply. Additional TypeScript-specific refe
 
 - **npm workspaces** — Monorepo management. Simple, no additional tooling (no Turborepo, no Nx). `npm install` at the root links all packages.
 
+- **ghostwright/phantom** — Autonomous AI agent platform with three-tier vector memory (episodic/semantic/procedural). Informed Setlist's per-type decay rates, type-priority budget allocation, query-intent weight profiles, and proactive contradiction detection patterns. Phantom uses Qdrant for vector storage; Setlist adapts the conceptual patterns to its SQLite/FTS5 architecture. Not adopted as a dependency.
+
 ### 6.2 Ecosystem Context {#ecosystem-context}
 
 Same ecosystem as the Python spec (Archibald, ctx, Chorus, fctry, McPoyle, Knowmarks), with updated integration model:
@@ -1167,6 +1180,7 @@ Complete tool reference for the 27 MCP tools. All tools have identical names, pa
 | register_project | name, display_name?, type, status, description, goals, paths? | Confirmation |
 | update_project | name, display_name?, status?, description?, goals? | Updated project summary |
 | archive_project | name | Confirmation (ports released, capabilities cleared) |
+| rename_project | name, new_name | Confirmation (all references updated) |
 | batch_update | type_filter?, status_filter?, fields, dry_run? | Count and names of affected projects |
 
 **Capabilities:**

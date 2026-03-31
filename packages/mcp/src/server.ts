@@ -30,6 +30,7 @@ export function createServer(dbPath?: string): Server {
       { name: 'register_project', description: 'Register a new project in the registry. Suggestion: use update_project() to modify existing projects.', inputSchema: { type: 'object' as const, properties: { name: { type: 'string' }, display_name: { type: 'string' }, project_type: { type: 'string', default: 'project' }, status: { type: 'string', default: 'active' }, description: { type: 'string' }, goals: { type: 'string' }, paths: { type: 'string' }, producer: { type: 'string', default: 'system' } }, required: ['name'] } },
       { name: 'update_project', description: 'Update core identity fields on an existing project.', inputSchema: { type: 'object' as const, properties: { name: { type: 'string' }, display_name: { type: 'string' }, status: { type: 'string' }, description: { type: 'string' }, goals: { type: 'string' } }, required: ['name'] } },
       { name: 'archive_project', description: 'Archive a project (releases ports, clears capabilities).', inputSchema: { type: 'object' as const, properties: { name: { type: 'string' } }, required: ['name'] } },
+      { name: 'rename_project', description: 'Rename a project atomically (rewrites all references).', inputSchema: { type: 'object' as const, properties: { name: { type: 'string' }, new_name: { type: 'string' } }, required: ['name', 'new_name'] } },
       { name: 'batch_update', description: 'Apply field changes to all projects matching a filter. Supports dry_run.', inputSchema: { type: 'object' as const, properties: { type_filter: { type: 'string' }, status_filter: { type: 'string' }, display_name: { type: 'string' }, status: { type: 'string' }, description: { type: 'string' }, goals: { type: 'string' }, dry_run: { type: 'boolean' } } } },
       // Capabilities (2)
       { name: 'register_capabilities', description: 'Write a project\'s complete capability set (replace semantics).', inputSchema: { type: 'object' as const, properties: { project_name: { type: 'string' }, capabilities: { type: 'array' } }, required: ['project_name', 'capabilities'] } },
@@ -120,6 +121,10 @@ export function createServer(dbPath?: string): Server {
           result = { result: `Project '${a.name}' archived.`, ...archiveResult };
           break;
         }
+        case 'rename_project':
+          registry.renameProject(a.name as string, a.new_name as string);
+          result = { result: `Project '${a.name}' renamed to '${a.new_name}'.` };
+          break;
         case 'batch_update':
           result = registry.batchUpdate({
             type_filter: a.type_filter as string | undefined,

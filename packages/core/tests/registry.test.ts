@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
-import { Registry } from '../src/index.js';
+import { Registry, MemoryStore, MemoryRetrieval } from '../src/index.js';
 
 describe('Registry', () => {
   let tmpDir: string;
@@ -553,6 +553,113 @@ describe('Registry', () => {
     it('batch requires at least one field to update', () => {
       expect(() => registry.batchUpdate({ status_filter: 'active' }))
         .toThrow('at least one field');
+    });
+  });
+
+  // ── S31: Project Rename ──────────────────────────────────────
+
+  describe('renameProject (S31)', () => {
+    beforeEach(() => {
+      registry.register({
+        name: 'old-name', type: 'project', status: 'active',
+        description: 'Test project', goals: 'Testing rename',
+        display_name: 'Old Project', paths: ['/tmp/old-name'],
+      });
+    });
+
+    it('renames a project and makes it queryable under the new name', () => {
+      registry.renameProject('old-name', 'new-name');
+
+      const proj = registry.getProject('new-name', 'full');
+      expect(proj).not.toBeNull();
+      expect(proj!.name).toBe('new-name');
+      expect(proj!.description).toBe('Test project');
+      expect(proj!.display_name).toBe('Old Project');
+    });
+
+    it('old name returns NOT_FOUND after rename', () => {
+      registry.renameProject('old-name', 'new-name');
+      const proj = registry.getProject('old-name');
+      expect(proj).toBeNull();
+    });
+
+    it('preserves port claims under the new name', () => {
+      registry.claimPort('old-name', 'dev server', 4500);
+      registry.renameProject('old-name', 'new-name');
+
+      const check = registry.checkPort(4500);
+      expect(check.available).toBe(false);
+      expect(check.project).toBe('new-name');
+    });
+
+    it('preserves capabilities under the new name', () => {
+      registry.registerCapabilities('old-name', [
+        { name: 'search', capability_type: 'mcp-tool', description: 'Search' },
+      ]);
+      registry.renameProject('old-name', 'new-name');
+
+      const caps = registry.queryCapabilities({ project_name: 'new-name' });
+      expect(caps).toHaveLength(1);
+      expect(caps[0].name).toBe('search');
+
+      const oldCaps = registry.queryCapabilities({ project_name: 'old-name' });
+      expect(oldCaps).toHaveLength(0);
+    });
+
+    it('rewrites task references to the new name', () => {
+      registry.queueTask({ description: 'Build docs', project_name: 'old-name', schedule: 'now' });
+      registry.renameProject('old-name', 'new-name');
+
+      const tasks = registry.listTasks({ project_name: 'new-name' });
+      expect(tasks).toHaveLength(1);
+
+      const oldTasks = registry.listTasks({ project_name: 'old-name' });
+      expect(oldTasks).toHaveLength(0);
+    });
+
+    it('rewrites memory references to the new name', () => {
+      const dbFile = join(tmpDir, 'test.db');
+      const ms = new MemoryStore(dbFile);
+      ms.retain({ content: 'Use SQLite', type: 'decision', project_id: 'old-name' });
+
+      registry.renameProject('old-name', 'new-name');
+
+      const mr = new MemoryRetrieval(dbFile);
+      const results = mr.recall({ query: 'SQLite', project_id: 'new-name' });
+      expect(results.length).toBeGreaterThan(0);
+    });
+
+    it('preserves filesystem paths under the new name', () => {
+      registry.renameProject('old-name', 'new-name');
+      const proj = registry.getProject('new-name', 'full');
+      expect(proj!.paths).toContain('/tmp/old-name');
+    });
+
+    it('preserves extended fields and producer attribution', () => {
+      registry.updateFields('old-name', { tech_stack: ['typescript'] }, 'fctry');
+      registry.renameProject('old-name', 'new-name');
+
+      const proj = registry.getProject('new-name', 'full') as Record<string, unknown>;
+      const fields = proj.fields as Record<string, unknown>;
+      expect(fields.tech_stack).toBeDefined();
+    });
+
+    it('rejects rename to an existing project name', () => {
+      registry.register({ name: 'taken-name', type: 'project', status: 'active' });
+      expect(() => registry.renameProject('old-name', 'taken-name'))
+        .toThrow(/taken-name/);
+    });
+
+    it('throws NOT_FOUND for non-existent source name', () => {
+      expect(() => registry.renameProject('nonexistent', 'new-name'))
+        .toThrow('NOT_FOUND');
+    });
+
+    it('old name is available for re-registration after rename', () => {
+      registry.renameProject('old-name', 'new-name');
+      registry.register({ name: 'old-name', type: 'project', status: 'active' });
+      const proj = registry.getProject('old-name');
+      expect(proj).not.toBeNull();
     });
   });
 });
