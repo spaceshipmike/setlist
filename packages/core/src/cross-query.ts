@@ -168,6 +168,82 @@ export class CrossQuery {
     return results;
   }
 
+  portfolioBrief(): {
+    projects: { name: string; type: string; status: string; spec_version?: string; updated_at: string }[];
+    portfolio_memories: RecallResult[];
+    pending_observations: RecallResult[];
+    health_indicators: { project: string; issue: string }[];
+  } {
+    const db = this.open();
+    try {
+      // Active projects with basic identity
+      const projects = db.prepare(`
+        SELECT p.name, p.type, p.status, p.updated_at,
+               (SELECT pf.field_value FROM project_fields pf WHERE pf.project_id = p.id AND pf.field_name = 'spec_version') as spec_version
+        FROM projects p
+        WHERE p.status NOT IN ('archived')
+        ORDER BY p.name
+      `).all() as { name: string; type: string; status: string; updated_at: string; spec_version: string | null }[];
+
+      // Portfolio-scoped and global memories via recall (bootstrap mode)
+      const retrieval = new MemoryRetrieval(this._dbPath);
+      const portfolioMemories = retrieval.recall({
+        token_budget: 4000,
+      });
+
+      // Recent observation memories that haven't been acted on
+      const pendingObservations = db.prepare(`
+        SELECT id, content, content_l0, content_l1, type, scope, importance,
+               reinforcement_count, outcome_score, is_pinned, project_id,
+               created_at, updated_at
+        FROM memories
+        WHERE type = 'observation' AND status = 'active'
+        ORDER BY created_at DESC
+        LIMIT 20
+      `).all() as RecallResult[];
+      for (const obs of pendingObservations) {
+        obs.relevance_score = obs.importance ?? 0.5;
+      }
+
+      // Health indicators: stale projects (no update in 30+ days), projects missing capabilities
+      const healthIndicators: { project: string; issue: string }[] = [];
+      const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+
+      for (const p of projects) {
+        if (p.status === 'active' && p.updated_at < thirtyDaysAgo) {
+          healthIndicators.push({ project: p.name, issue: 'no registry update in 30+ days' });
+        }
+      }
+
+      const capCounts = db.prepare(`
+        SELECT p.name, COUNT(pc.id) as cap_count
+        FROM projects p
+        LEFT JOIN project_capabilities pc ON pc.project_id = p.id
+        WHERE p.status = 'active' AND p.type = 'project'
+        GROUP BY p.id
+        HAVING cap_count = 0
+      `).all() as { name: string; cap_count: number }[];
+      for (const row of capCounts) {
+        healthIndicators.push({ project: row.name, issue: 'no capabilities registered' });
+      }
+
+      return {
+        projects: projects.map(p => ({
+          name: p.name,
+          type: p.type,
+          status: p.status,
+          spec_version: p.spec_version ?? undefined,
+          updated_at: p.updated_at,
+        })),
+        portfolio_memories: portfolioMemories,
+        pending_observations: pendingObservations,
+        health_indicators: healthIndicators,
+      };
+    } finally {
+      db.close();
+    }
+  }
+
   private synthesize(results: CrossQueryResult[], query: string): string {
     if (results.length === 0) return `No results found for "${query}".`;
 

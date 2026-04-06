@@ -55,15 +55,15 @@ packages/
 ### Database
 
 Location: `~/.local/share/project-registry/registry.db`
-14 tables, schema v8, WAL mode, FTS5 for memory search.
+14 tables, schema v9, WAL mode, FTS5 for memory search.
 
-### 27 MCP Tools
+### 30 MCP Tools
 
-**Identity (10):** list_projects, get_project, switch_project, search_projects, get_registry_stats, register_project, update_project, archive_project, rename_project, batch_update
+**Identity (11):** list_projects, get_project, switch_project, search_projects, get_registry_stats, register_project, update_project, archive_project, rename_project, batch_update, write_fields
 
 **Capabilities (2):** register_capabilities, query_capabilities
 
-**Memory Agent (4):** retain, recall, feedback, memory_status
+**Memory Agent (5):** retain, recall, feedback, memory_status, portfolio_brief
 
 **Memory Admin (5):** reflect, correct, forget, inspect_memory, configure_memory
 

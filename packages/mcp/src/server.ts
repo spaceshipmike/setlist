@@ -32,14 +32,16 @@ export function createServer(dbPath?: string): Server {
       { name: 'archive_project', description: 'Archive a project (releases ports, clears capabilities).', inputSchema: { type: 'object' as const, properties: { name: { type: 'string' } }, required: ['name'] } },
       { name: 'rename_project', description: 'Rename a project atomically (rewrites all references).', inputSchema: { type: 'object' as const, properties: { name: { type: 'string' }, new_name: { type: 'string' } }, required: ['name', 'new_name'] } },
       { name: 'batch_update', description: 'Apply field changes to all projects matching a filter. Supports dry_run.', inputSchema: { type: 'object' as const, properties: { type_filter: { type: 'string' }, status_filter: { type: 'string' }, display_name: { type: 'string' }, status: { type: 'string' }, description: { type: 'string' }, goals: { type: 'string' }, dry_run: { type: 'boolean' } } } },
+      { name: 'write_fields', description: 'Write extended fields to a project (short_description, medium_description, tech_stack, etc.). Producer-owned: fields written by one producer are not overwritten by another.', inputSchema: { type: 'object' as const, properties: { project_name: { type: 'string' }, fields: { type: 'object', description: 'Key-value pairs of field names to values. Values can be strings or arrays.' }, producer: { type: 'string', default: 'system', description: 'Producer identity (e.g., "fctry", "chorus", "user")' } }, required: ['project_name', 'fields'] } },
       // Capabilities (2)
       { name: 'register_capabilities', description: 'Write a project\'s complete capability set (replace semantics).', inputSchema: { type: 'object' as const, properties: { project_name: { type: 'string' }, capabilities: { type: 'array' } }, required: ['project_name', 'capabilities'] } },
       { name: 'query_capabilities', description: 'Discover capabilities across the ecosystem by project, type, or keyword.', inputSchema: { type: 'object' as const, properties: { project_name: { type: 'string' }, type: { type: 'string' }, keyword: { type: 'string' } } } },
       // Memory Agent (4)
-      { name: 'retain', description: 'Store a memory. Suggestion: use recall() to retrieve.', inputSchema: { type: 'object' as const, properties: { content: { type: 'string' }, type: { type: 'string', enum: ['decision', 'outcome', 'pattern', 'preference', 'dependency', 'correction', 'skill'] }, project: { type: 'string' }, scope: { type: 'string', enum: ['project', 'area_of_focus', 'portfolio', 'global'] }, tags: { type: 'array', items: { type: 'string' } }, session_id: { type: 'string' }, agent_role: { type: 'string' } }, required: ['content', 'type'] } },
+      { name: 'retain', description: 'Store a memory. Suggestion: use recall() to retrieve.', inputSchema: { type: 'object' as const, properties: { content: { type: 'string' }, type: { type: 'string', enum: ['decision', 'outcome', 'pattern', 'preference', 'dependency', 'correction', 'skill', 'observation'] }, project: { type: 'string' }, scope: { type: 'string', enum: ['project', 'area_of_focus', 'portfolio', 'global'] }, tags: { type: 'array', items: { type: 'string' } }, session_id: { type: 'string' }, agent_role: { type: 'string' } }, required: ['content', 'type'] } },
       { name: 'recall', description: 'Retrieve relevant memories. Omit query for bootstrap mode. Suggestion: use retain() to capture new knowledge.', inputSchema: { type: 'object' as const, properties: { query: { type: 'string' }, project: { type: 'string' }, token_budget: { type: 'number' } } } },
       { name: 'feedback', description: 'Report a build outcome for memory reinforcement.', inputSchema: { type: 'object' as const, properties: { result: { type: 'string', enum: ['success', 'failure'] }, memory_ids: { type: 'array', items: { type: 'string' } } }, required: ['result', 'memory_ids'] } },
       { name: 'memory_status', description: 'Memory store health check. Suggestion: use reflect() for maintenance.', inputSchema: { type: 'object' as const, properties: {} } },
+      { name: 'portfolio_brief', description: 'Structured portfolio snapshot: active projects, portfolio memories, health indicators, pending observations. Use at session start for portfolio-level reasoning.', inputSchema: { type: 'object' as const, properties: {} } },
       // Memory Admin (5)
       { name: 'reflect', description: 'Trigger memory consolidation (admin tool).', inputSchema: { type: 'object' as const, properties: {} } },
       { name: 'correct', description: 'Create a correction memory superseding an existing one (admin tool).', inputSchema: { type: 'object' as const, properties: { memory_id: { type: 'string' }, correction: { type: 'string' } }, required: ['memory_id', 'correction'] } },
@@ -125,6 +127,14 @@ export function createServer(dbPath?: string): Server {
           registry.renameProject(a.name as string, a.new_name as string);
           result = { result: `Project '${a.name}' renamed to '${a.new_name}'.` };
           break;
+        case 'write_fields': {
+          const fields = a.fields as Record<string, unknown>;
+          const producer = (a.producer as string) ?? 'system';
+          registry.updateFields(a.project_name as string, fields, producer);
+          const fieldCount = Object.keys(fields).length;
+          result = { result: `${fieldCount} field(s) written to '${a.project_name}' by producer '${producer}'.` };
+          break;
+        }
         case 'batch_update':
           result = registry.batchUpdate({
             type_filter: a.type_filter as string | undefined,
@@ -190,6 +200,9 @@ export function createServer(dbPath?: string): Server {
           break;
         case 'memory_status':
           result = memoryStore.memoryStatus();
+          break;
+        case 'portfolio_brief':
+          result = crossQuery.portfolioBrief();
           break;
 
         // Memory Admin

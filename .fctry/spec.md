@@ -3,8 +3,8 @@
 ```yaml
 ---
 title: Setlist
-spec-version: "0.3"
-date: 2026-03-30
+spec-version: "0.5"
+date: 2026-04-06
 status: active
 author: Mike (via fctry interview, experience-ported from project-registry-service)
 spec-format: nlspec-v2
@@ -407,6 +407,23 @@ Projects declare their capabilities in the registry -- a structured map of every
 
 A capability is any integration surface another app, agent, or script might need to connect to. For code projects: MCP tools, CLI commands, API endpoints, databases, and library functions. For non-code projects and areas of focus: skills, agents, prompt templates, and workflows. The type field is an open string. Each capability declaration is rich: a name, a type, a description of what it does, what it accepts (inputs/parameters), and what it returns (output shape).
 
+**Granularity principle:**
+
+A capability is one callable thing — not a feature, not a category, not a summary of related functionality. The test: could an agent invoke this capability with a single call and get a result? If the answer is no, it is too coarse.
+
+- Each MCP tool is its own capability. A project exposing 40 MCP tools registers 40 capabilities, not 8 feature groups.
+- Each CLI command is its own capability.
+- Each API endpoint is its own capability.
+- Each library function meant for external consumption is its own capability.
+
+Do not register internal features, architectural patterns, or design decisions. "memory-system" is not a capability — `ctx_remember`, `ctx_search`, and `ctx_recall` are. "mail-triage" is not a capability if it names a workflow composed of multiple tools — register each tool individually.
+
+The name field should match the actual callable identifier (the MCP tool name, the CLI command, the endpoint path). The type field should be `tool`, `cli-command`, `api-endpoint`, `library`, `connector`, or another concrete integration type — never `feature`.
+
+Data sources and connectors are also valid capabilities. A connector represents a specific integration that brings external data into the project — each one individually registered. Connectors answer "what data sources does this project have access to?" which is valuable for cross-project discovery even though connectors are not directly invocable by an external agent.
+
+This matters because `query_capabilities` and `cross_query` match against individual capabilities. Bundled registrations hide the specific thing an agent is searching for inside a description blob, defeating the purpose of structured discovery.
+
 **Writing capabilities:**
 
 A producer writes a project's capabilities by providing the complete set of capability declarations for that project. Each write uses **replace semantics** -- the new set replaces the previous set entirely. This ensures the registry always reflects what the code actually exposes, not a stale accumulation.
@@ -465,8 +482,9 @@ Implementation note: better-sqlite3 is synchronous, which simplifies the hot pat
 - **dependency** -- A relationship between this project and something external.
 - **correction** -- An explicit "don't do that" or "actually, use this instead."
 - **skill** -- A capability or technique the agent has demonstrated.
+- **observation** -- A cross-project finding produced by portfolio intelligence — a pattern detected, a convergence opportunity identified, a drift noticed, or a dependency inferred. Observations are portfolio-scoped by default and carry a confidence indicator (verified vs. inferred). They represent compounding insight: each observation builds on what was previously retained, so portfolio intelligence improves across sessions rather than rediscovering from zero.
 
-**Per-type decay rates:** Different memory types fade at different rates during recall scoring. Corrections and preferences represent durable knowledge that should persist indefinitely -- they decay very slowly (rate 0.25). Decisions and dependencies decay at baseline rate (1.0). Outcomes and patterns decay faster (1.5) -- they are naturally ephemeral and should be displaced by newer observations. Skills decay at baseline (1.0). The decay rate multiplies the time-decay exponent in recall scoring: a memory with rate 0.25 takes 4x longer to fade than one with rate 1.0. This prevents important conventions from being buried by recent but trivial observations.
+**Per-type decay rates:** Different memory types fade at different rates during recall scoring. Corrections and preferences represent durable knowledge that should persist indefinitely -- they decay very slowly (rate 0.25). Decisions and dependencies decay at baseline rate (1.0). Outcomes and patterns decay faster (1.5) -- they are naturally ephemeral and should be displaced by newer observations. Skills decay at baseline (1.0). Observations decay slowly (rate 0.5) -- they represent analyzed cross-project findings that took effort to produce and should persist longer than raw outcomes, but not as permanently as corrections. The decay rate multiplies the time-decay exponent in recall scoring: a memory with rate 0.25 takes 4x longer to fade than one with rate 1.0. This prevents important conventions from being buried by recent but trivial observations.
 
 **Four-level scoping:**
 
@@ -508,7 +526,7 @@ Reflection performs five operations:
 Build outcomes feed back into the memory store. When a build succeeds, the memories that were recalled during that build session receive a positive outcome signal. When a build fails, those memories receive a negative signal. The outcome score uses exponential moving average (EMA) with alpha = 0.1.
 
 The feedback flow has two paths:
-- **Explicit builds:** fctry sends a post-build hook with the build result and the list of memory IDs that were recalled during the session.
+- **Explicit builds:** fctry reports outcomes per chunk, not per build. Each chunk commit triggers a success signal for all memory IDs that were recalled during bootstrap or error-triggered recall. Failed chunks (retries exhausted) receive a failure signal at build completion. The per-chunk granularity means memories are reinforced as work progresses, not batched at the end.
 - **Async tasks:** The worker automatically captures the task result and the memories that were part of the task context.
 
 **Correction flow:**
@@ -532,6 +550,20 @@ The embedding provider is a runtime configuration. Changing providers does not i
 - `recall` -- Retrieve relevant memories.
 - `feedback` -- Report a build outcome.
 - `memory_status` -- Quick health check.
+- `portfolio_brief` -- Structured portfolio snapshot for session start.
+
+**Portfolio brief:**
+
+`portfolio_brief` returns a structured snapshot of the portfolio's current state, designed as the starting point for any portfolio-level reasoning session. It assembles:
+
+- All active projects with status, type, spec version, and last activity timestamp
+- Portfolio-scoped and global-scoped memories (via an internal recall with no query, portfolio scope, and a generous token budget)
+- Known health indicators: projects with no recent commits, stale specs, missing capabilities, or unresolved drift observations
+- Recent observations (memory type `observation`) that haven't been acted on
+
+The response is structured data, not synthesized prose. The calling agent (e.g., the orchestrator) does the reasoning — `portfolio_brief` provides the raw material efficiently in a single call, replacing what would otherwise require `list_projects` + `recall` + multiple `get_project` calls.
+
+`portfolio_brief` does not read specs or code from disk. It returns only what setlist already knows from its database: registry fields, memories, and capability data. Filesystem reads are the calling agent's job.
 
 *Admin tools* (used for memory maintenance and debugging):
 - `reflect` -- Trigger a reflection cycle manually.
@@ -805,6 +837,7 @@ Everything the Python spec covers (project identity, fields, queries, migration,
 - npm distribution and package.json configuration
 - Schema v8 compatibility with the Python implementation (shared .db file)
 - Porting strategy from the 786 Python tests
+- Portfolio intelligence support: the `observation` memory type and `portfolio_brief` tool that enable external agents (orchestrator) to retain and recall cross-project findings
 
 **This spec does NOT cover (deferred, same as Python spec):**
 
@@ -1182,6 +1215,7 @@ Complete tool reference for the 27 MCP tools. All tools have identical names, pa
 | archive_project | name | Confirmation (ports released, capabilities cleared) |
 | rename_project | name, new_name | Confirmation (all references updated) |
 | batch_update | type_filter?, status_filter?, fields, dry_run? | Count and names of affected projects |
+| write_fields | project_name, fields, producer? | Count of fields written |
 
 **Capabilities:**
 
@@ -1198,6 +1232,7 @@ Complete tool reference for the 27 MCP tools. All tools have identical names, pa
 | recall | query?, project?, token_budget | Scored memories with tiered content |
 | feedback | result, memory_ids[] | Count updated, direction |
 | memory_status | (none) | Counts by type/scope, provider status |
+| portfolio_brief | (none) | Active projects, portfolio memories, health indicators, pending observations |
 
 **Memory — Admin:**
 

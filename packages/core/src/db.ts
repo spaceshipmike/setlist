@@ -3,7 +3,7 @@ import { existsSync, mkdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { homedir } from 'node:os';
 
-export const SCHEMA_VERSION = 8;
+export const SCHEMA_VERSION = 9;
 
 const DEFAULT_DB_DIR = join(homedir(), '.local', 'share', 'project-registry');
 const DEFAULT_DB_NAME = 'registry.db';
@@ -113,7 +113,7 @@ CREATE TABLE IF NOT EXISTS memories (
     content TEXT NOT NULL,
     content_l0 TEXT,
     content_l1 TEXT,
-    type TEXT NOT NULL CHECK (type IN ('decision', 'outcome', 'pattern', 'preference', 'dependency', 'correction', 'skill')),
+    type TEXT NOT NULL CHECK (type IN ('decision', 'outcome', 'pattern', 'preference', 'dependency', 'correction', 'skill', 'observation')),
     importance REAL DEFAULT 0.5,
     confidence REAL DEFAULT 0.5,
     status TEXT DEFAULT 'active' CHECK (status IN ('active', 'consolidating', 'archived', 'superseded')),
@@ -329,9 +329,30 @@ function seedTemplates(db: Database.Database): void {
   }
 }
 
+function ensureColumns(db: Database.Database): void {
+  // Guard against tables created by an older version (e.g. Python registry)
+  // where CREATE TABLE IF NOT EXISTS was a no-op on the existing table.
+  const capCols = db.prepare("PRAGMA table_info(project_capabilities)").all() as { name: string }[];
+  const capColNames = new Set(capCols.map(c => c.name));
+  if (!capColNames.has('requires_auth')) {
+    db.exec(`ALTER TABLE project_capabilities ADD COLUMN requires_auth INTEGER`);
+  }
+  if (!capColNames.has('invocation_model')) {
+    db.exec(`ALTER TABLE project_capabilities ADD COLUMN invocation_model TEXT NOT NULL DEFAULT ''`);
+  }
+  if (!capColNames.has('audience')) {
+    db.exec(`ALTER TABLE project_capabilities ADD COLUMN audience TEXT NOT NULL DEFAULT ''`);
+  }
+}
+
 function upgradeSchema(db: Database.Database): void {
   const meta = db.prepare("SELECT value FROM schema_meta WHERE key = 'schema_version'").get() as { value: string } | undefined;
   const currentVersion = meta ? parseInt(meta.value, 10) : 0;
+
+  // Always ensure columns exist, even if schema version matches.
+  // CREATE TABLE IF NOT EXISTS is a no-op on existing tables, so columns
+  // added after the table was first created may be missing.
+  ensureColumns(db);
 
   if (currentVersion >= SCHEMA_VERSION) return;
 
@@ -371,6 +392,64 @@ function upgradeSchema(db: Database.Database): void {
       db.exec(`ALTER TABLE memories ADD COLUMN is_pinned INTEGER DEFAULT 0`);
       db.exec(`CREATE INDEX IF NOT EXISTS idx_memories_pinned ON memories(is_pinned, status)`);
     } catch { /* column may already exist */ }
+  }
+
+  if (currentVersion < 9) {
+    // v8 → v9: add 'observation' to memories type CHECK constraint.
+    // SQLite cannot ALTER CHECK constraints, so recreate the table.
+    const hasMemories = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='memories'").get();
+    if (hasMemories) {
+      // Clean up any leftover from a previously interrupted migration
+      db.exec(`DROP TABLE IF EXISTS memories_v9`);
+      // Temporarily disable foreign keys for the table swap
+      db.pragma('foreign_keys = OFF');
+      db.exec(`
+        CREATE TABLE memories_v9 (
+            id TEXT PRIMARY KEY,
+            content TEXT NOT NULL,
+            content_l0 TEXT,
+            content_l1 TEXT,
+            type TEXT NOT NULL CHECK (type IN ('decision', 'outcome', 'pattern', 'preference', 'dependency', 'correction', 'skill', 'observation')),
+            importance REAL DEFAULT 0.5,
+            confidence REAL DEFAULT 0.5,
+            status TEXT DEFAULT 'active' CHECK (status IN ('active', 'consolidating', 'archived', 'superseded')),
+            project_id TEXT,
+            scope TEXT DEFAULT 'project' CHECK (scope IN ('project', 'area_of_focus', 'portfolio', 'global')),
+            agent_role TEXT,
+            session_id TEXT,
+            tags TEXT,
+            content_hash TEXT NOT NULL,
+            embedding BLOB,
+            embedding_model TEXT,
+            embedding_new BLOB,
+            embedding_model_new TEXT,
+            reinforcement_count INTEGER DEFAULT 1,
+            outcome_score REAL DEFAULT 0.0,
+            is_static INTEGER DEFAULT 0,
+            is_inference INTEGER DEFAULT 0,
+            is_pinned INTEGER DEFAULT 0,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL,
+            last_accessed TEXT,
+            forget_after TEXT,
+            forget_reason TEXT,
+            UNIQUE(content_hash, project_id, scope)
+        );
+        INSERT INTO memories_v9 SELECT * FROM memories;
+        DROP TABLE memories;
+        ALTER TABLE memories_v9 RENAME TO memories;
+        CREATE INDEX IF NOT EXISTS idx_memories_status ON memories(status);
+        CREATE INDEX IF NOT EXISTS idx_memories_project ON memories(project_id);
+        CREATE INDEX IF NOT EXISTS idx_memories_scope ON memories(scope);
+        CREATE INDEX IF NOT EXISTS idx_memories_type ON memories(type);
+        CREATE INDEX IF NOT EXISTS idx_memories_hash ON memories(content_hash);
+        CREATE INDEX IF NOT EXISTS idx_memories_pinned ON memories(is_pinned, status);
+      `);
+      // Recreate FTS triggers dropped with the old table
+      createFtsTriggers(db);
+      // Re-enable foreign keys
+      db.pragma('foreign_keys = ON');
+    }
   }
 
   db.prepare("INSERT OR REPLACE INTO schema_meta (key, value) VALUES ('schema_version', ?)").run(String(SCHEMA_VERSION));

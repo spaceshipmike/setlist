@@ -189,6 +189,18 @@ export class MemoryRetrieval {
     return rows.map((r, idx) => this.rowToResult(r, 0.5 / (idx + 1)));
   }
 
+  // Per-type decay rate multipliers (spec §2.12): lower = slower decay
+  private static DECAY_RATES: Record<string, number> = {
+    correction: 0.25,
+    preference: 0.25,
+    observation: 0.5,
+    decision: 1.0,
+    dependency: 1.0,
+    skill: 1.0,
+    outcome: 1.5,
+    pattern: 1.5,
+  };
+
   private scoreAndRank(results: RecallResult[]): RecallResult[] {
     // Composite scoring: combine relevance, reinforcement, recency, outcome
     for (const r of results) {
@@ -196,9 +208,10 @@ export class MemoryRetrieval {
       const outcomeBoost = r.outcome_score * 0.2;
       const pinnedBoost = r.is_pinned ? 10.0 : 0;
 
-      // Recency: days since update, decay factor
+      // Recency: days since update, decay factor adjusted by type
+      const decayRate = MemoryRetrieval.DECAY_RATES[r.type] ?? 1.0;
       const daysSinceUpdate = (Date.now() - new Date(r.updated_at).getTime()) / (1000 * 60 * 60 * 24);
-      const recencyFactor = Math.exp(-daysSinceUpdate / 30); // 30-day half-life
+      const recencyFactor = Math.exp(-(daysSinceUpdate * decayRate) / 30); // 30-day base half-life
 
       r.relevance_score = r.relevance_score + reinforcementBoost * 0.1 + outcomeBoost + pinnedBoost + recencyFactor * 0.2;
     }

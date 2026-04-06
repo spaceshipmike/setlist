@@ -16,7 +16,7 @@ export type ProjectType = 'project' | 'area_of_focus';
 export type ProjectStatus = 'idea' | 'draft' | 'active' | 'paused' | 'archived' | 'complete';
 export type QueryDepth = 'minimal' | 'summary' | 'standard' | 'full';
 
-export type MemoryType = 'decision' | 'outcome' | 'pattern' | 'preference' | 'dependency' | 'correction' | 'skill';
+export type MemoryType = 'decision' | 'outcome' | 'pattern' | 'preference' | 'dependency' | 'correction' | 'skill' | 'observation';
 export type MemoryScope = 'project' | 'area_of_focus' | 'portfolio' | 'global';
 export type MemoryStatus = 'active' | 'consolidating' | 'archived' | 'superseded';
 export type MemoryEdgeType = 'updates' | 'extends' | 'derives' | 'contradicts' | 'caused_by' | 'related_to';
@@ -25,7 +25,7 @@ export type TaskSchedule = 'now' | 'tonight' | 'weekly';
 export type TaskStatus = 'pending' | 'running' | 'completed' | 'failed';
 
 export const MEMORY_TYPES = new Set<MemoryType>([
-  'decision', 'outcome', 'pattern', 'preference', 'dependency', 'correction', 'skill',
+  'decision', 'outcome', 'pattern', 'preference', 'dependency', 'correction', 'skill', 'observation',
 ]);
 
 export const MEMORY_SCOPES = new Set<MemoryScope>([
