@@ -36,6 +36,13 @@ export interface RecallResult {
   is_pinned: boolean;
   relevance_score: number;
   project_id: string | null;
+  belief: string | null;
+  extraction_confidence: number | null;
+  valid_from: string | null;
+  valid_until: string | null;
+  entities: string | null;
+  parent_version_id: string | null;
+  is_current: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -102,8 +109,10 @@ export class MemoryRetrieval {
 
   private bootstrapRecall(db: Database.Database, projectId: string | null | undefined): RecallResult[] {
     // Bootstrap: return pinned memories first, then highest-scored active memories
+    // Filter out superseded procedural memories (is_current = false)
     let sql = `
       SELECT * FROM memories WHERE status = 'active'
+      AND (type != 'procedural' OR is_current = 1)
     `;
     const params: unknown[] = [];
 
@@ -143,6 +152,7 @@ export class MemoryRetrieval {
           JOIN memories m ON m.id = fts.memory_id
           WHERE memory_fts MATCH ?
             AND m.status = 'active'
+            AND (m.type != 'procedural' OR m.is_current = 1)
             AND (m.project_id = ? OR m.scope IN ('portfolio', 'global'))
           ORDER BY fts.rank
           LIMIT 50
@@ -155,6 +165,7 @@ export class MemoryRetrieval {
           JOIN memories m ON m.id = fts.memory_id
           WHERE memory_fts MATCH ?
             AND m.status = 'active'
+            AND (m.type != 'procedural' OR m.is_current = 1)
           ORDER BY fts.rank
           LIMIT 50
         `;
@@ -174,6 +185,7 @@ export class MemoryRetrieval {
     let sql = `
       SELECT * FROM memories
       WHERE status = 'active'
+      AND (type != 'procedural' OR is_current = 1)
       AND (content LIKE ? OR content_l0 LIKE ?)
     `;
     const params: unknown[] = [likeQ, likeQ];
@@ -193,12 +205,14 @@ export class MemoryRetrieval {
   private static DECAY_RATES: Record<string, number> = {
     correction: 0.25,
     preference: 0.25,
+    procedural: 0.5,
     observation: 0.5,
     decision: 1.0,
     dependency: 1.0,
-    skill: 1.0,
+    learning: 1.0,
     outcome: 1.5,
     pattern: 1.5,
+    context: 2.0,
   };
 
   private scoreAndRank(results: RecallResult[]): RecallResult[] {
@@ -213,7 +227,16 @@ export class MemoryRetrieval {
       const daysSinceUpdate = (Date.now() - new Date(r.updated_at).getTime()) / (1000 * 60 * 60 * 24);
       const recencyFactor = Math.exp(-(daysSinceUpdate * decayRate) / 30); // 30-day base half-life
 
-      r.relevance_score = r.relevance_score + reinforcementBoost * 0.1 + outcomeBoost + pinnedBoost + recencyFactor * 0.2;
+      // Temporal validity penalty: expired memories get scored down
+      let temporalPenalty = 0;
+      if (r.valid_until) {
+        const expiryMs = new Date(r.valid_until).getTime();
+        if (expiryMs < Date.now()) {
+          temporalPenalty = -0.3; // Expired but not hidden
+        }
+      }
+
+      r.relevance_score = r.relevance_score + reinforcementBoost * 0.1 + outcomeBoost + pinnedBoost + recencyFactor * 0.2 + temporalPenalty;
     }
 
     // Sort by score descending
@@ -246,6 +269,13 @@ export class MemoryRetrieval {
       is_pinned: Boolean(row.is_pinned),
       relevance_score: baseScore,
       project_id: row.project_id as string | null,
+      belief: row.belief as string | null,
+      extraction_confidence: row.extraction_confidence as number | null,
+      valid_from: row.valid_from as string | null,
+      valid_until: row.valid_until as string | null,
+      entities: row.entities as string | null,
+      parent_version_id: row.parent_version_id as string | null,
+      is_current: row.is_current == null ? true : Boolean(row.is_current),
       created_at: row.created_at as string,
       updated_at: row.updated_at as string,
     };

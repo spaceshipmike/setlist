@@ -1,7 +1,7 @@
 import { createHash, randomUUID } from 'node:crypto';
 import type Database from 'better-sqlite3';
 import { connect, getDbPath, initDb } from './db.js';
-import { type MemoryType, type MemoryScope, MEMORY_TYPES, MEMORY_SCOPES } from './models.js';
+import { type MemoryType, type MemoryScope, type MemoryBelief, MEMORY_TYPES, MEMORY_SCOPES, MEMORY_BELIEFS } from './models.js';
 import { InvalidInputError, NotFoundError } from './errors.js';
 
 const CORRECTION_MIN_IMPORTANCE = 0.9;
@@ -51,6 +51,12 @@ export class MemoryStore {
     is_inference?: boolean;
     is_pinned?: boolean;
     forget_after?: string | null;
+    belief?: string | null;
+    extraction_confidence?: number | null;
+    valid_from?: string | null;
+    valid_until?: string | null;
+    entities?: Array<{ name: string; type: string }> | null;
+    parent_version_id?: string | null;
   }): { memory_id: string; is_new: boolean; reinforcement_count: number } {
     if (!MEMORY_TYPES.has(opts.type as MemoryType)) {
       throw new InvalidInputError(`Unknown memory type '${opts.type}'. Allowed: ${[...MEMORY_TYPES].join(', ')}`);
@@ -63,6 +69,31 @@ export class MemoryStore {
 
     if (opts.scope && !MEMORY_SCOPES.has(opts.scope as MemoryScope)) {
       throw new InvalidInputError(`Unknown scope '${opts.scope}'. Allowed: ${[...MEMORY_SCOPES].join(', ')}`);
+    }
+
+    // Validate belief
+    if (opts.belief != null && !MEMORY_BELIEFS.has(opts.belief as MemoryBelief)) {
+      throw new InvalidInputError(`Unknown belief '${opts.belief}'. Allowed: ${[...MEMORY_BELIEFS].join(', ')}`);
+    }
+
+    // Validate entities
+    if (opts.entities != null) {
+      if (!Array.isArray(opts.entities)) {
+        throw new InvalidInputError('Entities must be an array');
+      }
+      for (const e of opts.entities) {
+        if (!e.name || typeof e.name !== 'string' || !e.type || typeof e.type !== 'string') {
+          throw new InvalidInputError('Each entity must have a name (string) and type (string)');
+        }
+      }
+    }
+
+    // Context memories cannot be pinned
+    const isPinned = opts.type === 'context' ? false : (opts.is_pinned ?? false);
+
+    // parent_version_id only valid for procedural type
+    if (opts.parent_version_id != null && opts.type !== 'procedural') {
+      throw new InvalidInputError('parent_version_id is only valid for procedural type memories');
     }
 
     let importance = opts.importance ?? 0.5;
@@ -98,6 +129,20 @@ export class MemoryStore {
       // Insert new memory
       const memoryId = newId();
       const tagsStr = opts.tags ? JSON.stringify(opts.tags) : null;
+      const entitiesStr = opts.entities ? JSON.stringify(opts.entities) : null;
+
+      // Validate parent_version_id if provided
+      if (opts.parent_version_id != null) {
+        const parent = db.prepare('SELECT id, type, is_current FROM memories WHERE id = ? AND status = ?').get(opts.parent_version_id, 'active') as { id: string; type: string; is_current: number } | undefined;
+        if (!parent) {
+          throw new NotFoundError(`Parent memory '${opts.parent_version_id}' not found or not active`);
+        }
+        if (parent.type !== 'procedural') {
+          throw new InvalidInputError(`Parent memory '${opts.parent_version_id}' is type '${parent.type}', not 'procedural'`);
+        }
+        // Set parent's is_current to false
+        db.prepare('UPDATE memories SET is_current = 0, updated_at = ? WHERE id = ?').run(now, opts.parent_version_id);
+      }
 
       db.prepare(`
         INSERT INTO memories (
@@ -105,14 +150,20 @@ export class MemoryStore {
           project_id, scope, agent_role, session_id, tags,
           content_hash, reinforcement_count, outcome_score,
           is_static, is_inference, is_pinned,
+          belief, extraction_confidence, valid_from, valid_until, entities,
+          parent_version_id, is_current,
           created_at, updated_at, forget_after
-        ) VALUES (?, ?, ?, ?, 0.5, 'active', ?, ?, ?, ?, ?, ?, 1, 0.0, ?, ?, ?, ?, ?, ?)
+        ) VALUES (?, ?, ?, ?, 0.5, 'active', ?, ?, ?, ?, ?, ?, 1, 0.0, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?)
       `).run(
         memoryId, opts.content, opts.type, importance,
         opts.project_id ?? null, scope, opts.agent_role ?? null,
         opts.session_id ?? null, tagsStr,
         hash, opts.is_static ? 1 : 0, opts.is_inference ? 1 : 0,
-        opts.is_pinned ? 1 : 0, now, now, opts.forget_after ?? null,
+        isPinned ? 1 : 0,
+        opts.belief ?? null, opts.extraction_confidence ?? null,
+        opts.valid_from ?? null, opts.valid_until ?? null, entitiesStr,
+        opts.parent_version_id ?? null,
+        now, now, opts.forget_after ?? null,
       );
 
       // Create version record

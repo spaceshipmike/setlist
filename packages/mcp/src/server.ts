@@ -37,7 +37,7 @@ export function createServer(dbPath?: string): Server {
       { name: 'register_capabilities', description: 'Write a project\'s complete capability set (replace semantics).', inputSchema: { type: 'object' as const, properties: { project_name: { type: 'string' }, capabilities: { type: 'array' } }, required: ['project_name', 'capabilities'] } },
       { name: 'query_capabilities', description: 'Discover capabilities across the ecosystem by project, type, or keyword.', inputSchema: { type: 'object' as const, properties: { project_name: { type: 'string' }, type: { type: 'string' }, keyword: { type: 'string' } } } },
       // Memory Agent (4)
-      { name: 'retain', description: 'Store a memory. Suggestion: use recall() to retrieve.', inputSchema: { type: 'object' as const, properties: { content: { type: 'string' }, type: { type: 'string', enum: ['decision', 'outcome', 'pattern', 'preference', 'dependency', 'correction', 'skill', 'observation'] }, project: { type: 'string' }, scope: { type: 'string', enum: ['project', 'area_of_focus', 'portfolio', 'global'] }, tags: { type: 'array', items: { type: 'string' } }, session_id: { type: 'string' }, agent_role: { type: 'string' } }, required: ['content', 'type'] } },
+      { name: 'retain', description: 'Store a memory. Suggestion: use recall() to retrieve.', inputSchema: { type: 'object' as const, properties: { content: { type: 'string' }, type: { type: 'string', enum: ['decision', 'outcome', 'pattern', 'preference', 'dependency', 'correction', 'learning', 'context', 'procedural', 'observation'] }, project: { type: 'string' }, scope: { type: 'string', enum: ['project', 'area_of_focus', 'portfolio', 'global'] }, tags: { type: 'array', items: { type: 'string' } }, session_id: { type: 'string' }, agent_role: { type: 'string' }, belief: { type: 'string', enum: ['fact', 'opinion', 'hypothesis'] }, extraction_confidence: { type: 'number' }, valid_from: { type: 'string' }, valid_until: { type: 'string' }, entities: { type: 'array', items: { type: 'object', properties: { name: { type: 'string' }, type: { type: 'string' } }, required: ['name', 'type'] } }, parent_version_id: { type: 'string' } }, required: ['content', 'type'] } },
       { name: 'recall', description: 'Retrieve relevant memories. Omit query for bootstrap mode. Suggestion: use retain() to capture new knowledge.', inputSchema: { type: 'object' as const, properties: { query: { type: 'string' }, project: { type: 'string' }, token_budget: { type: 'number' } } } },
       { name: 'feedback', description: 'Report a build outcome for memory reinforcement.', inputSchema: { type: 'object' as const, properties: { result: { type: 'string', enum: ['success', 'failure'] }, memory_ids: { type: 'array', items: { type: 'string' } } }, required: ['result', 'memory_ids'] } },
       { name: 'memory_status', description: 'Memory store health check. Suggestion: use reflect() for maintenance.', inputSchema: { type: 'object' as const, properties: {} } },
@@ -181,6 +181,12 @@ export function createServer(dbPath?: string): Server {
             tags: a.tags as string[] | undefined,
             session_id: a.session_id as string | undefined,
             agent_role: a.agent_role as string | undefined,
+            belief: a.belief as string | undefined,
+            extraction_confidence: a.extraction_confidence as number | undefined,
+            valid_from: a.valid_from as string | undefined,
+            valid_until: a.valid_until as string | undefined,
+            entities: a.entities as Array<{ name: string; type: string }> | undefined,
+            parent_version_id: a.parent_version_id as string | undefined,
           });
           result = retainResult;
           break;
