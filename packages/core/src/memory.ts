@@ -4,6 +4,9 @@ import { connect, getDbPath, initDb } from './db.js';
 import { type MemoryType, type MemoryScope, type MemoryBelief, MEMORY_TYPES, MEMORY_SCOPES, MEMORY_BELIEFS } from './models.js';
 import { InvalidInputError, NotFoundError } from './errors.js';
 
+// Types that warrant proactive contradiction detection (spec §2.12)
+const CONTRADICTION_TYPES = new Set<string>(['preference', 'correction', 'learning']);
+
 const CORRECTION_MIN_IMPORTANCE = 0.9;
 const EMA_ALPHA = 0.1;
 
@@ -57,7 +60,7 @@ export class MemoryStore {
     valid_until?: string | null;
     entities?: Array<{ name: string; type: string }> | null;
     parent_version_id?: string | null;
-  }): { memory_id: string; is_new: boolean; reinforcement_count: number } {
+  }): { memory_id: string; is_new: boolean; reinforcement_count: number; potential_conflicts?: Array<{ id: string; content: string; type: string }> } {
     if (!MEMORY_TYPES.has(opts.type as MemoryType)) {
       throw new InvalidInputError(`Unknown memory type '${opts.type}'. Allowed: ${[...MEMORY_TYPES].join(', ')}`);
     }
@@ -126,6 +129,14 @@ export class MemoryStore {
         return { memory_id: existing.id, is_new: false, reinforcement_count: newCount };
       }
 
+      // Proactive contradiction detection (spec §2.12):
+      // For preference/correction/learning types, search for existing active memories
+      // with the same project scope that may contradict this new memory.
+      let potentialConflicts: Array<{ id: string; content: string; type: string }> | undefined;
+      if (CONTRADICTION_TYPES.has(opts.type)) {
+        potentialConflicts = this.detectConflicts(db, opts.content, opts.type, opts.project_id ?? null, scope);
+      }
+
       // Insert new memory
       const memoryId = newId();
       const tagsStr = opts.tags ? JSON.stringify(opts.tags) : null;
@@ -182,9 +193,83 @@ export class MemoryStore {
         `).run(sourceId, memoryId, opts.project_id ?? null, opts.session_id ?? null, opts.agent_role ?? null, now);
       }
 
-      return { memory_id: memoryId, is_new: true, reinforcement_count: 1 };
+      const result: { memory_id: string; is_new: boolean; reinforcement_count: number; potential_conflicts?: Array<{ id: string; content: string; type: string }> } = {
+        memory_id: memoryId, is_new: true, reinforcement_count: 1,
+      };
+      if (potentialConflicts && potentialConflicts.length > 0) {
+        result.potential_conflicts = potentialConflicts;
+      }
+      return result;
     } finally {
       db.close();
+    }
+  }
+
+  // ── Conflict Detection ───────────────────────────────────
+
+  private detectConflicts(
+    db: Database.Database,
+    content: string,
+    type: string,
+    projectId: string | null,
+    scope: string,
+  ): Array<{ id: string; content: string; type: string }> {
+    // Use FTS5 to find existing active memories with similar content
+    // in the same project scope and type family
+    const words = content
+      .replace(/[*"(){}[\]^~\\:]/g, ' ')
+      .replace(/\b(AND|OR|NOT|NEAR)\b/gi, '')
+      .trim()
+      .split(/\s+/)
+      .filter(t => t.length > 2); // skip short words
+
+    if (words.length === 0) return [];
+
+    // Use the most distinctive words (up to 5) for the FTS5 query
+    const queryTerms = words.slice(0, 5).map(t => `"${t}"`).join(' OR ');
+
+    try {
+      let sql: string;
+      const params: unknown[] = [queryTerms];
+
+      if (projectId) {
+        sql = `
+          SELECT m.id, m.content, m.type, m.content_hash
+          FROM memory_fts fts
+          JOIN memories m ON m.id = fts.memory_id
+          WHERE memory_fts MATCH ?
+            AND m.status = 'active'
+            AND m.type = ?
+            AND (m.project_id = ? OR m.scope IN ('portfolio', 'global'))
+          ORDER BY fts.rank
+          LIMIT 5
+        `;
+        params.push(type, projectId);
+      } else {
+        sql = `
+          SELECT m.id, m.content, m.type, m.content_hash
+          FROM memory_fts fts
+          JOIN memories m ON m.id = fts.memory_id
+          WHERE memory_fts MATCH ?
+            AND m.status = 'active'
+            AND m.type = ?
+            AND m.scope = ?
+          ORDER BY fts.rank
+          LIMIT 5
+        `;
+        params.push(type, scope);
+      }
+
+      const rows = db.prepare(sql).all(...params) as Array<{ id: string; content: string; type: string; content_hash: string }>;
+
+      // Exclude exact dedup matches (same content hash)
+      const newHash = contentHash(type, normalizeContent(content));
+      return rows
+        .filter(r => r.content_hash !== newHash)
+        .map(r => ({ id: r.id, content: r.content, type: r.type }));
+    } catch {
+      // FTS5 query failure — skip conflict detection silently
+      return [];
     }
   }
 

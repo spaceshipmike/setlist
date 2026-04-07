@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { mkdtempSync, rmSync, writeFileSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
-import { Registry, MemoryStore, MemoryRetrieval, MemoryReflection, connect, initDb } from '../src/index.js';
+import { Registry, MemoryStore, MemoryRetrieval, MemoryReflection, classifyIntent, connect, initDb } from '../src/index.js';
 
 describe('Edge Cases — Project Identity', () => {
   let tmpDir: string;
@@ -402,5 +402,120 @@ describe('Edge Cases — Reflection', () => {
 
     const result = reflection.reflect();
     expect(result.edges_created).toBeGreaterThan(0);
+  });
+});
+
+// ── Type-Priority Budget Allocation ─────────────────────────
+
+describe('Type-priority budget allocation', () => {
+  let tmpDir: string;
+  let dbPath: string;
+  let store: MemoryStore;
+  let retrieval: MemoryRetrieval;
+
+  beforeEach(() => {
+    tmpDir = mkdtempSync(join(tmpdir(), 'setlist-tier-'));
+    dbPath = join(tmpDir, 'test.db');
+    store = new MemoryStore(dbPath);
+    retrieval = new MemoryRetrieval(dbPath);
+  });
+
+  afterEach(() => {
+    rmSync(tmpDir, { recursive: true, force: true });
+  });
+
+  it('returns corrections before patterns when budget is tight', () => {
+    // Create a pattern first (lower tier)
+    store.retain({ content: 'SQLite pattern for database optimization', type: 'pattern', project_id: 'proj' });
+    // Create a correction (higher tier)
+    store.retain({ content: 'SQLite correction always use WAL mode', type: 'correction', project_id: 'proj' });
+
+    // Very tight budget — should prefer correction
+    const results = retrieval.recall({ query: 'SQLite', project_id: 'proj', token_budget: 50 });
+    expect(results.length).toBeGreaterThan(0);
+    expect(results[0].type).toBe('correction');
+  });
+
+  it('returns preferences before context memories', () => {
+    store.retain({ content: 'SQLite context information about setup', type: 'context', project_id: 'proj' });
+    store.retain({ content: 'SQLite preference always use better-sqlite3', type: 'preference', project_id: 'proj' });
+
+    const results = retrieval.recall({ query: 'SQLite', project_id: 'proj', token_budget: 50 });
+    expect(results.length).toBeGreaterThan(0);
+    expect(results[0].type).toBe('preference');
+  });
+});
+
+// ── Query Intent Classification ─────────────────────────────
+
+describe('Query intent classification', () => {
+  it('classifies temporal queries', () => {
+    expect(classifyIntent('what changed recently')).toBe('temporal');
+    expect(classifyIntent('latest updates since yesterday')).toBe('temporal');
+  });
+
+  it('classifies factual queries', () => {
+    expect(classifyIntent('what is the database schema')).toBe('factual');
+    expect(classifyIntent('how does the migration work')).toBe('factual');
+  });
+
+  it('classifies relational queries', () => {
+    expect(classifyIntent('who depends on the registry')).toBe('relational');
+    expect(classifyIntent('relationship between ctx and chorus')).toBe('relational');
+  });
+
+  it('defaults to exploratory for ambiguous queries', () => {
+    expect(classifyIntent('SQLite storage')).toBe('exploratory');
+    expect(classifyIntent('memory system')).toBe('exploratory');
+  });
+});
+
+// ── Proactive Contradiction Detection ───────────────────────
+
+describe('Proactive contradiction detection', () => {
+  let tmpDir: string;
+  let dbPath: string;
+  let store: MemoryStore;
+
+  beforeEach(() => {
+    tmpDir = mkdtempSync(join(tmpdir(), 'setlist-conflict-'));
+    dbPath = join(tmpDir, 'test.db');
+    store = new MemoryStore(dbPath);
+  });
+
+  afterEach(() => {
+    rmSync(tmpDir, { recursive: true, force: true });
+  });
+
+  it('flags potential conflicts for preference type', () => {
+    store.retain({ content: 'Always use PostgreSQL for production databases', type: 'preference', project_id: 'proj' });
+    const result = store.retain({ content: 'Always use MySQL for production databases', type: 'preference', project_id: 'proj' });
+
+    expect(result.is_new).toBe(true);
+    expect(result.potential_conflicts).toBeDefined();
+    expect(result.potential_conflicts!.length).toBeGreaterThan(0);
+    expect(result.potential_conflicts![0].content).toContain('PostgreSQL');
+  });
+
+  it('does not flag conflicts for decision type', () => {
+    store.retain({ content: 'Use SQLite for the registry database', type: 'decision', project_id: 'proj' });
+    const result = store.retain({ content: 'Use PostgreSQL for the registry database', type: 'decision', project_id: 'proj' });
+
+    expect(result.potential_conflicts).toBeUndefined();
+  });
+
+  it('does not flag exact duplicates as conflicts', () => {
+    store.retain({ content: 'Always use WAL mode for SQLite', type: 'preference', project_id: 'proj' });
+    // Same content = dedup, not conflict
+    const result = store.retain({ content: 'Always use WAL mode for SQLite', type: 'preference', project_id: 'proj' });
+
+    expect(result.is_new).toBe(false);
+    expect(result.potential_conflicts).toBeUndefined();
+  });
+
+  it('returns no conflicts when none exist', () => {
+    const result = store.retain({ content: 'Completely unique preference about testing', type: 'preference', project_id: 'proj' });
+    // No prior memories to conflict with
+    expect(result.potential_conflicts).toBeUndefined();
   });
 });

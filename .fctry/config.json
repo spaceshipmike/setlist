@@ -46,5 +46,5 @@
     "freshAudit": "codex",
     "localPrefilter": "oss"
   },
-  "formatVersion": "0.78.17"
+  "formatVersion": "0.79.0"
 }

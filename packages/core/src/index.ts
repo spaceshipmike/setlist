@@ -4,7 +4,7 @@ export * from './errors.js';
 export { serializeFieldValue, deserializeFieldValue, writeFields } from './fields.js';
 export { Registry, PORT_RANGE_MIN, PORT_RANGE_MAX } from './registry.js';
 export { MemoryStore } from './memory.js';
-export { MemoryRetrieval, type RecallResult } from './memory-retrieval.js';
+export { MemoryRetrieval, classifyIntent, type RecallResult, type QueryIntent } from './memory-retrieval.js';
 export { CrossQuery } from './cross-query.js';
 export { discoverPortsInPath, type DiscoveredPort } from './port-discovery.js';
 export { MemoryReflection, type ReflectionResult } from './memory-reflection.js';

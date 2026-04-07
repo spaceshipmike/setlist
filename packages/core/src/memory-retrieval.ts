@@ -47,6 +47,33 @@ export interface RecallResult {
   updated_at: string;
 }
 
+export type QueryIntent = 'temporal' | 'factual' | 'relational' | 'exploratory';
+
+const TEMPORAL_PATTERNS = /\b(recent|latest|last|today|yesterday|this week|this month|when|since|ago|new|updated|changed)\b/i;
+const FACTUAL_PATTERNS = /\b(what is|what are|how does|how do|define|exactly|specific|which|where is|does it|is there)\b/i;
+const RELATIONAL_PATTERNS = /\b(who|between|relationship|related|connected|depends|dependency|linked|affects|impacts|uses|used by)\b/i;
+
+export function classifyIntent(query: string): QueryIntent {
+  const temporal = TEMPORAL_PATTERNS.test(query);
+  const factual = FACTUAL_PATTERNS.test(query);
+  const relational = RELATIONAL_PATTERNS.test(query);
+
+  // If multiple match, prefer the strongest signal
+  if (relational && !temporal && !factual) return 'relational';
+  if (temporal && !factual) return 'temporal';
+  if (factual && !temporal) return 'factual';
+
+  return 'exploratory';
+}
+
+// Weight profiles per intent: multipliers for scoring components
+const INTENT_WEIGHTS: Record<QueryIntent, { relevance: number; recency: number; reinforcement: number; outcome: number }> = {
+  temporal:     { relevance: 0.6, recency: 1.5, reinforcement: 0.1, outcome: 0.2 },
+  factual:      { relevance: 1.5, recency: 0.5, reinforcement: 0.1, outcome: 0.2 },
+  relational:   { relevance: 1.0, recency: 0.8, reinforcement: 0.3, outcome: 0.2 },
+  exploratory:  { relevance: 1.0, recency: 1.0, reinforcement: 0.1, outcome: 0.2 },
+};
+
 export class MemoryRetrieval {
   private _dbPath: string;
 
@@ -81,21 +108,34 @@ export class MemoryRetrieval {
         candidates = this.searchRecall(db, opts.query!, opts.project_id);
       }
 
-      // Apply budget control: estimate ~4 chars per token
+      // Apply budget control with type-priority allocation (spec §3.3):
+      // Fill by tier: corrections/preferences first, then outcomes/learnings, etc.
       const charsPerToken = 4;
       let usedTokens = 0;
       const results: RecallResult[] = [];
 
+      // Partition candidates into type tiers, preserving score order within each tier
+      const tierBuckets: RecallResult[][] = MemoryRetrieval.TYPE_TIERS.map(() => []);
+      const uncategorized: RecallResult[] = [];
       for (const mem of candidates) {
-        // Choose content tier based on remaining budget
-        const fullLen = mem.content.length;
-        const l0Len = mem.content_l0?.length ?? fullLen;
-        const tokensNeeded = Math.ceil(Math.min(l0Len, fullLen) / charsPerToken);
+        const tierIdx = MemoryRetrieval.TYPE_TIERS.findIndex(t => t.includes(mem.type));
+        if (tierIdx >= 0) tierBuckets[tierIdx].push(mem);
+        else uncategorized.push(mem);
+      }
 
-        if (usedTokens + tokensNeeded > budget && results.length > 0) break;
+      // Fill budget tier by tier
+      for (const bucket of [...tierBuckets, uncategorized]) {
+        for (const mem of bucket) {
+          const fullLen = mem.content.length;
+          const l0Len = mem.content_l0?.length ?? fullLen;
+          const tokensNeeded = Math.ceil(Math.min(l0Len, fullLen) / charsPerToken);
 
-        results.push(mem);
-        usedTokens += Math.ceil(fullLen / charsPerToken);
+          if (usedTokens + tokensNeeded > budget && results.length > 0) break;
+
+          results.push(mem);
+          usedTokens += Math.ceil(fullLen / charsPerToken);
+        }
+        if (usedTokens >= budget) break;
       }
 
       // Log the recall
@@ -133,11 +173,13 @@ export class MemoryRetrieval {
     const sanitized = sanitizeFtsQuery(query);
     if (!sanitized) return [];
 
+    const intent = classifyIntent(query);
+
     // FTS5 search
     const ftsResults = this.ftsSearch(db, sanitized, projectId);
 
-    // Combine and score
-    return this.scoreAndRank(ftsResults);
+    // Combine and score with intent-adjusted weights
+    return this.scoreAndRank(ftsResults, intent);
   }
 
   private ftsSearch(db: Database.Database, ftsQuery: string, projectId: string | null | undefined): RecallResult[] {
@@ -201,6 +243,16 @@ export class MemoryRetrieval {
     return rows.map((r, idx) => this.rowToResult(r, 0.5 / (idx + 1)));
   }
 
+  // Type-priority tiers for budget allocation (spec §3.3):
+  // Fill results in tier order; within each tier, sort by composite score.
+  private static TYPE_TIERS: string[][] = [
+    ['correction', 'preference'],
+    ['outcome', 'learning'],
+    ['pattern', 'procedural'],
+    ['decision', 'dependency', 'observation'],
+    ['context'],
+  ];
+
   // Per-type decay rate multipliers (spec §2.12): lower = slower decay
   private static DECAY_RATES: Record<string, number> = {
     correction: 0.25,
@@ -215,11 +267,14 @@ export class MemoryRetrieval {
     context: 2.0,
   };
 
-  private scoreAndRank(results: RecallResult[]): RecallResult[] {
+  private scoreAndRank(results: RecallResult[], intent: QueryIntent = 'exploratory'): RecallResult[] {
+    const weights = INTENT_WEIGHTS[intent];
+
     // Composite scoring: combine relevance, reinforcement, recency, outcome
+    // with intent-adjusted weight profiles (spec §3.3)
     for (const r of results) {
       const reinforcementBoost = Math.log(r.reinforcement_count + 1);
-      const outcomeBoost = r.outcome_score * 0.2;
+      const outcomeBoost = r.outcome_score * weights.outcome;
       const pinnedBoost = r.is_pinned ? 10.0 : 0;
 
       // Recency: days since update, decay factor adjusted by type
@@ -236,7 +291,12 @@ export class MemoryRetrieval {
         }
       }
 
-      r.relevance_score = r.relevance_score + reinforcementBoost * 0.1 + outcomeBoost + pinnedBoost + recencyFactor * 0.2 + temporalPenalty;
+      r.relevance_score = r.relevance_score * weights.relevance
+        + reinforcementBoost * weights.reinforcement
+        + outcomeBoost
+        + pinnedBoost
+        + recencyFactor * weights.recency
+        + temporalPenalty;
     }
 
     // Sort by score descending

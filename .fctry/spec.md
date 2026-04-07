@@ -20,7 +20,7 @@ synopsis:
 plugin-version: 0.77.3
 ```
 
-Setlist is the TypeScript implementation of the Project Registry — the active intelligence hub at the center of the user's personal ecosystem. It is a direct port of the Python project-registry-service, preserving the identical experience, SQLite schema (v8), 27 MCP tools, and portfolio memory subsystem. What changes is the implementation language (TypeScript), the SQLite binding (better-sqlite3), the MCP SDK (@modelcontextprotocol/sdk), and the packaging model (npm monorepo with @setlist/core, @setlist/mcp, @setlist/cli). The .db file is the shared contract — both implementations read and write the same database.
+Setlist is the TypeScript implementation of the Project Registry — the active intelligence hub at the center of the user's personal ecosystem. Originally a direct port of the Python project-registry-service, it has since evolved beyond parity: schema v10 (unified memory types, belief classification, temporal validity, entity extraction, procedural versioning), 28 MCP tools (the original 27 plus `rename_project`), and an expanded portfolio memory subsystem. The .db file is the shared contract — both implementations read and write the same database, though the Python implementation remains at schema v8.
 
 The rewrite exists because Chorus (Electron + React) and Ensemble need the registry as a direct npm dependency, not a subprocess or MCP-only integration. @setlist/core provides the library API importable from any Node.js process. @setlist/mcp wraps it as an MCP server. @setlist/cli exposes it from the terminal. The 786 Python tests define the behavioral contract to port against.
 
@@ -99,7 +99,7 @@ Setlist is a TypeScript monorepo providing the Project Registry as three npm pac
 
 - **@setlist/cli** -- The CLI. Terminal commands for project management, migration, worker installation, and diagnostics. Entry point: `setlist`.
 
-The three packages share the same SQLite database (schema v8) at `~/.local/share/project-registry/registry.db`. The database file is the shared contract between Setlist, the Python implementation, and any tool that opens it directly.
+The three packages share the same SQLite database (schema v10) at `~/.local/share/project-registry/registry.db`. The database file is the shared contract between Setlist, the Python implementation, and any tool that opens it directly.
 
 ### 1.3 Design Principles {#design-principles}
 
@@ -815,7 +815,7 @@ See [Appendix D](#appendix-d-mcp-tool-reference) for the complete tool reference
 | Ensemble | Memory retain/recall, library import of @setlist/core | Ensemble reads/writes via direct import | Ensemble continues without memory |
 | Knowmarks | Project metadata (name, description, goals, keywords, tech stack) | Knowmarks reads from registry | Falls back to regex extraction |
 | ctx | Project context (description, goals, status, tech stack) | ctx reads from registry | Operates without project context |
-| Claude Code (via MCP) | All 27 tools | CC reads/writes via @setlist/mcp | CC has no project awareness; MCP server provides it |
+| Claude Code (via MCP) | All 28 tools | CC reads/writes via @setlist/mcp | CC has no project awareness; MCP server provides it |
 | Async worker (launchd) | Task execution | Worker reads tasks, spawns CC sessions, writes results | Tasks remain pending until worker runs |
 | CC auto-memory files | Per-project patterns and decisions (`MEMORY.md`) | cross_query reads from filesystem | Cross-project queries limited to registry fields + structured memories |
 | Embedding provider (OpenAI / Ollama) | Vector embeddings for memory content | Registry sends content, receives embeddings | FTS5-only fallback. All other features work identically. |
@@ -895,7 +895,7 @@ All Python spec hard constraints apply, plus:
 
 - **Schema evolution from v8.** The SQLite schema originated as v8, byte-compatible with the Python implementation. Setlist has since evolved the schema: v9 added the `observation` memory type, v10 adds unified memory types (learning, context, procedural), new fields (belief, extraction_confidence, valid_from, valid_until, entities, parent_version_id, is_current), and migrates `skill` → `procedural`. The Python implementation remains at v8; the shared .db file is forward-compatible (Python can read v10 databases but will not recognize new types or fields). Schema migrations are incremental and non-destructive.
 
-- **Same 27 MCP tools, same parameters, same response shapes, plus Setlist-specific additions.** The original 27 tools are a drop-in replacement for the Python server. Tool names, parameter names, parameter types, and response structures are identical. An agent that works with the Python MCP server must work identically with Setlist's MCP server. Setlist adds `rename_project` as a 28th tool not present in the Python implementation.
+- **28 MCP tools with Python-compatible core.** The original 27 tools are a drop-in replacement for the Python server — same names, parameters, and response shapes. Setlist adds `rename_project` as a 28th tool. An agent that works with the Python MCP server works identically with Setlist's.
 
 - **ESM-only.** All packages produce ESM output. No CommonJS dual-publishing.
 
@@ -909,7 +909,7 @@ All Python spec anti-patterns apply, plus:
 
 - **Schema evolution must be incremental and non-destructive.** Each version upgrade (v8→v9→v10) must handle the full migration path. Existing data must never be lost during upgrades. New columns use nullable defaults or sensible initial values. The `skill` → `procedural` type migration in v10 is a data migration within the table-recreate pattern.
 
-- **Setlist must not re-invent MCP tool semantics.** The 27 tools have defined parameter names, types, and response shapes. Setlist implements them; it does not redesign them.
+- **Setlist must not re-invent MCP tool semantics.** The 28 tools have defined parameter names, types, and response shapes. Setlist implements them; it does not redesign them.
 
 ---
 
@@ -942,7 +942,7 @@ setlist/
 │   ├── mcp/                         # @setlist/mcp
 │   │   ├── src/
 │   │   │   ├── index.ts             # MCP server entry point
-│   │   │   └── server.ts            # 27 tool definitions
+│   │   │   └── server.ts            # 28 tool definitions
 │   │   ├── package.json
 │   │   └── tsconfig.json
 │   └── cli/                         # @setlist/cli
@@ -1029,7 +1029,7 @@ import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 
 const server = new Server({ name: 'setlist', version: '0.1.0' }, { capabilities: { tools: {} } });
-// Register 27 tools...
+// Register 28 tools...
 const transport = new StdioServerTransport();
 await server.connect(transport);
 ```
@@ -1060,7 +1060,7 @@ The port follows a strict behavioral contract: every Python test, translated to 
 | cross_query.py | cross-query.ts | 3 scopes, freshness+importance scoring |
 | tasks.py | registry.ts | Task CRUD consolidated into Registry |
 | scripts/migrate_memories.py | migrate-memories.ts | CC auto-memory + fctry memory migration |
-| server.py | server.ts | 27 MCP tools via @modelcontextprotocol/sdk |
+| server.py | server.ts | 28 MCP tools via @modelcontextprotocol/sdk |
 | cli.py | index.ts | CLI entry point |
 | worker.py | worker.ts | Launchd integration |
 
@@ -1105,7 +1105,7 @@ Same ecosystem as the Python spec (Archibald, ctx, Chorus, fctry, McPoyle, Knowm
 - **Ensemble** — Imports @setlist/core for memory retain/recall during agent orchestration.
 
 **MCP consumers (unchanged):**
-- **Claude Code** — Uses @setlist/mcp for all 27 tools.
+- **Claude Code** — Uses @setlist/mcp for all 28 tools.
 
 **Producers (unchanged):**
 - **fctry** — Writes project identity and capabilities via MCP or library import.
@@ -1132,7 +1132,7 @@ All satisfaction criteria from the Python spec (section 6.1) apply identically, 
 
 ### 7.2 Convergence Strategy {#convergence}
 
-**Start with:** @setlist/core schema initialization (db.ts) producing schema v8 identical to the Python implementation. Verify by comparing table definitions, indexes, and constraints.
+**Start with:** @setlist/core schema initialization (db.ts) producing the current schema (v10, evolved from Python's v8). Verify by comparing table definitions, indexes, and constraints.
 
 **Then layer in:** Core identity — registration, querying at three depths, filtering. Port the corresponding Python tests. This is the foundation everything else builds on.
 
@@ -1140,7 +1140,7 @@ All satisfaction criteria from the Python spec (section 6.1) apply identically, 
 
 **Then layer in:** Migration, port management, port discovery. Port tests.
 
-**Then layer in:** @setlist/mcp — wrap the core library as 27 MCP tools. Verify tool-by-tool against the Python server's behavior.
+**Then layer in:** @setlist/mcp — wrap the core library as 28 MCP tools. Verify tool-by-tool against the Python server's behavior.
 
 **Then layer in:** Portfolio memory — retain, recall, reflect. Content-hash dedup. FTS5 retrieval. Port memory tests.
 
@@ -1178,8 +1178,8 @@ The agent has authority over implementation details within the constraints above
 - **Internal type patterns** — branded types, discriminated unions, Result types, etc.
 
 The agent does NOT decide:
-- Schema shape (defined by v8 compatibility)
-- MCP tool surface (defined by the 27-tool contract)
+- Schema shape (defined by v10, evolved from v8 compatibility)
+- MCP tool surface (defined by the 28-tool contract)
 - Package boundaries (core/mcp/cli as specified)
 - SQLite binding (better-sqlite3)
 - MCP SDK (@modelcontextprotocol/sdk)
@@ -1207,7 +1207,7 @@ All terms from the Python spec glossary apply. Additional terms:
 |------|---------|
 | Setlist | The TypeScript implementation of the Project Registry |
 | @setlist/core | npm package providing the library API — all registry logic |
-| @setlist/mcp | npm package providing the MCP server — 27 tools via @modelcontextprotocol/sdk |
+| @setlist/mcp | npm package providing the MCP server — 28 tools via @modelcontextprotocol/sdk |
 | @setlist/cli | npm package providing the CLI — terminal commands and worker script |
 | better-sqlite3 | Synchronous native SQLite binding for Node.js |
 | Schema v10 | The current SQLite schema version. Evolved from Python's v8 through v9 (observation type) and v10 (unified memory types + chorus-compatible fields) |
@@ -1219,11 +1219,11 @@ All deferred futures from the Python spec apply. The TypeScript implementation i
 
 Additional TypeScript-specific deferred future:
 
-- **Python implementation deprecation.** Once Setlist reaches full parity (all 786 tests passing, all 27 MCP tools operational, migration tested), the Python implementation can be deprecated. The .db file continues as the shared contract during the transition period. Deprecation means: new features are added to Setlist first, the Python MCP server is replaced by @setlist/mcp in Claude Code config, and the Python package is archived. The database is never migrated or converted — both implementations read the same file.
+- **Python implementation deprecation.** Once Setlist reaches full parity (all 786 tests passing, all 28 MCP tools operational, migration tested), the Python implementation can be deprecated. The .db file continues as the shared contract during the transition period. Deprecation means: new features are added to Setlist first, the Python MCP server is replaced by @setlist/mcp in Claude Code config, and the Python package is archived. The database is never migrated or converted — both implementations read the same file.
 
 ## Appendix D: MCP Tool Reference {#appendix-d-mcp-tool-reference}
 
-Complete tool reference for the 27 MCP tools. All tools have identical names, parameters, and response shapes to the Python implementation.
+Complete tool reference for the 28 MCP tools. The original 27 have identical names, parameters, and response shapes to the Python implementation; `rename_project` is a Setlist addition.
 
 **Project Identity:**
 
