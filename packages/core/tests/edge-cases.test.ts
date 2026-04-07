@@ -241,12 +241,16 @@ describe('Edge Cases — Memory', () => {
     expect(() => store.retain({ content: 'test', type: 'invalid_type' })).toThrow('Unknown memory type');
   });
 
-  it('all 7 valid memory types accepted', () => {
-    const types = ['decision', 'outcome', 'pattern', 'preference', 'dependency', 'correction', 'skill'];
+  it('all 10 valid memory types accepted', () => {
+    const types = ['decision', 'outcome', 'pattern', 'preference', 'dependency', 'correction', 'learning', 'context', 'procedural', 'observation'];
     for (const type of types) {
       const r = store.retain({ content: `Test ${type}`, type });
       expect(r.is_new).toBe(true);
     }
+  });
+
+  it('retired skill type is rejected', () => {
+    expect(() => store.retain({ content: 'test', type: 'skill' })).toThrow('Unknown memory type');
   });
 
   it('scope defaults to project when project_id provided', () => {

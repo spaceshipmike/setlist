@@ -16,7 +16,8 @@ export type ProjectType = 'project' | 'area_of_focus';
 export type ProjectStatus = 'idea' | 'draft' | 'active' | 'paused' | 'archived' | 'complete';
 export type QueryDepth = 'minimal' | 'summary' | 'standard' | 'full';
 
-export type MemoryType = 'decision' | 'outcome' | 'pattern' | 'preference' | 'dependency' | 'correction' | 'skill' | 'observation';
+export type MemoryType = 'decision' | 'outcome' | 'pattern' | 'preference' | 'dependency' | 'correction' | 'learning' | 'context' | 'procedural' | 'observation';
+export type MemoryBelief = 'fact' | 'opinion' | 'hypothesis';
 export type MemoryScope = 'project' | 'area_of_focus' | 'portfolio' | 'global';
 export type MemoryStatus = 'active' | 'consolidating' | 'archived' | 'superseded';
 export type MemoryEdgeType = 'updates' | 'extends' | 'derives' | 'contradicts' | 'caused_by' | 'related_to';
@@ -25,8 +26,10 @@ export type TaskSchedule = 'now' | 'tonight' | 'weekly';
 export type TaskStatus = 'pending' | 'running' | 'completed' | 'failed';
 
 export const MEMORY_TYPES = new Set<MemoryType>([
-  'decision', 'outcome', 'pattern', 'preference', 'dependency', 'correction', 'skill', 'observation',
+  'decision', 'outcome', 'pattern', 'preference', 'dependency', 'correction', 'learning', 'context', 'procedural', 'observation',
 ]);
+
+export const MEMORY_BELIEFS = new Set<MemoryBelief>(['fact', 'opinion', 'hypothesis']);
 
 export const MEMORY_SCOPES = new Set<MemoryScope>([
   'project', 'area_of_focus', 'portfolio', 'global',
@@ -90,6 +93,13 @@ export interface Memory {
   is_static: boolean;
   is_inference: boolean;
   is_pinned: boolean;
+  belief: MemoryBelief | null;
+  extraction_confidence: number | null;
+  valid_from: string | null;
+  valid_until: string | null;
+  entities: string | null;
+  parent_version_id: string | null;
+  is_current: boolean;
   created_at: string;
   updated_at: string;
   last_accessed: string | null;

@@ -3,7 +3,7 @@ import { existsSync, mkdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { homedir } from 'node:os';
 
-export const SCHEMA_VERSION = 9;
+export const SCHEMA_VERSION = 10;
 
 const DEFAULT_DB_DIR = join(homedir(), '.local', 'share', 'project-registry');
 const DEFAULT_DB_NAME = 'registry.db';
@@ -113,7 +113,7 @@ CREATE TABLE IF NOT EXISTS memories (
     content TEXT NOT NULL,
     content_l0 TEXT,
     content_l1 TEXT,
-    type TEXT NOT NULL CHECK (type IN ('decision', 'outcome', 'pattern', 'preference', 'dependency', 'correction', 'skill', 'observation')),
+    type TEXT NOT NULL CHECK (type IN ('decision', 'outcome', 'pattern', 'preference', 'dependency', 'correction', 'learning', 'context', 'procedural', 'observation')),
     importance REAL DEFAULT 0.5,
     confidence REAL DEFAULT 0.5,
     status TEXT DEFAULT 'active' CHECK (status IN ('active', 'consolidating', 'archived', 'superseded')),
@@ -132,6 +132,13 @@ CREATE TABLE IF NOT EXISTS memories (
     is_static INTEGER DEFAULT 0,
     is_inference INTEGER DEFAULT 0,
     is_pinned INTEGER DEFAULT 0,
+    belief TEXT CHECK (belief IN ('fact', 'opinion', 'hypothesis')),
+    extraction_confidence REAL,
+    valid_from TEXT,
+    valid_until TEXT,
+    entities TEXT,
+    parent_version_id TEXT REFERENCES memories(id),
+    is_current INTEGER DEFAULT 1,
     created_at TEXT NOT NULL,
     updated_at TEXT NOT NULL,
     last_accessed TEXT,
@@ -394,22 +401,73 @@ function upgradeSchema(db: Database.Database): void {
     } catch { /* column may already exist */ }
   }
 
-  if (currentVersion < 9) {
+  if (currentVersion >= 8 && currentVersion < 9) {
     // v8 → v9: add 'observation' to memories type CHECK constraint.
+    // Only runs on databases actually at v8 (not fresh installs which start at v10).
     // SQLite cannot ALTER CHECK constraints, so recreate the table.
-    const hasMemories = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='memories'").get();
-    if (hasMemories) {
-      // Clean up any leftover from a previously interrupted migration
-      db.exec(`DROP TABLE IF EXISTS memories_v9`);
-      // Temporarily disable foreign keys for the table swap
+    db.exec(`DROP TABLE IF EXISTS memories_v9`);
+    db.pragma('foreign_keys = OFF');
+    db.exec(`
+      CREATE TABLE memories_v9 (
+          id TEXT PRIMARY KEY,
+          content TEXT NOT NULL,
+          content_l0 TEXT,
+          content_l1 TEXT,
+          type TEXT NOT NULL CHECK (type IN ('decision', 'outcome', 'pattern', 'preference', 'dependency', 'correction', 'skill', 'observation')),
+          importance REAL DEFAULT 0.5,
+          confidence REAL DEFAULT 0.5,
+          status TEXT DEFAULT 'active' CHECK (status IN ('active', 'consolidating', 'archived', 'superseded')),
+          project_id TEXT,
+          scope TEXT DEFAULT 'project' CHECK (scope IN ('project', 'area_of_focus', 'portfolio', 'global')),
+          agent_role TEXT,
+          session_id TEXT,
+          tags TEXT,
+          content_hash TEXT NOT NULL,
+          embedding BLOB,
+          embedding_model TEXT,
+          embedding_new BLOB,
+          embedding_model_new TEXT,
+          reinforcement_count INTEGER DEFAULT 1,
+          outcome_score REAL DEFAULT 0.0,
+          is_static INTEGER DEFAULT 0,
+          is_inference INTEGER DEFAULT 0,
+          is_pinned INTEGER DEFAULT 0,
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL,
+          last_accessed TEXT,
+          forget_after TEXT,
+          forget_reason TEXT,
+          UNIQUE(content_hash, project_id, scope)
+      );
+      INSERT INTO memories_v9 SELECT * FROM memories;
+      DROP TABLE memories;
+      ALTER TABLE memories_v9 RENAME TO memories;
+      CREATE INDEX IF NOT EXISTS idx_memories_status ON memories(status);
+      CREATE INDEX IF NOT EXISTS idx_memories_project ON memories(project_id);
+      CREATE INDEX IF NOT EXISTS idx_memories_scope ON memories(scope);
+      CREATE INDEX IF NOT EXISTS idx_memories_type ON memories(type);
+      CREATE INDEX IF NOT EXISTS idx_memories_hash ON memories(content_hash);
+      CREATE INDEX IF NOT EXISTS idx_memories_pinned ON memories(is_pinned, status);
+    `);
+    createFtsTriggers(db);
+    db.pragma('foreign_keys = ON');
+  }
+
+  if (currentVersion >= 9 && currentVersion < 10) {
+    // v9 → v10: unified memory model for chorus integration.
+    // Only runs on databases actually at v9 (not fresh installs which start at v10).
+    // Add types: learning, context, procedural. Remove: skill (migrated to procedural).
+    // Add columns: belief, extraction_confidence, valid_from, valid_until, entities, parent_version_id, is_current.
+    {
+      db.exec(`DROP TABLE IF EXISTS memories_v10`);
       db.pragma('foreign_keys = OFF');
       db.exec(`
-        CREATE TABLE memories_v9 (
+        CREATE TABLE memories_v10 (
             id TEXT PRIMARY KEY,
             content TEXT NOT NULL,
             content_l0 TEXT,
             content_l1 TEXT,
-            type TEXT NOT NULL CHECK (type IN ('decision', 'outcome', 'pattern', 'preference', 'dependency', 'correction', 'skill', 'observation')),
+            type TEXT NOT NULL CHECK (type IN ('decision', 'outcome', 'pattern', 'preference', 'dependency', 'correction', 'learning', 'context', 'procedural', 'observation')),
             importance REAL DEFAULT 0.5,
             confidence REAL DEFAULT 0.5,
             status TEXT DEFAULT 'active' CHECK (status IN ('active', 'consolidating', 'archived', 'superseded')),
@@ -428,6 +486,13 @@ function upgradeSchema(db: Database.Database): void {
             is_static INTEGER DEFAULT 0,
             is_inference INTEGER DEFAULT 0,
             is_pinned INTEGER DEFAULT 0,
+            belief TEXT CHECK (belief IN ('fact', 'opinion', 'hypothesis')),
+            extraction_confidence REAL,
+            valid_from TEXT,
+            valid_until TEXT,
+            entities TEXT,
+            parent_version_id TEXT REFERENCES memories_v10(id),
+            is_current INTEGER DEFAULT 1,
             created_at TEXT NOT NULL,
             updated_at TEXT NOT NULL,
             last_accessed TEXT,
@@ -435,19 +500,36 @@ function upgradeSchema(db: Database.Database): void {
             forget_reason TEXT,
             UNIQUE(content_hash, project_id, scope)
         );
-        INSERT INTO memories_v9 SELECT * FROM memories;
+        INSERT INTO memories_v10 (
+            id, content, content_l0, content_l1,
+            type,
+            importance, confidence, status, project_id, scope,
+            agent_role, session_id, tags, content_hash,
+            embedding, embedding_model, embedding_new, embedding_model_new,
+            reinforcement_count, outcome_score, is_static, is_inference, is_pinned,
+            belief, extraction_confidence, valid_from, valid_until, entities, parent_version_id, is_current,
+            created_at, updated_at, last_accessed, forget_after, forget_reason
+        )
+        SELECT
+            id, content, content_l0, content_l1,
+            CASE WHEN type = 'skill' THEN 'procedural' ELSE type END,
+            importance, confidence, status, project_id, scope,
+            agent_role, session_id, tags, content_hash,
+            embedding, embedding_model, embedding_new, embedding_model_new,
+            reinforcement_count, outcome_score, is_static, is_inference, is_pinned,
+            NULL, NULL, NULL, NULL, NULL, NULL, 1,
+            created_at, updated_at, last_accessed, forget_after, forget_reason
+        FROM memories;
         DROP TABLE memories;
-        ALTER TABLE memories_v9 RENAME TO memories;
-        CREATE INDEX IF NOT EXISTS idx_memories_status ON memories(status);
-        CREATE INDEX IF NOT EXISTS idx_memories_project ON memories(project_id);
-        CREATE INDEX IF NOT EXISTS idx_memories_scope ON memories(scope);
-        CREATE INDEX IF NOT EXISTS idx_memories_type ON memories(type);
+        ALTER TABLE memories_v10 RENAME TO memories;
+        CREATE INDEX IF NOT EXISTS idx_memories_project ON memories(project_id, status);
+        CREATE INDEX IF NOT EXISTS idx_memories_scope ON memories(scope, status);
+        CREATE INDEX IF NOT EXISTS idx_memories_type ON memories(type, status);
         CREATE INDEX IF NOT EXISTS idx_memories_hash ON memories(content_hash);
         CREATE INDEX IF NOT EXISTS idx_memories_pinned ON memories(is_pinned, status);
+        CREATE INDEX IF NOT EXISTS idx_memories_current ON memories(type, is_current) WHERE type = 'procedural';
       `);
-      // Recreate FTS triggers dropped with the old table
       createFtsTriggers(db);
-      // Re-enable foreign keys
       db.pragma('foreign_keys = ON');
     }
   }
