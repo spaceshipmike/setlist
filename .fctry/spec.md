@@ -3,7 +3,7 @@
 ```yaml
 ---
 title: Setlist
-spec-version: "0.5"
+spec-version: "0.6"
 date: 2026-04-06
 status: active
 author: Mike (via fctry interview, experience-ported from project-registry-service)
@@ -11,12 +11,12 @@ spec-format: nlspec-v2
 experience-source: project-registry-service/.fctry/spec.md (v1.3)
 ---
 synopsis:
-  short: "TypeScript implementation of the project registry — active intelligence hub for project identity, capabilities, memory, and cross-project awareness (28 MCP tools)"
-  medium: "TypeScript monorepo (@setlist/core, @setlist/mcp, @setlist/cli) implementing the project registry as npm-packageable infrastructure. Local SQLite (better-sqlite3) + MCP server (@modelcontextprotocol/sdk) providing project identity, capability declarations, portfolio memory with hybrid retrieval and outcome-aware reinforcement, port allocation, async task dispatch, batch operations, and cross-project intelligence. Same schema v8, same 27 Python MCP tools plus rename_project, same experience as the Python implementation — repackaged for the Node.js ecosystem."
-  readme: "Setlist is the TypeScript implementation of the Project Registry — invisible infrastructure at the center of the user's personal ecosystem. It provides structured, queryable identity for every project and area of focus, with programmatic administration tools for updating project metadata and archiving projects. Projects declare their capabilities — MCP tools, CLI commands, API endpoints, databases, library functions — and other projects and agents discover those capabilities through a dedicated query tool. Setlist maintains a portfolio memory: agents retain decisions, outcomes, patterns, preferences, and corrections as typed memories that are enriched with embeddings and importance scores, then recalled via budget-controlled hybrid retrieval (FTS5 + vector + graph) with outcome-aware reinforcement. It manages globally-unique port allocation with automatic discovery from project config files. Beyond single-project operations, Setlist acts as an active hub: batch_update applies field changes atomically across filtered project sets, and cross-project task dispatch fans out work items simultaneously via the async worker. Distributed as npm packages (@setlist/core, @setlist/mcp, @setlist/cli), Setlist is directly consumable by Chorus, Ensemble, and any Node.js tool in the ecosystem."
+  short: "TypeScript implementation of the project registry — active intelligence hub for project identity, capabilities, unified memory (10 types), and cross-project awareness (28 MCP tools + direct library import)"
+  medium: "TypeScript monorepo (@setlist/core, @setlist/mcp, @setlist/cli) implementing the project registry as npm-packageable infrastructure. Local SQLite (better-sqlite3) + MCP server (@modelcontextprotocol/sdk) providing project identity, capability declarations, unified portfolio memory (10 types with belief classification, temporal validity, entity extraction, and procedural versioning) with hybrid retrieval and outcome-aware reinforcement, port allocation, async task dispatch, batch operations, and cross-project intelligence. Schema v10, 28 MCP tools, importable as @setlist/core by Chorus and Ensemble for in-process memory operations."
+  readme: "Setlist is the TypeScript implementation of the Project Registry — invisible infrastructure at the center of the user's personal ecosystem. It provides structured, queryable identity for every project and area of focus, with programmatic administration tools for updating project metadata and archiving projects. Projects declare their capabilities — MCP tools, CLI commands, API endpoints, databases, library functions — and other projects and agents discover those capabilities through a dedicated query tool. Setlist maintains a unified portfolio memory: agents retain decisions, outcomes, patterns, preferences, corrections, learnings, context, procedural workflows, and observations as typed memories with optional belief classification (fact/opinion/hypothesis), temporal validity, and entity extraction. Memories are enriched with embeddings and importance scores, then recalled via budget-controlled hybrid retrieval (FTS5 + vector + graph) with outcome-aware reinforcement. Chorus imports @setlist/core directly as its canonical memory store, maintaining local indices for fast retrieval while setlist owns persistence. It manages globally-unique port allocation with automatic discovery from project config files. Beyond single-project operations, Setlist acts as an active hub: batch_update applies field changes atomically across filtered project sets, and cross-project task dispatch fans out work items simultaneously via the async worker. Distributed as npm packages (@setlist/core, @setlist/mcp, @setlist/cli), Setlist is directly consumable by Chorus, Ensemble, and any Node.js tool in the ecosystem."
   tech-stack: [typescript, better-sqlite3, "@modelcontextprotocol/sdk", node, npm-monorepo]
-  patterns: [atomized-fields, progressive-disclosure, producer-consumer, registration-not-discovery, invisible-infrastructure, config-file-scanning, hub-and-spoke, capability-declaration, definition-is-truth, fuzzy-match-suggestions, archive-triggered-cleanup, producer-attribution, summary-compactness, freshness-importance-scoring, invocation-metadata, retain-recall-reflect, outcome-aware-reinforcement, content-hash-dedup, embedding-provider-abstraction, budget-controlled-recall, four-level-scoping, hybrid-retrieval]
-  goals: [unified-project-identity, capability-discovery, programmatic-project-administration, batch-operations, cross-project-task-dispatch, conflict-free-port-allocation, automatic-port-discovery, async-task-execution, cross-project-intelligence, crash-resilient-worker, ranked-cross-project-results, capability-invocation-awareness, portfolio-memory, outcome-reinforcement, hybrid-retrieval, npm-packageable-distribution]
+  patterns: [atomized-fields, progressive-disclosure, producer-consumer, registration-not-discovery, invisible-infrastructure, config-file-scanning, hub-and-spoke, capability-declaration, definition-is-truth, fuzzy-match-suggestions, archive-triggered-cleanup, producer-attribution, summary-compactness, freshness-importance-scoring, invocation-metadata, retain-recall-reflect, outcome-aware-reinforcement, content-hash-dedup, embedding-provider-abstraction, budget-controlled-recall, four-level-scoping, hybrid-retrieval, belief-classification, temporal-validity, entity-extraction, procedural-versioning, unified-memory-store]
+  goals: [unified-project-identity, capability-discovery, programmatic-project-administration, batch-operations, cross-project-task-dispatch, conflict-free-port-allocation, automatic-port-discovery, async-task-execution, cross-project-intelligence, crash-resilient-worker, ranked-cross-project-results, capability-invocation-awareness, portfolio-memory, outcome-reinforcement, hybrid-retrieval, npm-packageable-distribution, canonical-memory-store, chorus-memory-unification]
 plugin-version: 0.77.3
 ```
 
@@ -475,16 +475,33 @@ Implementation note: better-sqlite3 is synchronous, which simplifies the hot pat
 
 **Memory types:**
 
-- **decision** -- An explicit choice made during development.
+- **decision** -- An explicit choice made during development or knowledge work.
 - **outcome** -- What happened as a result of an action.
 - **pattern** -- A recurring approach or technique observed across sessions.
 - **preference** -- An explicit user preference or convention.
 - **dependency** -- A relationship between this project and something external.
 - **correction** -- An explicit "don't do that" or "actually, use this instead."
-- **skill** -- A capability or technique the agent has demonstrated.
+- **learning** -- A fact, insight, or discovery made during work. Distinguished from decisions (which are choices) and outcomes (which are results of actions). Learnings are what was found out, not what was decided or what happened.
+- **context** -- Ephemeral working memory: background information, intermediate findings, explored-but-abandoned approaches. Context memories decay fastest and are cleaned up aggressively by reflection. They exist so that cross-session context persists without the producing agent managing its own cleanup.
+- **procedural** -- A reusable workflow or multi-step technique extracted from repeated work. Procedural memories support versioning: when a workflow is refined, the new version links to its predecessor via `parent_version_id`, and only the current version (`is_current = true`) surfaces in recall. Previous versions remain queryable via `inspect_memory`.
 - **observation** -- A cross-project finding produced by portfolio intelligence — a pattern detected, a convergence opportunity identified, a drift noticed, or a dependency inferred. Observations are portfolio-scoped by default and carry a confidence indicator (verified vs. inferred). They represent compounding insight: each observation builds on what was previously retained, so portfolio intelligence improves across sessions rather than rediscovering from zero.
 
-**Per-type decay rates:** Different memory types fade at different rates during recall scoring. Corrections and preferences represent durable knowledge that should persist indefinitely -- they decay very slowly (rate 0.25). Decisions and dependencies decay at baseline rate (1.0). Outcomes and patterns decay faster (1.5) -- they are naturally ephemeral and should be displaced by newer observations. Skills decay at baseline (1.0). Observations decay slowly (rate 0.5) -- they represent analyzed cross-project findings that took effort to produce and should persist longer than raw outcomes, but not as permanently as corrections. The decay rate multiplies the time-decay exponent in recall scoring: a memory with rate 0.25 takes 4x longer to fade than one with rate 1.0. This prevents important conventions from being buried by recent but trivial observations.
+**Per-type decay rates:** Different memory types fade at different rates during recall scoring. Corrections and preferences represent durable knowledge that should persist indefinitely -- they decay very slowly (rate 0.25). Procedural memories and observations decay slowly (rate 0.5) -- they represent synthesized knowledge that took effort to produce. Decisions, dependencies, and learnings decay at baseline rate (1.0). Outcomes and patterns decay faster (1.5) -- they are naturally ephemeral and should be displaced by newer observations. Context memories decay fastest (rate 2.0) -- they are working memory meant to bridge sessions, not persist long-term. The decay rate multiplies the time-decay exponent in recall scoring: a memory with rate 0.25 takes 4x longer to fade than one with rate 1.0. This prevents important conventions from being buried by recent but trivial observations.
+
+**Belief classification and confidence.** Memories optionally carry epistemic metadata:
+
+- **belief** -- Classifies the memory as `fact` (verified), `opinion` (subjective judgment), or `hypothesis` (unverified inference). Null when not classified. Belief classification is orthogonal to type -- a decision can be fact-based or hypothesis-based.
+- **confidence** -- A 0.0--1.0 score reflecting how certain the content is. Already present in the schema (used by proactive contradiction detection). The semantic is unchanged.
+- **extraction_confidence** -- A 0.0--1.0 score reflecting the quality of the source from which the memory was extracted. Null for manually retained memories. Producers that extract memories from conversations or documents set this to indicate source reliability.
+
+**Temporal validity.** Memories optionally carry temporal bounds:
+
+- **valid_from** -- ISO timestamp marking when the memory becomes applicable. Null means applicable from creation.
+- **valid_until** -- ISO timestamp marking when the memory expires. Null means no expiration. Expired memories are not archived automatically -- they still appear in recall but with a temporal penalty in scoring. Reflection may archive memories whose `valid_until` is far in the past.
+
+**Entity extraction.** Memories optionally carry structured entity metadata as a JSON array in the `entities` field. Each entry has a `name` and `type` (person, organization, project, topic). Entity data is denormalized on the memory row for fast single-memory reads. Chorus and other producers populate this during extraction; setlist stores and returns it but does not extract entities itself. Entity overlap is a signal in hybrid retrieval when the caller provides entity context.
+
+**Procedural versioning.** Procedural memories support an in-row version chain via `parent_version_id` (FK to memories.id) and `is_current` (boolean, default true). When a workflow is refined, the producer retains a new procedural memory with `parent_version_id` pointing to the previous version and sets `is_current = false` on the predecessor. Recall filters to `is_current = true` by default. This coexists with the `memory_versions` table, which serves a different purpose: `memory_versions` tracks edit history within a single memory (audit trail), while `parent_version_id` tracks evolution across distinct procedural memory entries (version chain).
 
 **Four-level scoping:**
 
@@ -507,7 +524,7 @@ The recall response fills the caller's token budget with the highest-scored memo
 
 **Query intent classification:** The recall system classifies incoming queries by intent -- temporal, relational, factual, or exploratory -- and adjusts retrieval weights accordingly. Each intent maps to a weight profile that shifts emphasis across retrieval legs: temporal queries boost recency weight, factual queries boost FTS5/exact-match weight, relational queries boost graph traversal weight, exploratory queries use balanced weights. This ensures that "what did we decide last week?" emphasizes time while "do we use Postgres or MySQL?" emphasizes precision.
 
-**Type-priority budget allocation:** When filling a caller's token budget, the recall system allocates in priority order across memory types: corrections and preferences claim budget first (they directly shape agent behavior), then recent outcomes (they prevent repeated mistakes), then patterns and skills (they save time). Within each priority tier, memories expand from L0 to L2 as budget allows. This ensures that a tight budget always contains the knowledge most likely to affect the agent's next action.
+**Type-priority budget allocation:** When filling a caller's token budget, the recall system allocates in priority order across memory types: corrections and preferences claim budget first (they directly shape agent behavior), then recent outcomes and learnings (they prevent repeated mistakes and surface discoveries), then patterns and procedural memories (they save time), then decisions, dependencies, and observations (they provide context). Context-type memories are lowest priority -- they fill remaining budget only. Within each priority tier, memories expand from L0 to L2 as budget allows. This ensures that a tight budget always contains the knowledge most likely to affect the agent's next action.
 
 **Reflect: background consolidation.**
 
@@ -696,13 +713,13 @@ See [Appendix D](#appendix-d-mcp-tool-reference) for the complete tool reference
 
 - **Templates** -- Configurations governing which fields are relevant for a given project type. Three canonical templates: code_project (includes tech_stack, patterns, mcp_servers, urls, keywords), non_code_project (includes stakeholders, timeline, domain, keywords), area_of_focus (subset of fields, no project-specific fields). Templates govern which fields appear at standard depth.
 
-- **Schema meta** -- Version tracking for the database schema. Stores the current schema version (8) used by migration logic to determine whether upgrades are needed.
+- **Schema meta** -- Version tracking for the database schema. Stores the current schema version (10) used by migration logic to determine whether upgrades are needed.
 
 - **Ports** -- Port allocations claimed by projects for their services. Each entry has: port number (3000--9999, globally unique), project, service label, protocol (tcp/udp), claimed_at.
 
 - **Capability declarations** -- Structured descriptions of a project's integration surfaces. Each has: name, type (open string), description, inputs, outputs, project, and optional invocation metadata (requires_auth, invocation_model, audience).
 
-- **Memories** -- Structured knowledge entries. Each has: ID, content, content_l0 (one-sentence abstract), content_l1 (structural overview), type, importance, confidence, status, project_id (FK to projects), scope, agent_role, session_id, tags (JSON array), content_hash, embedding (BLOB), embedding_model, embedding_new (BLOB for migration), embedding_model_new, reinforcement_count, outcome_score, is_pinned, is_static (non-decaying, exempt from archival), is_inference (derived vs. directly observed), forget_after, forget_reason, timestamps (created_at, updated_at, last_accessed).
+- **Memories** -- Structured knowledge entries. Each has: ID, content, content_l0 (one-sentence abstract), content_l1 (structural overview), type, importance, confidence, status, project_id (FK to projects), scope, agent_role, session_id, tags (JSON array), content_hash, embedding (BLOB), embedding_model, embedding_new (BLOB for migration), embedding_model_new, reinforcement_count, outcome_score, is_pinned, is_static (non-decaying, exempt from archival), is_inference (derived vs. directly observed), forget_after, forget_reason, belief (fact/opinion/hypothesis), extraction_confidence, valid_from, valid_until, entities (JSON array of {name, type}), parent_version_id (FK to memories.id for procedural versioning), is_current (boolean for version chain filtering), timestamps (created_at, updated_at, last_accessed).
 
 - **Memory versions** -- Historical snapshots of memory content.
 
@@ -771,11 +788,16 @@ See [Appendix D](#appendix-d-mcp-tool-reference) for the complete tool reference
 - Corrections create type `correction` with importance >= 0.9, `contradicts` edge. Corrected memory archived immediately. Corrections never subject to triple-gate archival.
 - Reflection runs on internal schedule, separate from async task worker. Triggers: cumulative importance threshold, periodic schedule, or manual invocation.
 - Embedding provider is runtime configuration. Changing does not invalidate existing embeddings. Dual-column pattern supports gradual migration.
-- Memory types are a closed set: decision, outcome, pattern, preference, dependency, correction, skill. Unknown types rejected at retain time.
-- Per-type decay rates multiply the time-decay exponent: correction=0.25, preference=0.25, decision=1.0, dependency=1.0, skill=1.0, outcome=1.5, pattern=1.5. Lower rate = slower fade.
+- Memory types are a closed set: decision, outcome, pattern, preference, dependency, correction, learning, context, procedural, observation. Unknown types rejected at retain time. The `skill` type is retired as of schema v10 — existing skill memories are migrated to `procedural` during the v9→v10 upgrade.
+- Per-type decay rates multiply the time-decay exponent: correction=0.25, preference=0.25, procedural=0.5, observation=0.5, decision=1.0, dependency=1.0, learning=1.0, outcome=1.5, pattern=1.5, context=2.0. Lower rate = slower fade.
+- Belief classification is optional. When provided, must be one of: fact, opinion, hypothesis. Null is valid and means unclassified.
+- Temporal validity: valid_from and valid_until are optional ISO timestamps. Memories with valid_until in the past receive a scoring penalty in recall but are not automatically archived. Reflection may archive memories whose valid_until is more than 90 days in the past.
+- Entity field is optional JSON. When provided, must be an array of objects with `name` (string) and `type` (string, one of: person, organization, project, topic). Stored denormalized for fast reads.
+- Procedural versioning: parent_version_id must reference an existing memory of type `procedural`. When set, the referenced memory's is_current is set to false. Recall filters to is_current=true by default for procedural types. inspect_memory shows the full version chain.
+- Context-type memories are exempt from pinning (is_pinned is always false for context type). They exist for cross-session bridging, not permanent reference.
 - Query intent classification maps to retrieval weight profiles: temporal boosts recency, factual boosts FTS5/exact-match, relational boosts graph traversal, exploratory uses balanced weights.
-- Type-priority budget allocation fills in order: corrections/preferences first, then outcomes, then patterns/skills/decisions/dependencies. Within each tier, L0 → L1 → L2 expansion.
-- Proactive contradiction detection runs during retain for preference and correction types. Auto-resolves when embeddings available (similarity > 0.85 with different conclusion). Flags for review in FTS5-only mode.
+- Type-priority budget allocation fills in order: corrections/preferences first, then outcomes/learnings, then patterns/procedural, then decisions/dependencies/observations, then context. Within each tier, L0 → L1 → L2 expansion.
+- Proactive contradiction detection runs during retain for preference, correction, and learning types. Auto-resolves when embeddings available (similarity > 0.85 with different conclusion). Flags for review in FTS5-only mode.
 - Every memory must have content and type. Project, scope, tags, session_id, agent_role are optional. Scope defaults to "project" when project provided, "global" when not.
 
 **TypeScript-specific rules:**
@@ -789,7 +811,7 @@ See [Appendix D](#appendix-d-mcp-tool-reference) for the complete tool reference
 | Connects To | What Flows | Direction | If Unavailable |
 |-------------|-----------|-----------|---------------|
 | fctry | Project identity (core + technical fields), port claims, capability declarations after builds | fctry writes via MCP or library import | fctry continues; registry entry not created |
-| Chorus | Project identity (core + context fields), library import of @setlist/core | Chorus reads/writes via direct import | Chorus continues without project awareness |
+| Chorus | Project identity, memory CRUD (all 10 types), capability exchange, port management | Chorus imports @setlist/core as npm dependency (`file:` reference). Reads/writes memory via MemoryStore and MemoryRetrieval directly (in-process, synchronous). Chorus is the primary producer of learning, context, preference, decision, correction, and procedural types. Setlist is canonical store; Chorus maintains local vector/FTS5/graph indices for fast retrieval. | Chorus falls back to local-only memory (no cross-project awareness, no portfolio memories) |
 | Ensemble | Memory retain/recall, library import of @setlist/core | Ensemble reads/writes via direct import | Ensemble continues without memory |
 | Knowmarks | Project metadata (name, description, goals, keywords, tech stack) | Knowmarks reads from registry | Falls back to regex extraction |
 | ctx | Project context (description, goals, status, tech stack) | ctx reads from registry | Operates without project context |
@@ -835,9 +857,10 @@ Everything the Python spec covers (project identity, fields, queries, migration,
 - better-sqlite3 synchronous API patterns
 - @modelcontextprotocol/sdk integration for the MCP server
 - npm distribution and package.json configuration
-- Schema v8 compatibility with the Python implementation (shared .db file)
+- Schema evolution from Python's v8 through v9 (observation) to v10 (unified memory types + chorus-compatible fields)
 - Porting strategy from the 786 Python tests
 - Portfolio intelligence support: the `observation` memory type and `portfolio_brief` tool that enable external agents (orchestrator) to retain and recall cross-project findings
+- Unified memory store: setlist as the canonical memory backend for Chorus (10 memory types, belief classification, temporal validity, entity extraction, procedural versioning). Chorus imports @setlist/core directly for in-process memory operations.
 
 **This spec does NOT cover (deferred, same as Python spec):**
 
@@ -870,7 +893,7 @@ All Python spec hard constraints apply, plus:
 
 - **SQLite via better-sqlite3, synchronous API.** The database binding is better-sqlite3, which provides synchronous, native SQLite access. This is a deliberate choice: synchronous calls are simpler, faster, and avoid the callback/promise complexity that async SQLite wrappers introduce for a local database. The library API may expose async signatures for ergonomic consistency, but the underlying operations are synchronous.
 
-- **Schema v8 compatibility.** The SQLite schema must be byte-compatible with the Python implementation's schema v8. Both implementations read and write the same .db file. Schema migrations in Setlist must produce identical tables, indexes, and constraints as the Python implementation.
+- **Schema evolution from v8.** The SQLite schema originated as v8, byte-compatible with the Python implementation. Setlist has since evolved the schema: v9 added the `observation` memory type, v10 adds unified memory types (learning, context, procedural), new fields (belief, extraction_confidence, valid_from, valid_until, entities, parent_version_id, is_current), and migrates `skill` → `procedural`. The Python implementation remains at v8; the shared .db file is forward-compatible (Python can read v10 databases but will not recognize new types or fields). Schema migrations are incremental and non-destructive.
 
 - **Same 27 MCP tools, same parameters, same response shapes, plus Setlist-specific additions.** The original 27 tools are a drop-in replacement for the Python server. Tool names, parameter names, parameter types, and response structures are identical. An agent that works with the Python MCP server must work identically with Setlist's MCP server. Setlist adds `rename_project` as a 28th tool not present in the Python implementation.
 
@@ -884,7 +907,7 @@ All Python spec anti-patterns apply, plus:
 
 - **Setlist must not add async where sync suffices.** better-sqlite3 is synchronous. Wrapping every call in async/await adds complexity without benefit for a local database. Use async only where genuinely needed (embedding API calls, file system operations, worker process management).
 
-- **Setlist must not diverge from the Python schema.** The .db file is the shared contract. Schema changes must be coordinated across both implementations or the contract breaks. Schema evolution happens in the Python implementation first, then is ported to Setlist.
+- **Schema evolution must be incremental and non-destructive.** Each version upgrade (v8→v9→v10) must handle the full migration path. Existing data must never be lost during upgrades. New columns use nullable defaults or sensible initial values. The `skill` → `procedural` type migration in v10 is a data migration within the table-recreate pattern.
 
 - **Setlist must not re-invent MCP tool semantics.** The 27 tools have defined parameter names, types, and response shapes. Setlist implements them; it does not redesign them.
 
@@ -937,7 +960,7 @@ setlist/
 
 ### 5.2 Schema Compatibility {#schema}
 
-The SQLite schema v8 is the shared contract. Setlist's `db.ts` must produce identical schema to the Python `db.py`:
+The SQLite schema v10 is the current schema. It extends the Python implementation's v8 through two evolution steps: v9 added the `observation` memory type, v10 adds unified memory types and chorus-compatible fields:
 
 **Tables (18):**
 - `projects` — core identity columns (name PK, display_name, type, status, description, goals, created_at, updated_at)
@@ -946,11 +969,11 @@ The SQLite schema v8 is the shared contract. Setlist's `db.ts` must produce iden
 - `field_catalog` — master list of known fields (name PK, type, category, description). Advisory — fields not in the catalog are still accepted.
 - `templates` — project type templates (name PK, description). Three canonical templates: code_project, non_code_project, area_of_focus.
 - `template_fields` — maps templates to field names (template_name FK, field_name FK). Governs which fields appear at standard depth.
-- `schema_meta` — schema version tracking (key PK, value). Stores `schema_version = 8`.
+- `schema_meta` — schema version tracking (key PK, value). Stores `schema_version = 10`.
 - `project_ports` — port allocations (id PK, project_id FK, port UNIQUE, service_label, protocol, claimed_by, claimed_at)
 - `project_capabilities` — capability declarations (id PK, project_id FK, name, capability_type, description, inputs, outputs, producer, requires_auth, invocation_model, audience, UNIQUE(project_id, name))
 - `tasks` — async work queue (id PK, project_name TEXT, description, schedule, status, session_reference, error_message, created_at, started_at, completed_at)
-- `memories` — knowledge entries (id TEXT PK, content, content_l0, content_l1, type, importance, confidence, status, project_id TEXT, scope, agent_role, session_id, tags, content_hash, embedding BLOB, embedding_model, embedding_new BLOB, embedding_model_new, reinforcement_count, outcome_score, is_static, is_inference, is_pinned, created_at, updated_at, last_accessed, forget_after, forget_reason, UNIQUE(content_hash, project_id, scope))
+- `memories` — knowledge entries (id TEXT PK, content, content_l0, content_l1, type CHECK(decision|outcome|pattern|preference|dependency|correction|learning|context|procedural|observation), importance, confidence, status, project_id TEXT, scope, agent_role, session_id, tags, content_hash, embedding BLOB, embedding_model, embedding_new BLOB, embedding_model_new, reinforcement_count, outcome_score, is_static, is_inference, is_pinned, belief TEXT CHECK(fact|opinion|hypothesis), extraction_confidence REAL, valid_from TEXT, valid_until TEXT, entities TEXT, parent_version_id TEXT, is_current INTEGER DEFAULT 1, created_at, updated_at, last_accessed, forget_after, forget_reason, UNIQUE(content_hash, project_id, scope))
 - `memory_versions` — version history (id PK, memory_id FK, previous_content, author CHECK(agent|user|system), change_type CHECK(created|updated|corrected|archived|superseded), timestamp)
 - `memory_edges` — inter-memory relationships (id PK, source_id FK, target_id FK, relationship_type CHECK(updates|extends|derives|contradicts|caused_by|related_to), weight, confidence, observation_count, created_at)
 - `memory_sources` — provenance records (id PK, memory_id FK, project_id, session_id, agent_role, context_snippet, timestamp)
@@ -993,7 +1016,8 @@ interface Project {
 }
 
 type ProjectStatus = 'idea' | 'draft' | 'active' | 'paused' | 'archived' | 'complete';
-type MemoryType = 'decision' | 'outcome' | 'pattern' | 'preference' | 'dependency' | 'correction' | 'skill';
+type MemoryType = 'decision' | 'outcome' | 'pattern' | 'preference' | 'dependency' | 'correction' | 'learning' | 'context' | 'procedural' | 'observation';
+type MemoryBelief = 'fact' | 'opinion' | 'hypothesis';
 type MemoryScope = 'project' | 'area_of_focus' | 'portfolio' | 'global';
 type QueryDepth = 'minimal' | 'summary' | 'standard' | 'full';
 ```
@@ -1186,7 +1210,7 @@ All terms from the Python spec glossary apply. Additional terms:
 | @setlist/mcp | npm package providing the MCP server — 27 tools via @modelcontextprotocol/sdk |
 | @setlist/cli | npm package providing the CLI — terminal commands and worker script |
 | better-sqlite3 | Synchronous native SQLite binding for Node.js |
-| Schema v8 | The current SQLite schema version, shared between Python and TypeScript implementations |
+| Schema v10 | The current SQLite schema version. Evolved from Python's v8 through v9 (observation type) and v10 (unified memory types + chorus-compatible fields) |
 | Experience-port | A spec derived from an existing implementation where the experience stays identical and only the implementation changes |
 
 ## Appendix C: Deferred Futures {#deferred-futures}
@@ -1228,7 +1252,7 @@ Complete tool reference for the 27 MCP tools. All tools have identical names, pa
 
 | Tool | Parameters | Returns |
 |------|-----------|---------|
-| retain | content, type, project?, scope?, tags?, session_id?, agent_role? | Memory ID, created vs reinforced |
+| retain | content, type, project?, scope?, tags?, session_id?, agent_role?, belief?, extraction_confidence?, valid_from?, valid_until?, entities?, parent_version_id? | Memory ID, created vs reinforced |
 | recall | query?, project?, token_budget | Scored memories with tiered content |
 | feedback | result, memory_ids[] | Count updated, direction |
 | memory_status | (none) | Counts by type/scope, provider status |

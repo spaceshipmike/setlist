@@ -13,13 +13,15 @@ concerns unique to the Setlist implementation.
 ## S01: Schema Initialization {#s01}
 **Given** a fresh system with no registry database
 **When** @setlist/core initializes the database
-**Then** the SQLite file is created at `~/.local/share/project-registry/registry.db` with schema v8,
+**Then** the SQLite file is created at `~/.local/share/project-registry/registry.db` with schema v10,
 all 18 tables exist with correct columns and indexes, WAL mode is enabled, and FTS5 virtual table
 for memory search is created.
 
 **Satisfaction criteria:**
 - Table list matches: projects, project_paths, project_fields, field_catalog, templates, template_fields, schema_meta, tasks, project_ports, project_capabilities, memories, memory_versions, memory_edges, memory_sources, summary_blocks, enrichment_log, recall_audit, memory_fts
-- Schema version stored as 8
+- Schema version stored as 10
+- Memories table CHECK constraint includes all 10 types (decision, outcome, pattern, preference, dependency, correction, learning, context, procedural, observation)
+- Memories table includes columns: belief, extraction_confidence, valid_from, valid_until, entities, parent_version_id, is_current
 - WAL mode confirmed via `PRAGMA journal_mode`
 - FTS5 table responds to `SELECT * FROM memory_fts WHERE memory_fts MATCH 'test'` without error
 
@@ -452,3 +454,94 @@ and port discovery proposes port claims from config files.
 - Renaming to an existing project name fails with a clear error
 - The rename is atomic: if any step fails, no changes are committed
 - The old name becomes available for re-registration after rename
+
+---
+
+## S32: Schema v10 Migration {#s32}
+**Given** a registry.db at schema v9 (with observation type, without unified memory fields)
+**When** @setlist/core opens the database and detects v9
+**Then** the schema is upgraded to v10 non-destructively.
+
+**Satisfaction criteria:**
+- Memories table CHECK constraint accepts all 10 types: decision, outcome, pattern, preference, dependency, correction, learning, context, procedural, observation
+- Existing memories with `type = 'skill'` are migrated to `type = 'procedural'`
+- New nullable columns exist: belief, extraction_confidence, valid_from, valid_until, entities, parent_version_id, is_current
+- `is_current` defaults to 1 for all existing memories
+- All existing memory data (content, scores, embeddings, edges) is preserved exactly
+- schema_meta stores schema_version = 10
+- FTS5 triggers still function after migration
+
+---
+
+## S33: Unified Memory Types {#s33}
+**Given** a schema v10 database
+**When** memories are retained with each of the 10 types
+**Then** all types are accepted, stored, and recallable with correct decay behavior.
+
+**Satisfaction criteria:**
+- `retain({ content: '...', type: 'learning' })` succeeds and returns a memory ID
+- `retain({ content: '...', type: 'context' })` succeeds
+- `retain({ content: '...', type: 'procedural' })` succeeds
+- `retain({ content: '...', type: 'skill' })` is rejected (type no longer valid)
+- Recall applies correct decay rates: context decays fastest (2.0), procedural/observation slowest after corrections (0.5), learning at baseline (1.0)
+- Type-priority budget allocation orders: corrections/preferences → outcomes/learnings → patterns/procedural → decisions/dependencies/observations → context
+
+---
+
+## S34: Belief Classification and Temporal Validity {#s34}
+**Given** a schema v10 database with memories
+**When** memories are retained with belief, extraction_confidence, and temporal validity fields
+**Then** these fields are stored, returned in recall, and affect scoring.
+
+**Satisfaction criteria:**
+- `retain({ content: '...', type: 'learning', belief: 'hypothesis', extraction_confidence: 0.7 })` stores both fields
+- `retain({ content: '...', type: 'decision', valid_from: '2026-01-01', valid_until: '2026-06-01' })` stores temporal bounds
+- `inspect_memory` returns all new fields
+- Recall returns memories with expired `valid_until` but applies a temporal penalty in scoring
+- Belief field accepts only 'fact', 'opinion', 'hypothesis', or null
+- Null belief and null temporal bounds are valid (no penalty, treated as unclassified/unbounded)
+
+---
+
+## S35: Entity Extraction Storage {#s35}
+**Given** a schema v10 database
+**When** memories are retained with entity metadata
+**Then** entities are stored as JSON and returned in queries.
+
+**Satisfaction criteria:**
+- `retain({ content: '...', type: 'learning', entities: [{ name: 'Alice', type: 'person' }, { name: 'Acme', type: 'organization' }] })` stores the entities JSON
+- `inspect_memory` returns the entities array with correct structure
+- Recall results include the entities field
+- Invalid entity JSON (missing name or type) is rejected at retain time
+- Null entities field is valid (no entities extracted)
+
+---
+
+## S36: Procedural Memory Versioning {#s36}
+**Given** a schema v10 database with an existing procedural memory (version 1)
+**When** a refined version is retained with parent_version_id pointing to version 1
+**Then** the version chain is maintained and recall surfaces only the current version.
+
+**Satisfaction criteria:**
+- Retaining a procedural memory with `parent_version_id` pointing to an existing procedural memory succeeds
+- The referenced parent memory's `is_current` is set to false
+- `recall` returns only `is_current = true` procedural memories by default
+- `inspect_memory` on the current version shows `parent_version_id` linking to its predecessor
+- `inspect_memory` on the superseded version shows `is_current = false`
+- Setting `parent_version_id` on a non-procedural type is rejected
+- Setting `parent_version_id` to a non-existent memory ID is rejected
+
+---
+
+## S37: Chorus Direct Import [TS] {#s37}
+**Given** a Node.js project with `@setlist/core` as a file dependency
+**When** the project imports MemoryStore and MemoryRetrieval
+**Then** all unified memory operations work in-process without MCP.
+
+**Satisfaction criteria:**
+- `import { MemoryStore, MemoryRetrieval } from '@setlist/core'` resolves successfully
+- `MemoryStore.retain()` accepts all 10 types and all new fields (belief, entities, etc.)
+- `MemoryRetrieval.recall()` returns memories with new fields populated
+- Operations are synchronous (better-sqlite3) — no async overhead for basic retain/recall
+- The same registry.db is readable by both the direct import and the MCP server simultaneously (WAL mode)
+- Type exports include: MemoryType (10-member union), MemoryBelief, Memory (with all new fields)
