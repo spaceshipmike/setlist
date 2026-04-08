@@ -1,0 +1,24 @@
+appId: com.setlist.app
+productName: Setlist
+directories:
+  buildResources: build
+  output: dist
+files:
+  - '!**/.vscode/*'
+  - '!src/*'
+  - '!e2e/*'
+  - '!electron.vite.config.*'
+  - '!{tsconfig*.json,biome.json}'
+asarUnpack:
+  - node_modules/better-sqlite3/**
+mac:
+  target:
+    - target: dmg
+      arch:
+        - arm64
+        - x64
+  notarize: false
+publish:
+  provider: github
+  owner: spaceshipmike
+  repo: setlist

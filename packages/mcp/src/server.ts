@@ -1,7 +1,7 @@
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { CallToolRequestSchema, ListToolsRequestSchema } from '@modelcontextprotocol/sdk/types.js';
 import {
-  Registry, MemoryStore, MemoryRetrieval, MemoryReflection, CrossQuery,
+  Registry, MemoryStore, MemoryRetrieval, MemoryReflection, CrossQuery, Bootstrap,
   type CapabilityDeclaration, type QueryDepth,
 } from '@setlist/core';
 
@@ -11,6 +11,7 @@ export function createServer(dbPath?: string): Server {
   const memoryRetrieval = new MemoryRetrieval(dbPath);
   const crossQuery = new CrossQuery(dbPath);
   const memoryReflection = new MemoryReflection(dbPath);
+  const bootstrapManager = new Bootstrap(dbPath);
 
   const server = new Server(
     { name: 'setlist', version: '0.1.0' },
@@ -32,6 +33,7 @@ export function createServer(dbPath?: string): Server {
       { name: 'archive_project', description: 'Archive a project (releases ports, clears capabilities).', inputSchema: { type: 'object' as const, properties: { name: { type: 'string' } }, required: ['name'] } },
       { name: 'rename_project', description: 'Rename a project atomically (rewrites all references).', inputSchema: { type: 'object' as const, properties: { name: { type: 'string' }, new_name: { type: 'string' } }, required: ['name', 'new_name'] } },
       { name: 'batch_update', description: 'Apply field changes to all projects matching a filter. Supports dry_run.', inputSchema: { type: 'object' as const, properties: { type_filter: { type: 'string' }, status_filter: { type: 'string' }, display_name: { type: 'string' }, status: { type: 'string' }, description: { type: 'string' }, goals: { type: 'string' }, dry_run: { type: 'boolean' } } } },
+      { name: 'enrich_project', description: 'Add structured profile data (goals, topics, entities, concerns) to a project. Union semantics — new items are merged with existing.', inputSchema: { type: 'object' as const, properties: { name: { type: 'string' }, goals: { type: 'array', items: { type: 'string' } }, topics: { type: 'array', items: { type: 'string' } }, entities: { type: 'array', items: { type: 'string' } }, concerns: { type: 'array', items: { type: 'string' } } }, required: ['name'] } },
       { name: 'write_fields', description: 'Write extended fields to a project (short_description, medium_description, tech_stack, etc.). Producer-owned: fields written by one producer are not overwritten by another.', inputSchema: { type: 'object' as const, properties: { project_name: { type: 'string' }, fields: { type: 'object', description: 'Key-value pairs of field names to values. Values can be strings or arrays.' }, producer: { type: 'string', default: 'system', description: 'Producer identity (e.g., "fctry", "chorus", "user")' } }, required: ['project_name', 'fields'] } },
       // Capabilities (2)
       { name: 'register_capabilities', description: 'Write a project\'s complete capability set (replace semantics).', inputSchema: { type: 'object' as const, properties: { project_name: { type: 'string' }, capabilities: { type: 'array' } }, required: ['project_name', 'capabilities'] } },
@@ -57,6 +59,9 @@ export function createServer(dbPath?: string): Server {
       { name: 'queue_task', description: 'Queue async work. Single project or fan-out dispatch.', inputSchema: { type: 'object' as const, properties: { description: { type: 'string' }, project_name: { type: 'string' }, schedule: { type: 'string', enum: ['now', 'tonight', 'weekly'] }, type_filter: { type: 'string' }, status_filter: { type: 'string' } }, required: ['description', 'schedule'] } },
       { name: 'list_tasks', description: 'List tasks with optional status and project filters.', inputSchema: { type: 'object' as const, properties: { status_filter: { type: 'string' }, project_name: { type: 'string' } } } },
       { name: 'cross_query', description: 'Search across all projects for a natural-language question.', inputSchema: { type: 'object' as const, properties: { query: { type: 'string' }, scope: { type: 'string', enum: ['registry', 'memories', 'all'], default: 'registry' } }, required: ['query'] } },
+      // Bootstrap (2)
+      { name: 'bootstrap_project', description: 'Create a new project end-to-end: register in registry, create folder, apply templates, init git (code projects). Requires configure_bootstrap first.', inputSchema: { type: 'object' as const, properties: { name: { type: 'string' }, project_type: { type: 'string', enum: ['project', 'area_of_focus'], default: 'project' }, status: { type: 'string', default: 'active' }, description: { type: 'string' }, goals: { type: 'string' }, display_name: { type: 'string' }, path_override: { type: 'string' }, skip_git: { type: 'boolean', default: false }, producer: { type: 'string', default: 'bootstrap' } }, required: ['name'] } },
+      { name: 'configure_bootstrap', description: 'Configure bootstrap: set path roots per project type and template directory. Call with no arguments to view current config.', inputSchema: { type: 'object' as const, properties: { path_roots: { type: 'object', description: 'Mapping of project type to default path root (e.g., {"project": "~/Code", "area_of_focus": "~/Areas"})' }, template_dir: { type: 'string', description: 'Path to the template directory' } } } },
     ],
   }));
 
@@ -127,6 +132,16 @@ export function createServer(dbPath?: string): Server {
           registry.renameProject(a.name as string, a.new_name as string);
           result = { result: `Project '${a.name}' renamed to '${a.new_name}'.` };
           break;
+        case 'enrich_project': {
+          const enrichResult = registry.enrichProject(a.name as string, {
+            goals: a.goals as string[] | undefined,
+            topics: a.topics as string[] | undefined,
+            entities: a.entities as string[] | undefined,
+            concerns: a.concerns as string[] | undefined,
+          });
+          result = enrichResult;
+          break;
+        }
         case 'write_fields': {
           const fields = a.fields as Record<string, unknown>;
           const producer = (a.producer as string) ?? 'system';
@@ -283,6 +298,27 @@ export function createServer(dbPath?: string): Server {
           result = cqResult;
           break;
         }
+
+        // Bootstrap
+        case 'bootstrap_project':
+          result = bootstrapManager.bootstrapProject({
+            name: a.name as string,
+            type: (a.project_type as string ?? 'project') as 'project' | 'area_of_focus',
+            status: a.status as string | undefined,
+            description: a.description as string | undefined,
+            goals: a.goals as string | undefined,
+            display_name: a.display_name as string | undefined,
+            path_override: a.path_override as string | undefined,
+            skip_git: a.skip_git as boolean | undefined,
+            producer: a.producer as string | undefined,
+          });
+          break;
+        case 'configure_bootstrap':
+          result = bootstrapManager.configureBootstrap({
+            path_roots: a.path_roots as Record<string, string> | undefined,
+            template_dir: a.template_dir as string | undefined,
+          });
+          break;
 
         default:
           return { content: [{ type: 'text', text: `Error [INVALID_INPUT]: Unknown tool '${name}'.` }] };

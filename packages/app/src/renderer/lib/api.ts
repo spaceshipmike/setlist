@@ -1,0 +1,147 @@
+/**
+ * Typed wrapper around the IPC bridge exposed via window.setlist.
+ * All calls are async (IPC invoke returns promises).
+ */
+
+export interface ProjectSummary {
+  name: string;
+  display_name: string;
+  type: string;
+  status: string;
+  description: string;
+  goals: string;
+  updated_at: string;
+  created_at: string;
+  paths?: string[];
+}
+
+export interface ProjectFull extends ProjectSummary {
+  paths: string[];
+  extended_fields: Record<string, unknown>;
+  capabilities: Capability[];
+  ports: PortClaim[];
+}
+
+export interface Capability {
+  project: string;
+  name: string;
+  type: string;
+  description: string;
+  inputs?: string;
+  outputs?: string;
+  requires_auth?: boolean;
+}
+
+export interface PortClaim {
+  port: number;
+  service_label: string;
+  protocol: string;
+  claimed_by: string;
+  claimed_at: string;
+}
+
+export interface Memory {
+  id: string;
+  content: string;
+  type: string;
+  importance: number;
+  project_id: string | null;
+  scope: string;
+  status: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface RegistryStats {
+  total: number;
+  by_type: Record<string, number>;
+  by_status: Record<string, number>;
+}
+
+const api = {
+  listProjects: (opts?: { depth?: string; type_filter?: string; status_filter?: string }) =>
+    window.setlist.listProjects(opts) as Promise<ProjectSummary[]>,
+
+  getProject: (name: string, depth?: string) =>
+    window.setlist.getProject(name, depth) as Promise<ProjectFull | null>,
+
+  searchProjects: (opts: { query: string; type_filter?: string; status_filter?: string }) =>
+    window.setlist.searchProjects(opts) as Promise<ProjectSummary[]>,
+
+  getRegistryStats: () =>
+    window.setlist.getRegistryStats() as Promise<RegistryStats>,
+
+  register: (opts: {
+    name: string;
+    type: string;
+    status: string;
+    description?: string;
+    goals?: string;
+    display_name?: string;
+    paths?: string[];
+  }) => window.setlist.register(opts) as Promise<number>,
+
+  updateCore: (name: string, updates: {
+    status?: string;
+    description?: string;
+    goals?: string;
+    display_name?: string;
+  }) => window.setlist.updateCore(name, updates),
+
+  updateFields: (name: string, fields: Record<string, unknown>, producer?: string) =>
+    window.setlist.updateFields(name, fields, producer),
+
+  archiveProject: (name: string) =>
+    window.setlist.archiveProject(name),
+
+  renameProject: (oldName: string, newName: string) =>
+    window.setlist.renameProject(oldName, newName),
+
+  listProjectPorts: (projectName: string) =>
+    window.setlist.listProjectPorts(projectName) as Promise<PortClaim[]>,
+
+  queryCapabilities: (opts?: { project_name?: string; capability_type?: string; keyword?: string }) =>
+    window.setlist.queryCapabilities(opts) as Promise<Capability[]>,
+
+  recallMemories: (opts: { query?: string; project?: string; token_budget?: number }) =>
+    window.setlist.recallMemories(opts) as Promise<{ memories: Memory[] }>,
+
+  memoryStatus: (projectId?: string) =>
+    window.setlist.memoryStatus(projectId),
+
+  getBootstrapConfig: () =>
+    window.setlist.getBootstrapConfig() as Promise<BootstrapConfig>,
+
+  configureBootstrap: (opts: {
+    path_roots?: Record<string, string>;
+    template_dir?: string;
+    archive_path_root?: string;
+  }) => window.setlist.configureBootstrap(opts) as Promise<BootstrapConfig>,
+
+  bootstrapProject: (opts: {
+    name: string;
+    type: string;
+    status?: string;
+    description?: string;
+    goals?: string;
+    display_name?: string;
+    path_override?: string;
+    skip_git?: boolean;
+  }) => window.setlist.bootstrapProject(opts) as Promise<BootstrapResult>,
+};
+
+export interface BootstrapConfig {
+  path_roots: Record<string, string>;
+  template_dir?: string;
+  archive_path_root?: string;
+}
+
+export interface BootstrapResult {
+  name: string;
+  path: string;
+  type: string;
+  git_initialized: boolean;
+  templates_applied: boolean;
+}
+
+export default api;

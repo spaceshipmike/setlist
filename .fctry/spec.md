@@ -3,26 +3,26 @@
 ```yaml
 ---
 title: Setlist
-spec-version: "0.6"
-date: 2026-04-06
+spec-version: "0.8"
+date: 2026-04-07
 status: active
 author: Mike (via fctry interview, experience-ported from project-registry-service)
 spec-format: nlspec-v2
 experience-source: project-registry-service/.fctry/spec.md (v1.3)
 ---
 synopsis:
-  short: "TypeScript implementation of the project registry — active intelligence hub for project identity, capabilities, unified memory (10 types), and cross-project awareness (28 MCP tools + direct library import)"
-  medium: "TypeScript monorepo (@setlist/core, @setlist/mcp, @setlist/cli) implementing the project registry as npm-packageable infrastructure. Local SQLite (better-sqlite3) + MCP server (@modelcontextprotocol/sdk) providing project identity, capability declarations, unified portfolio memory (10 types with belief classification, temporal validity, entity extraction, and procedural versioning) with hybrid retrieval and outcome-aware reinforcement, port allocation, async task dispatch, batch operations, and cross-project intelligence. Schema v10, 28 MCP tools, importable as @setlist/core by Chorus and Ensemble for in-process memory operations."
-  readme: "Setlist is the TypeScript implementation of the Project Registry — invisible infrastructure at the center of the user's personal ecosystem. It provides structured, queryable identity for every project and area of focus, with programmatic administration tools for updating project metadata and archiving projects. Projects declare their capabilities — MCP tools, CLI commands, API endpoints, databases, library functions — and other projects and agents discover those capabilities through a dedicated query tool. Setlist maintains a unified portfolio memory: agents retain decisions, outcomes, patterns, preferences, corrections, learnings, context, procedural workflows, and observations as typed memories with optional belief classification (fact/opinion/hypothesis), temporal validity, and entity extraction. Memories are enriched with embeddings and importance scores, then recalled via budget-controlled hybrid retrieval (FTS5 + vector + graph) with outcome-aware reinforcement. Chorus imports @setlist/core directly as its canonical memory store, maintaining local indices for fast retrieval while setlist owns persistence. It manages globally-unique port allocation with automatic discovery from project config files. Beyond single-project operations, Setlist acts as an active hub: batch_update applies field changes atomically across filtered project sets, and cross-project task dispatch fans out work items simultaneously via the async worker. Distributed as npm packages (@setlist/core, @setlist/mcp, @setlist/cli), Setlist is directly consumable by Chorus, Ensemble, and any Node.js tool in the ecosystem."
-  tech-stack: [typescript, better-sqlite3, "@modelcontextprotocol/sdk", node, npm-monorepo]
-  patterns: [atomized-fields, progressive-disclosure, producer-consumer, registration-not-discovery, invisible-infrastructure, config-file-scanning, hub-and-spoke, capability-declaration, definition-is-truth, fuzzy-match-suggestions, archive-triggered-cleanup, producer-attribution, summary-compactness, freshness-importance-scoring, invocation-metadata, retain-recall-reflect, outcome-aware-reinforcement, content-hash-dedup, embedding-provider-abstraction, budget-controlled-recall, four-level-scoping, hybrid-retrieval, belief-classification, temporal-validity, entity-extraction, procedural-versioning, unified-memory-store]
-  goals: [unified-project-identity, capability-discovery, programmatic-project-administration, batch-operations, cross-project-task-dispatch, conflict-free-port-allocation, automatic-port-discovery, async-task-execution, cross-project-intelligence, crash-resilient-worker, ranked-cross-project-results, capability-invocation-awareness, portfolio-memory, outcome-reinforcement, hybrid-retrieval, npm-packageable-distribution, canonical-memory-store, chorus-memory-unification]
+  short: "TypeScript project registry — intelligence hub with desktop control panel, 32 MCP tools, unified memory, and direct library import"
+  medium: "TypeScript monorepo (@setlist/core, @setlist/mcp, @setlist/cli, @setlist/app) implementing the project registry as both invisible infrastructure and a directly operable desktop surface. Local SQLite (better-sqlite3) + MCP server + Electron control panel sharing Chorus's design system (Tailwind 4, Radix UI). Provides project identity, capability declarations, unified portfolio memory (10 types), project bootstrap, port allocation, batch operations, and cross-project intelligence. Schema v10, 32 MCP tools, importable as @setlist/core by Chorus and Ensemble."
+  readme: "Setlist is the TypeScript implementation of the Project Registry — both invisible infrastructure at the center of the user's personal ecosystem and a directly operable desktop control panel. As infrastructure, it provides structured, queryable identity for every project and area of focus, with programmatic administration, capability declarations, unified portfolio memory (10 types with belief classification, temporal validity, entity extraction, and procedural versioning), budget-controlled hybrid retrieval, port allocation, project bootstrap, batch operations, and cross-project intelligence via 32 MCP tools and direct library import. As a desktop application, it presents a card-grid dashboard of all projects with filtering and sorting, tabbed project detail views (overview, memory, capabilities, ports), and full project CRUD — register, edit, archive, rename — through a native macOS Electron app sharing Chorus's design language (Tailwind CSS 4, Radix UI, terracotta accent, warm charcoal surfaces). The main process imports @setlist/core directly; no API layer sits between the UI and the registry. Distributed as four npm packages (@setlist/core, @setlist/mcp, @setlist/cli, @setlist/app), Setlist is directly consumable by Chorus, Ensemble, and any Node.js tool in the ecosystem, while also standing alone as a full-featured project management surface."
+  tech-stack: [typescript, better-sqlite3, "@modelcontextprotocol/sdk", node, npm-monorepo, electron, react, tailwindcss-v4, radix-ui]
+  patterns: [atomized-fields, progressive-disclosure, producer-consumer, registration-not-discovery, invisible-infrastructure, operable-surface, config-file-scanning, hub-and-spoke, capability-declaration, definition-is-truth, fuzzy-match-suggestions, archive-triggered-cleanup, producer-attribution, summary-compactness, freshness-importance-scoring, invocation-metadata, retain-recall-reflect, outcome-aware-reinforcement, content-hash-dedup, embedding-provider-abstraction, budget-controlled-recall, four-level-scoping, hybrid-retrieval, belief-classification, temporal-validity, entity-extraction, procedural-versioning, unified-memory-store, template-driven-bootstrap, configure-then-use, shared-design-system, ipc-bridge]
+  goals: [unified-project-identity, capability-discovery, programmatic-project-administration, batch-operations, cross-project-task-dispatch, conflict-free-port-allocation, automatic-port-discovery, async-task-execution, cross-project-intelligence, crash-resilient-worker, ranked-cross-project-results, capability-invocation-awareness, portfolio-memory, outcome-reinforcement, hybrid-retrieval, npm-packageable-distribution, canonical-memory-store, chorus-memory-unification, project-bootstrap-and-scaffolding, desktop-control-panel, project-dashboard, project-crud-ui]
 plugin-version: 0.77.3
 ```
 
-Setlist is the TypeScript implementation of the Project Registry — the active intelligence hub at the center of the user's personal ecosystem. Originally a direct port of the Python project-registry-service, it has since evolved beyond parity: schema v10 (unified memory types, belief classification, temporal validity, entity extraction, procedural versioning), 28 MCP tools (the original 27 plus `rename_project`), and an expanded portfolio memory subsystem. The .db file is the shared contract — both implementations read and write the same database, though the Python implementation remains at schema v8.
+Setlist is the TypeScript implementation of the Project Registry — the active intelligence hub at the center of the user's personal ecosystem. Originally a direct port of the Python project-registry-service, it has since evolved beyond parity: schema v10 (unified memory types, belief classification, temporal validity, entity extraction, procedural versioning), 32 MCP tools (the original 27 plus `rename_project`, `bootstrap_project`, and `configure_bootstrap`), an expanded portfolio memory subsystem, and a native desktop control panel for direct human interaction. The .db file is the shared contract — both implementations read and write the same database, though the Python implementation remains at schema v8.
 
-The rewrite exists because Chorus (Electron + React) and Ensemble need the registry as a direct npm dependency, not a subprocess or MCP-only integration. @setlist/core provides the library API importable from any Node.js process. @setlist/mcp wraps it as an MCP server. @setlist/cli exposes it from the terminal. The 786 Python tests define the behavioral contract to port against.
+The rewrite exists because Chorus (Electron + React) and Ensemble need the registry as a direct npm dependency, not a subprocess or MCP-only integration. @setlist/core provides the library API importable from any Node.js process. @setlist/mcp wraps it as an MCP server. @setlist/cli exposes it from the terminal. @setlist/app provides a desktop control panel — an Electron app that imports @setlist/core directly, giving the user a visual surface for project management alongside the programmatic interfaces. The 786 Python tests define the behavioral contract to port against.
 
 ---
 
@@ -46,6 +46,8 @@ The rewrite exists because Chorus (Electron + React) and Ensemble need the regis
    - 2.10 [Port Registry](#210-port-registry) `#port-registry`
    - 2.11 [Capability Declarations](#211-capability-declarations) `#capability-declarations`
    - 2.12 [Portfolio Memory](#212-portfolio-memory) `#portfolio-memory`
+   - 2.13 [Project Bootstrap](#213-project-bootstrap) `#project-bootstrap`
+   - 2.14 [Desktop Control Panel](#214-desktop-control-panel) `#desktop-app`
 3. [System Behavior](#3-system-behavior)
    - 3.1 [Core Capabilities](#31-core-capabilities) `#capabilities`
    - 3.2 [Things the System Keeps Track Of](#32-things-the-system-keeps-track-of) `#entities`
@@ -91,21 +93,23 @@ Setlist is the same system, re-implemented in TypeScript, distributed as npm pac
 
 ### 1.2 What This System Is {#what-this-is}
 
-Setlist is a TypeScript monorepo providing the Project Registry as three npm packages:
+Setlist is a TypeScript monorepo providing the Project Registry as four npm packages:
 
-- **@setlist/core** -- The library. All registry logic: project identity, field model, variable-depth querying, filtering, migration, port management, capability declarations, portfolio memory (retain/recall/reflect), task queue, cross-project queries, batch operations. Importable from any Node.js process. This is what Chorus and Ensemble consume directly.
+- **@setlist/core** -- The library. All registry logic: project identity, field model, variable-depth querying, filtering, migration, port management, capability declarations, portfolio memory (retain/recall/reflect), task queue, cross-project queries, batch operations. Importable from any Node.js process. This is what Chorus, Ensemble, and the desktop app consume directly.
 
-- **@setlist/mcp** -- The MCP server. A thin translation layer wrapping @setlist/core as 28 MCP tools via @modelcontextprotocol/sdk, using stdio transport managed by Claude Code's lifecycle. The original 27 tools match the Python server identically; `rename_project` is a Setlist-specific addition.
+- **@setlist/mcp** -- The MCP server. A thin translation layer wrapping @setlist/core as 32 MCP tools via @modelcontextprotocol/sdk, using stdio transport managed by Claude Code's lifecycle. The original 29 tools match the Python server identically; `bootstrap_project`, `configure_bootstrap`, and `rename_project` are Setlist-specific additions.
 
 - **@setlist/cli** -- The CLI. Terminal commands for project management, migration, worker installation, and diagnostics. Entry point: `setlist`.
 
-The three packages share the same SQLite database (schema v10) at `~/.local/share/project-registry/registry.db`. The database file is the shared contract between Setlist, the Python implementation, and any tool that opens it directly.
+- **@setlist/app** -- The desktop control panel. An Electron application providing a visual surface for project management: a card-grid dashboard of all projects, tabbed project detail views, and project CRUD operations. The main process imports @setlist/core directly via an IPC bridge to the renderer. Consumes design tokens from the `chorus-ui` package (Tailwind CSS 4, Radix UI). Launchable as a standalone macOS .app bundle or via `setlist ui` from the CLI.
+
+The four packages share the same SQLite database (schema v10) at `~/.local/share/project-registry/registry.db`. The database file is the shared contract between Setlist, the Python implementation, and any tool that opens it directly.
 
 ### 1.3 Design Principles {#design-principles}
 
 All design principles from the Python spec apply identically. They are the experience, not the implementation.
 
-**Invisible infrastructure.** The registry is a data layer, not a tool. If the user must interact with it directly during normal operation, the design has failed. All interaction flows through producers and consumers.
+**Invisible infrastructure, operable surface.** The registry is both a data layer that producers and consumers use without the user's awareness, and a directly operable control panel when the user wants to see and manage their project landscape. During normal agent-driven work, the registry is invisible — agents read and write through MCP tools and library imports without surfacing the registry itself. But the user can open the desktop app at any time to browse projects, edit metadata, archive old work, or simply see the state of their ecosystem. These two modes coexist: the control panel reads and writes the same database the agents use, and changes from either surface are immediately visible to the other.
 
 **Filesystem-first.** The database is a durable file on the local filesystem. No cloud service required. Any tool that can open a SQLite database can read the registry.
 
@@ -123,7 +127,9 @@ All design principles from the Python spec apply identically. They are the exper
 
 **Additional principle for Setlist:**
 
-**Library-first, server-second.** @setlist/core is the primary interface. The MCP server and CLI are thin wrappers. Any capability available through MCP or CLI must first be available as a library function. Chorus and Ensemble import @setlist/core directly; they never spawn subprocesses or connect to servers for registry operations.
+**Library-first, server-second.** @setlist/core is the primary interface. The MCP server, CLI, and desktop app are thin wrappers. Any capability available through MCP, CLI, or the UI must first be available as a library function. Chorus and Ensemble import @setlist/core directly; they never spawn subprocesses or connect to servers for registry operations.
+
+**Shared design language.** The desktop app consumes `chorus-ui`, an extracted design token package providing CSS custom properties and TypeScript constants for the shared visual language (terracotta accent, warm charcoal surfaces, Inter typeface). Setlist and Chorus are separate products that coexist in the same ecosystem — sharing design tokens from a single source makes them feel like siblings, not strangers. The tokens are imported as `chorus-ui/tokens.css` (CSS custom properties on `:root`) or `chorus-ui/tokens` (TypeScript constants).
 
 ### 1.4 What Success Looks Like {#success}
 
@@ -135,12 +141,15 @@ Everything from the Python spec's success criteria, plus:
 - The CLI (`setlist`) provides the same commands as `project-registry`.
 - Both Python and TypeScript implementations can read and write the same .db file without migration or conversion.
 - TypeScript tests (vitest) cover all behavioral categories from the 786 Python tests, confirming equivalent parity against @setlist/core.
+- The desktop app launches as a standalone macOS .app and via `setlist ui`. It displays a card grid of all registered projects, allows navigating to project detail tabs, and supports registering, editing, archiving, and renaming projects through the UI.
+- Changes made through the desktop app are immediately visible to agents via MCP and library import. Changes made by agents are visible in the desktop app on next render.
+- The desktop app enforces single-instance: launching a second instance activates the existing window.
 
 ---
 
 ## 2. The Experience
 
-The registry's "users" are programs, not people. This section describes the experience from the perspective of producers (tools that write to the registry) and consumers (tools that read from it), plus the one-time human-visible event of initial migration.
+The registry's primary "users" are programs — producers that write data and consumers that read it. The desktop control panel (section 2.14) adds a direct human surface, but the programmatic interfaces remain the backbone. This section describes the experience from the perspective of producers, consumers, and (for the desktop app) the human user.
 
 ### 2.1 First Run: Migration {#first-run}
 
@@ -220,7 +229,35 @@ Consumers can filter queries by type (project vs. area of focus) and by status (
 
 The registry does not push data to consumers. Consumers read on demand at their chosen depth. There are no notifications, no subscriptions, no webhooks.
 
-### 2.4 Field Enrichment {#enrichment}
+### 2.4 Structured Project Profile {#project-profile}
+
+Every project carries a **structured profile** — a machine-readable fingerprint that agents and tools use for association, routing, and discovery. The profile sits alongside the human-readable description and replaces the old comma-separated goals string.
+
+**Profile fields:**
+
+- **Goals** (array of strings) — What this project is trying to achieve. Each goal is a semantic anchor: agents match tasks to projects by goal alignment, Knowmarks associates incoming knowledge against goals, and the orchestrator routes work by goal relevance. Goals are durable — they change when the project's direction changes, not with daily activity.
+
+- **Topics** (array of strings) — Domains, technologies, concepts, and subject areas the project involves. Lowercase, hyphenated tokens (e.g., `typescript`, `estate-planning`, `mcp`, `newsletter-automation`). Topics are the primary signal for cross-project association: Knowmarks matches bookmarks against topics, agents find related projects by topic overlap.
+
+- **Entities** (array of strings) — Specific things the project references or connects to: other projects, tools, services, people, organizations. Unlike topics (which are categorical), entities are proper nouns (e.g., `chorus`, `better-sqlite3`, `mailchimp`, `claude-code`).
+
+- **Concerns** (array of strings) — What's actively being worked on right now. Ephemeral by nature — concerns rotate as work progresses. An agent checking "what's in flight?" reads concerns. Examples: `desktop-app-v1`, `archive-filesystem`, `voice-sample-collection`.
+
+**How profiles are populated:**
+
+Profiles are populated by agents via a dedicated `enrich_project` tool. An agent reads the project's spec, CLAUDE.md, description, and memories, then writes structured profile data. The tool accepts partial updates — an agent can add topics without touching goals. Multiple agents can enrich the same project; arrays are merged (union semantics, no duplicates).
+
+For initial population of existing projects, agents run a backfill pass across the portfolio. For new projects created via bootstrap, the bootstrapping agent enriches the profile as part of setup.
+
+**Goals migration:**
+
+The structured goals array replaces the legacy comma-separated goals string in the core `projects` table. Existing goals are migrated: the comma-separated string is split into an array and stored in the new format. The `goals` column in the `projects` table becomes a JSON array. Queries that previously read `goals` as a string now read it as a parsed array.
+
+**Queryability:**
+
+Profile fields are stored as JSON arrays in the project record. `cross_query` and `search_projects` search across profile fields. A query like "which projects involve MCP?" matches projects with `mcp` in their topics or entities. `list_projects` at standard depth includes the profile.
+
+### 2.5 Field Enrichment {#enrichment}
 
 A project's identity grows over time. The atomized field model means any producer can add fields to any project at any time without coordinating with other producers.
 
@@ -249,7 +286,7 @@ A project registered during migration with only a name, type, path, and status c
 
 **Description quality matters.** Natural-language description and goals fields are the foundation for semantic reasoning by agents. These fields must preserve the richness of their source material. A description authored by a human during fctry's interview or Chorus's guided flow should be stored verbatim, not summarized or truncated.
 
-**Structured fields are structured.** Tech stack is a list, not a comma-separated string. Patterns are enumerated, not prose. Consumers can iterate over structured extended fields without parsing. Goals are stored as free-text (a core identity column) and may contain markdown-formatted lists; consumers should treat goals as natural language suitable for semantic reasoning, not as a programmatically iterable structure.
+**Structured fields are structured.** Tech stack is a list, not a comma-separated string. Patterns are enumerated, not prose. Consumers can iterate over structured extended fields without parsing. Goals are a JSON array of strings — each goal is a distinct semantic anchor, not a prose paragraph. Topics, entities, and concerns follow the same pattern.
 
 **Paths are exact.** The registry stores the exact filesystem path provided during registration. It does not normalize, relocate, or validate paths against conventions.
 
@@ -589,6 +626,139 @@ The response is structured data, not synthesized prose. The calling agent (e.g.,
 - `inspect_memory` -- View a specific memory's full details.
 - `configure_memory` -- Set memory configuration: embedding provider, reflect schedule, reflect threshold.
 
+### 2.13 Project Bootstrap {#project-bootstrap}
+
+The registry can create a new project end-to-end: registering its identity, creating its folder on disk, populating it from templates, and optionally initializing version control. This subsumes the manual `new-project.sh` shell script entirely — the bootstrap is now a first-class registry operation available through MCP, CLI, and library import.
+
+**Before bootstrap works: configuration.**
+
+Bootstrap requires knowing where projects live on disk. An agent or user calls `configure_bootstrap` to map project types to default path roots, set the template directory, and set the archive path root. For example: `project → ~/Code`, `area_of_focus → ~/Areas`, templates at `~/Resources/System/Templates/`, archive at `~/Archive/`. This configuration is stored in the registry database and persists across sessions. The desktop app provides a Settings view for configuring these paths visually.
+
+If an agent calls `bootstrap_project` before any bootstrap configuration exists, the call fails with a clear error: "Bootstrap is not configured. Call configure_bootstrap first to set path roots for your project types and a template directory." The error includes the exact next step — no silent fallbacks, no guessing at paths.
+
+**Bootstrapping a code project:**
+
+An agent or user calls `bootstrap_project` with a project name, type (`project`), and optionally a path override. The registry:
+
+1. Registers the project in the registry (internally calls the same registration logic as `register_project` — core identity fields are created).
+2. Creates the project folder at the configured path root for the `project` type (e.g., `~/Code/my-new-project`).
+3. Copies the contents of the template directory into the new folder, applying any template-specific scaffolding.
+4. Initializes a git repository in the new folder and creates an initial commit.
+
+The caller receives confirmation with the registered project name and the created path. The project is immediately queryable in the registry and ready for development.
+
+**Bootstrapping a non-code project or area of focus:**
+
+An agent or user calls `bootstrap_project` with a name and type (`area_of_focus` or a non-code `project` variant). The registry:
+
+1. Registers the project in the registry.
+2. Creates the folder at the configured path root for that type (e.g., `~/Areas/my-area`).
+3. Copies template contents into the new folder — folder structure and template files only.
+4. Does NOT initialize git. Non-code projects and areas of focus typically live in iCloud-synced paths where git repositories are forbidden.
+
+**Path override:**
+
+The caller can provide an explicit path instead of using the configured default. This accommodates projects that need to live in non-standard locations. The override applies to a single bootstrap call; it does not change the stored configuration.
+
+**When the folder already exists:**
+
+If the target folder already exists on disk, the bootstrap fails with a clear error identifying the conflicting path. It does not overwrite, merge into, or silently skip the existing folder. The caller can either choose a different name, provide a path override, or handle the existing folder manually before retrying.
+
+**Archiving with filesystem cleanup.**
+
+When a project is archived (via the desktop app, CLI, or MCP), the archive operation can optionally move the project's folder to the configured `archive_path_root`. If an archive path root is configured:
+
+1. For each registered path of the project, the folder is moved to the archive path root (e.g., `~/Code/my-project` → `~/Archive/my-project`).
+2. Before moving, any `.git` directory inside the folder is removed. The archive destination may be in iCloud-synced storage where git repositories are forbidden.
+3. The project's paths in the registry are updated to reflect the new location.
+4. If the archive path root is not configured, the archive operation works as before — status change only, no filesystem move.
+
+The `.git` stripping is a safety measure, not a data loss concern: the canonical git history lives on the remote (GitHub). The archived folder preserves the project's files for reference without the repository overhead.
+
+**What bootstrap does NOT do:**
+
+- It does not create dual-surface folders (no automatic linking between `~/Code/` and `~/Projects/`). One folder per project.
+- It does not run post-creation hooks or install dependencies. The folder is scaffolded; the agent or user takes it from there.
+- It does not modify `register_project`. Registration remains pure data with no filesystem side effects. Bootstrap is a separate, higher-level operation that composes registration with folder creation.
+
+### 2.14 Desktop Control Panel {#desktop-app}
+
+The desktop app gives the user a direct window into their project landscape — a visual surface for browsing, managing, and understanding the same data that agents interact with programmatically.
+
+**Launching the app.**
+
+The app has two entry points: a standalone macOS `.app` bundle (double-click to launch) and a CLI command (`setlist ui`). Both start the same Electron process. The app enforces single-instance behavior — if a window is already open, launching again brings the existing window to the foreground rather than creating a second instance.
+
+**Home view: the project dashboard.**
+
+On launch, the user sees a card grid of all registered projects. Each card shows the project name, a type badge (project or area of focus), a status indicator, and a last-updated timestamp. The grid is the user's panoramic view of their ecosystem.
+
+Filter and sort controls sit at the top of the view. The user can filter by type (projects, areas of focus, or both), filter by status (active, paused, archived, etc.), and sort by name, status, or last updated. Filtering and sorting are immediate — no loading states for a local database of this size.
+
+**Project detail: the tabbed view.**
+
+Clicking a project card opens a detail view with a persistent header showing the project name, type badge, status, description, and action buttons (Edit, Archive). Below the header, content is organized into tabs:
+
+- **Overview tab** — Displays the project's fields, filesystem paths, and goals. For code projects, this includes tech stack, patterns, and tooling fields. For non-code projects, stakeholders, timeline, and domain. This is the project's identity card.
+
+- **Memory tab** — A read-only browse of the project's memories: decisions, outcomes, patterns, preferences, and other retained knowledge. Memories are displayed in score order with type badges and timestamps. The user can see what agents have learned about this project but cannot create, edit, or delete memories from the UI in v1.
+
+- **Capabilities tab** — A read-only list of the project's declared capabilities, grouped by type. Each capability shows its name, type, description, and invocation metadata where present. Read-only in v1.
+
+- **Ports tab** — A read-only view of the project's port allocations: port number, service label, protocol, and claim timestamp. Read-only in v1.
+
+**Project CRUD operations.**
+
+The desktop app supports the full project identity lifecycle through the UI:
+
+- **Register** — A form for creating a new project entry. Collects the six core identity fields (name, display name, type, status, description, goals) and optionally filesystem paths. Calls `registry.registerProject()` through the IPC bridge. The new project appears in the card grid immediately.
+
+- **Edit** — From the project detail header, the user can edit the project's display name, status, description, and goals. Edits are committed individually or as a batch. Calls `registry.updateProject()` through the IPC bridge.
+
+- **Archive** — From the project detail header, the user can archive a project. This triggers the same archive behavior as the programmatic `archive_project` — ports released, capabilities cleared, status set to archived. If an archive path root is configured, the project's folders are moved there (with `.git` stripped). The project disappears from the default card grid.
+
+- **Rename** — The user can rename a project (change its slug identifier). This triggers the same atomic rename as `registry.renameProject()` — all references updated in a single transaction.
+
+**Settings: bootstrap path configuration.**
+
+The desktop app includes a Settings view accessible from the home view. Settings allows the user to configure the bootstrap path roots visually:
+
+- **Project path root** — Where code projects are created (e.g., `~/Code`).
+- **Area path root** — Where areas of focus are created (e.g., `~/Areas`).
+- **Archive path root** — Where archived projects are moved (e.g., `~/Archive`).
+- **Template directory** — Where project templates live (e.g., `~/Resources/System/Templates`).
+
+Each path field shows the current configured value (or "Not configured") and allows the user to set or change it. Changes are saved immediately via `configure_bootstrap` through the IPC bridge.
+
+**What the desktop app does NOT do in v1:**
+
+- Memory write operations (retain, correct, forget, reflect) — the Memory tab is read-only
+- Capability write operations (register, replace) — the Capabilities tab is read-only
+- Port write operations (claim, release, discover) — the Ports tab is read-only
+- Migration — this remains a CLI operation (`setlist migrate`)
+- Task management — queuing and monitoring async tasks remains programmatic
+- Bootstrap — creating new projects with folder scaffolding remains CLI/programmatic
+
+These operations are deferred to future versions (see Appendix C).
+
+**Architecture: Electron with IPC bridge.**
+
+The main process imports `@setlist/core` directly — the same library that Chorus and Ensemble use. All database operations happen in the main process. The renderer communicates with the main process through Electron's `contextBridge` and `ipcRenderer`/`ipcMain` — no `nodeIntegration` in the renderer, no direct database access from the browser context. This follows Electron security best practices.
+
+The renderer is a React application styled with Tailwind CSS 4 and Radix UI primitives. It imports design tokens from the `chorus-ui` package — CSS custom properties for the shared visual language (surfaces, accents, typography, status colors). The visual language is the same as Chorus; the information architecture is Setlist's own. Token values are defined and maintained in `chorus-ui`; Setlist consumes them, never redefines them.
+
+**Design token consumption:**
+
+```css
+@import 'chorus-ui/tokens.css';  /* `:root` custom properties */
+```
+
+The tokens provide surfaces (warm charcoal palette), accents (terracotta), text colors, borders, status colors, font families (Inter, JetBrains Mono), and easing curves. See the `chorus-ui` package for the complete token inventory.
+
+**Relationship to Chorus.**
+
+Setlist and Chorus are separate products. Setlist is the registry control panel — it manages project identity, shows what agents have learned, and lets the user administer their ecosystem. Chorus is the AI workspace — it hosts conversations, builds projects, and manages knowledge. They share a design system and a database, but they serve different purposes and run as independent applications. Setlist does not depend on Chorus being installed, and Chorus does not depend on the Setlist desktop app (Chorus imports @setlist/core directly as a library).
+
 ---
 
 ## 3. System Behavior
@@ -639,6 +809,8 @@ The library API in @setlist/core exposes each capability as a method on the `Reg
 
 **Memory configuration.** Sets runtime memory configuration. Changes take effect immediately.
 
+**Project enrichment.** Accepts a project name and partial profile data (goals, topics, entities, concerns). Merges with existing profile using union semantics — new items are added, duplicates are ignored. Any field can be updated independently. This is the primary mechanism for agents to build structured project identity over time.
+
 **Producer-scoped field writing.** The `Registry.updateFields()` method enforces field domain isolation via the `producer` parameter. Each field tracks which producer last wrote it, and a write from producer A cannot overwrite a field owned by producer B. This is implemented via `ON CONFLICT ... WHERE producer = excluded.producer` in the upsert. Producers pass their identity (e.g., 'fctry', 'chorus', 'migration') on every write. Shared fields (short_description, medium_description, keywords) use first-producer-wins semantics.
 
 The fctry-owned field domain includes: tech_stack, patterns, short_description, medium_description, readme_description, keywords, ide, terminal_profile, mcp_servers, urls. The Chorus-owned domain includes: stakeholders, timeline, domain, short_description, medium_description, keywords.
@@ -647,7 +819,17 @@ The fctry-owned field domain includes: tech_stack, patterns, short_description, 
 
 **Memory migration utility.** A utility to migrate existing CC auto-memory files (`~/.claude/projects/*/memory/*.md`) and fctry global memory (`~/.fctry/memory.md`) into the registry's memory store. Maps CC memory types (feedback, project, user, reference) to registry memory types (preference, decision, correction, etc.). Available as `setlist migrate-memories` CLI command with `--apply` flag (dry-run by default).
 
-**MCP server access.** @setlist/mcp wraps @setlist/core as 28 MCP tools via @modelcontextprotocol/sdk using stdio transport managed by Claude Code's lifecycle. The 27 original tools match the Python server; `rename_project` is a Setlist-specific addition. The server provides:
+**Project bootstrap.** Creates a new project end-to-end: registers it in the database, creates its folder at the configured path root, populates from the template directory, and initializes git for code projects. Requires bootstrap configuration (path roots and template directory) to be set first via `configure_bootstrap`. Fails clearly if unconfigured or if the target folder already exists.
+
+**Bootstrap configuration.** Stores the mapping of project type to default path root and the template directory path. Persisted in the registry database. Readable and updatable at any time.
+
+**Desktop project dashboard.** Displays all registered projects as a card grid with name, type badge, status indicator, and last-updated timestamp. Supports filtering by type and status, and sorting by name, status, or last updated. Backed by `registry.listProjects({ depth: 'summary' })`.
+
+**Desktop project detail.** Displays a single project's full identity in a tabbed view: overview (fields, paths, goals), memory (read-only browse), capabilities (read-only list), and ports (read-only view). Backed by `registry.getProject()` at full depth.
+
+**Desktop project CRUD.** Provides UI forms for registering new projects, editing project identity fields (display name, status, description, goals), archiving projects, and renaming projects. Each operation delegates to the corresponding @setlist/core method through the IPC bridge.
+
+**MCP server access.** @setlist/mcp wraps @setlist/core as 32 MCP tools via @modelcontextprotocol/sdk using stdio transport managed by Claude Code's lifecycle. The 29 original tools match the Python server; `bootstrap_project`, `configure_bootstrap`, and `rename_project` are Setlist-specific additions. The server provides:
 
 - `list_projects` -- List projects at a given depth with optional filters.
 - `get_project` -- Get a single project by name at a given depth.
@@ -677,6 +859,8 @@ The fctry-owned field domain includes: tech_stack, patterns, short_description, 
 - `forget` -- Archive a memory.
 - `inspect_memory` -- View memory details.
 - `configure_memory` -- Set memory configuration.
+- `bootstrap_project` -- Register a project and create its folder from templates.
+- `configure_bootstrap` -- Set path roots per project type and template directory.
 
 See [Appendix D](#appendix-d-mcp-tool-reference) for the complete tool reference with parameters and return types.
 
@@ -734,6 +918,8 @@ See [Appendix D](#appendix-d-mcp-tool-reference) for the complete tool reference
 - **Recall audit entries** -- Records of every recall operation for debugging retrieval quality.
 
 - **Tasks** -- Async work items. Each has: ID, project, description, schedule (now, tonight, weekly), status (pending, running, completed, failed), session_reference, timestamps.
+
+- **Bootstrap configuration** -- Settings governing project bootstrap behavior. Maps each project type (project, area_of_focus) to a default filesystem path root where new projects of that type are created. Also stores the template directory path from which scaffolding files are copied. Persisted in the registry database. Must be configured before `bootstrap_project` can be used.
 
 ### 3.3 Rules and Logic {#rules}
 
@@ -815,13 +1001,16 @@ See [Appendix D](#appendix-d-mcp-tool-reference) for the complete tool reference
 | Ensemble | Memory retain/recall, library import of @setlist/core | Ensemble reads/writes via direct import | Ensemble continues without memory |
 | Knowmarks | Project metadata (name, description, goals, keywords, tech stack) | Knowmarks reads from registry | Falls back to regex extraction |
 | ctx | Project context (description, goals, status, tech stack) | ctx reads from registry | Operates without project context |
-| Claude Code (via MCP) | All 28 tools | CC reads/writes via @setlist/mcp | CC has no project awareness; MCP server provides it |
+| Claude Code (via MCP) | All 32 tools | CC reads/writes via @setlist/mcp | CC has no project awareness; MCP server provides it |
 | Async worker (launchd) | Task execution | Worker reads tasks, spawns CC sessions, writes results | Tasks remain pending until worker runs |
 | CC auto-memory files | Per-project patterns and decisions (`MEMORY.md`) | cross_query reads from filesystem | Cross-project queries limited to registry fields + structured memories |
 | Embedding provider (OpenAI / Ollama) | Vector embeddings for memory content | Registry sends content, receives embeddings | FTS5-only fallback. All other features work identically. |
 | fctry post-build hook | Build outcome (success/failure) + recalled memory IDs | fctry writes feedback to registry | Memory outcome scores not updated for explicit builds |
+| chorus-ui package | Design tokens (CSS custom properties + TS constants) for colors, typography, easing | @setlist/app imports `chorus-ui/tokens.css` and `chorus-ui/tokens` | Tokens are the contract; chorus-ui is a direct dependency of @setlist/app |
 
 **Direct library import (new with Setlist).** Chorus and Ensemble import @setlist/core as an npm dependency. This is the primary motivation for the TypeScript rewrite. The library is consumed in-process -- no IPC, no MCP server, no subprocess.
+
+**chorus-ui token package (new with @setlist/app).** The desktop app imports design tokens from `chorus-ui`, an extracted package providing CSS custom properties (`chorus-ui/tokens.css`) and TypeScript constants (`chorus-ui/tokens`). This is a direct dependency — @setlist/app lists `chorus-ui` in its `package.json`. There is no shared component library — each app implements its own UI components consuming the shared tokens. If the design language evolves, `chorus-ui` is updated and both apps follow.
 
 ### 3.5 Performance Expectations {#performance}
 
@@ -861,6 +1050,8 @@ Everything the Python spec covers (project identity, fields, queries, migration,
 - Porting strategy from the 786 Python tests
 - Portfolio intelligence support: the `observation` memory type and `portfolio_brief` tool that enable external agents (orchestrator) to retain and recall cross-project findings
 - Unified memory store: setlist as the canonical memory backend for Chorus (10 memory types, belief classification, temporal validity, entity extraction, procedural versioning). Chorus imports @setlist/core directly for in-process memory operations.
+- Project bootstrap: end-to-end project creation (registration + folder scaffolding + template population + git init for code projects) with configurable path roots per type and template directory. Subsumes the manual `new-project.sh` script.
+- Desktop control panel: Electron-based macOS application (@setlist/app) providing a project dashboard, tabbed project detail views, and project CRUD (register, edit, archive, rename). Memory, capabilities, and ports are read-only in v1. Shares Chorus's design system (Tailwind CSS 4, Radix UI, design tokens).
 
 **This spec does NOT cover (deferred, same as Python spec):**
 
@@ -879,12 +1070,14 @@ Everything the Python spec covers (project identity, fields, queries, migration,
 | Dimension | Constraint |
 |-----------|-----------|
 | Platform | macOS (single machine, the user's personal workstation) |
-| Runtime | Node.js (LTS). Local execution only. MCP server (stdio, CC-managed). Worker (launchd periodic job). |
+| Runtime | Node.js (LTS). Local execution only. MCP server (stdio, CC-managed). Worker (launchd periodic job). Electron (desktop app). |
 | Language | TypeScript, compiled to ESM |
 | Storage | SQLite via better-sqlite3, single file on local filesystem |
+| UI framework | React (renderer), Tailwind CSS 4, Radix UI primitives |
+| Desktop shell | Electron (main process imports @setlist/core, renderer via IPC bridge) |
 | Users | Single user, no authentication, no multi-tenancy |
 | Connectivity | Works entirely offline; optional internet for OpenAI embeddings |
-| Consumers | Programmatic: agents, scripts, tools, npm dependents (Chorus, Ensemble) |
+| Consumers | Programmatic: agents, scripts, tools, npm dependents (Chorus, Ensemble). Visual: the user via @setlist/app. |
 | Package manager | npm workspaces |
 
 ### 4.3 Hard Constraints {#hard-constraints}
@@ -895,9 +1088,13 @@ All Python spec hard constraints apply, plus:
 
 - **Schema evolution from v8.** The SQLite schema originated as v8, byte-compatible with the Python implementation. Setlist has since evolved the schema: v9 added the `observation` memory type, v10 adds unified memory types (learning, context, procedural), new fields (belief, extraction_confidence, valid_from, valid_until, entities, parent_version_id, is_current), and migrates `skill` → `procedural`. The Python implementation remains at v8; the shared .db file is forward-compatible (Python can read v10 databases but will not recognize new types or fields). Schema migrations are incremental and non-destructive.
 
-- **28 MCP tools with Python-compatible core.** The original 27 tools are a drop-in replacement for the Python server — same names, parameters, and response shapes. Setlist adds `rename_project` as a 28th tool. An agent that works with the Python MCP server works identically with Setlist's.
+- **32 MCP tools with Python-compatible core.** The original 29 tools are a drop-in replacement for the Python server — same names, parameters, and response shapes. Setlist adds `bootstrap_project`, `configure_bootstrap`, and `rename_project` as Setlist-specific tools (#30--#32). An agent that works with the Python MCP server works identically with Setlist's for the original 29.
 
 - **ESM-only.** All packages produce ESM output. No CommonJS dual-publishing.
+
+- **Electron security: no nodeIntegration in renderer.** The renderer process must not have direct access to Node.js APIs. All communication between the renderer and main process flows through Electron's `contextBridge` with explicitly exposed IPC methods. The main process imports @setlist/core and exposes a defined set of operations; the renderer calls these through the preload script. This is a hard security boundary.
+
+- **Single-instance Electron app.** Only one instance of the desktop app may run at a time. Attempting to launch a second instance activates the existing window. This prevents database contention and user confusion.
 
 - **No per-project manifest files.** Same as Python spec. The central SQLite database is the sole storage mechanism.
 
@@ -909,7 +1106,7 @@ All Python spec anti-patterns apply, plus:
 
 - **Schema evolution must be incremental and non-destructive.** Each version upgrade (v8→v9→v10) must handle the full migration path. Existing data must never be lost during upgrades. New columns use nullable defaults or sensible initial values. The `skill` → `procedural` type migration in v10 is a data migration within the table-recreate pattern.
 
-- **Setlist must not re-invent MCP tool semantics.** The 28 tools have defined parameter names, types, and response shapes. Setlist implements them; it does not redesign them.
+- **Setlist must not re-invent MCP tool semantics.** The 32 tools have defined parameter names, types, and response shapes. Setlist implements them; it does not redesign them.
 
 ---
 
@@ -935,21 +1132,36 @@ setlist/
 │   │   │   ├── memory-retrieval.ts  # Hybrid retrieval (recall, FTS5, budget control)
 │   │   │   ├── memory-reflection.ts # Background consolidation (reflect, triple-gate archival)
 │   │   │   ├── cross-query.ts       # Cross-project search (3 scopes)
-│   │   │   └── migrate-memories.ts  # Memory migration (CC auto-memory + fctry memory → registry)
+│   │   │   ├── migrate-memories.ts  # Memory migration (CC auto-memory + fctry memory → registry)
+│   │   │   └── bootstrap.ts        # Project bootstrap (folder creation, templates, git init)
 │   │   ├── tests/                   # Behavioral parity tests (vitest)
 │   │   ├── package.json
 │   │   └── tsconfig.json
 │   ├── mcp/                         # @setlist/mcp
 │   │   ├── src/
 │   │   │   ├── index.ts             # MCP server entry point
-│   │   │   └── server.ts            # 28 tool definitions
+│   │   │   └── server.ts            # 32 tool definitions
 │   │   ├── package.json
 │   │   └── tsconfig.json
-│   └── cli/                         # @setlist/cli
+│   ├── cli/                         # @setlist/cli
+│   │   ├── src/
+│   │   │   ├── index.ts             # CLI entry point
+│   │   │   ├── commands/            # Subcommands
+│   │   │   └── worker.ts            # Async worker (launchd target)
+│   │   ├── package.json
+│   │   └── tsconfig.json
+│   └── app/                         # @setlist/app
 │       ├── src/
-│       │   ├── index.ts             # CLI entry point
-│       │   ├── commands/            # Subcommands
-│       │   └── worker.ts            # Async worker (launchd target)
+│       │   ├── main/                # Electron main process
+│       │   │   ├── index.ts         # App entry point, window management
+│       │   │   └── ipc.ts           # IPC handlers (bridges @setlist/core to renderer)
+│       │   ├── preload/
+│       │   │   └── index.ts         # contextBridge API exposure
+│       │   └── renderer/            # React application
+│       │       ├── App.tsx           # Root component, routing
+│       │       ├── pages/            # Home (dashboard), ProjectDetail
+│       │       ├── components/       # Cards, tabs, forms, shared UI
+│       │       └── styles/           # Tailwind config, design tokens
 │       ├── package.json
 │       └── tsconfig.json
 ├── package.json                     # Workspace root
@@ -1029,10 +1241,16 @@ import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 
 const server = new Server({ name: 'setlist', version: '0.1.0' }, { capabilities: { tools: {} } });
-// Register 28 tools...
+// Register 32 tools...
 const transport = new StdioServerTransport();
 await server.connect(transport);
 ```
+
+**Electron with contextBridge IPC.** The desktop app uses Electron's recommended security model: the main process imports @setlist/core and registers IPC handlers for each operation the renderer needs. The preload script exposes these through `contextBridge.exposeInMainWorld()`, giving the renderer a typed API object (e.g., `window.setlist.listProjects()`) without any direct Node.js access. The renderer is a standard web application that happens to call IPC instead of HTTP.
+
+**React + Tailwind CSS 4 + Radix UI + chorus-ui.** The renderer uses React for component architecture, Tailwind CSS 4 for styling, `chorus-ui` for design tokens (imported as CSS custom properties, referenced via Tailwind's `@theme` or directly in CSS), and Radix UI for accessible primitive components (dialogs, tabs, dropdown menus, etc.). This matches Chorus's frontend stack, ensuring visual consistency and reducing the learning curve for maintenance across both applications.
+
+**Electron Forge or electron-builder for packaging.** The desktop app is packaged as a standalone macOS `.app` bundle. The specific packaging tool is an agent decision. The `setlist ui` CLI command launches the Electron process from the installed npm package.
 
 **Testing.** Tests cover all behavioral categories from the 786 Python tests using vitest. Coverage is measured by behavioral surface (every scenario S01-S30 has corresponding tests), not raw test count. Python-specific patterns (pytest fixtures, parametrize) are translated to vitest equivalents (beforeEach, test.each).
 
@@ -1060,7 +1278,7 @@ The port follows a strict behavioral contract: every Python test, translated to 
 | cross_query.py | cross-query.ts | 3 scopes, freshness+importance scoring |
 | tasks.py | registry.ts | Task CRUD consolidated into Registry |
 | scripts/migrate_memories.py | migrate-memories.ts | CC auto-memory + fctry memory migration |
-| server.py | server.ts | 28 MCP tools via @modelcontextprotocol/sdk |
+| server.py | server.ts | 32 MCP tools via @modelcontextprotocol/sdk |
 | cli.py | index.ts | CLI entry point |
 | worker.py | worker.ts | Launchd integration |
 
@@ -1105,7 +1323,7 @@ Same ecosystem as the Python spec (Archibald, ctx, Chorus, fctry, McPoyle, Knowm
 - **Ensemble** — Imports @setlist/core for memory retain/recall during agent orchestration.
 
 **MCP consumers (unchanged):**
-- **Claude Code** — Uses @setlist/mcp for all 28 tools.
+- **Claude Code** — Uses @setlist/mcp for all 32 tools.
 
 **Producers (unchanged):**
 - **fctry** — Writes project identity and capabilities via MCP or library import.
@@ -1129,6 +1347,9 @@ All satisfaction criteria from the Python spec (section 6.1) apply identically, 
 - TypeScript tests (vitest) cover all behavioral categories from the 786 Python tests, with every scenario S01-S30 having corresponding test coverage.
 - The npm packages build cleanly with `npm run build` from the workspace root.
 - The monorepo installs with `npm install` — no special setup beyond Node.js LTS.
+- The desktop app launches, displays all registered projects in a card grid, and supports navigating to project detail views with tabbed content.
+- Project CRUD operations (register, edit, archive, rename) work from the desktop UI and produce the same database state as the equivalent library/MCP calls.
+- The desktop app is packageable as a standalone macOS .app bundle.
 
 ### 7.2 Convergence Strategy {#convergence}
 
@@ -1140,13 +1361,15 @@ All satisfaction criteria from the Python spec (section 6.1) apply identically, 
 
 **Then layer in:** Migration, port management, port discovery. Port tests.
 
-**Then layer in:** @setlist/mcp — wrap the core library as 28 MCP tools. Verify tool-by-tool against the Python server's behavior.
+**Then layer in:** @setlist/mcp — wrap the core library as 32 MCP tools. Verify tool-by-tool against the Python server's behavior.
 
 **Then layer in:** Portfolio memory — retain, recall, reflect. Content-hash dedup. FTS5 retrieval. Port memory tests.
 
 **Then layer in:** Capability declarations, batch operations, cross-project queries, task queue. Port remaining tests.
 
 **Then layer in:** @setlist/cli — terminal commands, worker script, launchd integration.
+
+**Then layer in:** @setlist/app — Electron shell, IPC bridge, React renderer with Tailwind CSS 4 and Radix UI. Start with the home view (card grid), then project detail (tabbed view), then CRUD forms.
 
 **Finally:** Embedding provider integration (OpenAI, Ollama), outcome feedback, and background reflection. These are the most complex memory features and benefit from having the full test suite in place first.
 
@@ -1163,6 +1386,9 @@ Additional TypeScript-specific signals:
 - All behavioral categories tested with full scenario coverage (S01-S30)
 - npm package sizes reasonable (core < 500KB, mcp < 100KB, cli < 100KB)
 - No CommonJS output — ESM only
+- Desktop app launches and renders project cards matching `list_projects` output
+- CRUD operations through the UI produce identical database state to library calls
+- Desktop app enforces single-instance behavior
 
 ### 7.4 What the Agent Decides {#agent-decides}
 
@@ -1176,14 +1402,22 @@ The agent has authority over implementation details within the constraints above
 - **Worker process management** — how the launchd worker script is structured
 - **Test organization** — how pytest patterns map to vitest (test.each, beforeEach, etc.)
 - **Internal type patterns** — branded types, discriminated unions, Result types, etc.
+- **Electron packaging tool** — Electron Forge, electron-builder, or alternatives
+- **React component structure** — how pages, components, and hooks are organized within the renderer
+- **State management in renderer** — React context, Zustand, Jotai, or plain props
+- **Tailwind configuration details** — utility class patterns, component extraction
 
 The agent does NOT decide:
 - Schema shape (defined by v10, evolved from v8 compatibility)
-- MCP tool surface (defined by the 28-tool contract)
-- Package boundaries (core/mcp/cli as specified)
+- MCP tool surface (defined by the 32-tool contract)
+- Package boundaries (core/mcp/cli/app as specified)
 - SQLite binding (better-sqlite3)
 - MCP SDK (@modelcontextprotocol/sdk)
 - Module format (ESM)
+- Desktop shell (Electron)
+- UI framework (React + Tailwind CSS 4 + Radix UI)
+- Design tokens (consumed from `chorus-ui` package)
+- IPC security model (contextBridge, no nodeIntegration)
 
 ---
 
@@ -1195,9 +1429,13 @@ All rationale from the Python spec applies (SQLite over YAML, atomized fields, r
 
 **Why better-sqlite3 over other SQLite bindings?** better-sqlite3 provides synchronous native bindings, which match SQLite's embedded nature. sql.js (WASM) is slower and lacks FTS5. node-sqlite3 (async) adds unnecessary Promise overhead for a local database. better-sqlite3 is the standard choice for Node.js applications that use SQLite as an embedded database.
 
-**Why monorepo with npm workspaces?** Three packages serve three audiences: @setlist/core for library consumers (Chorus, Ensemble), @setlist/mcp for Claude Code, @setlist/cli for terminal users. A single package would force all consumers to depend on @modelcontextprotocol/sdk and CLI dependencies they don't need. npm workspaces is the simplest monorepo solution — no Turborepo, no Nx, no Lerna.
+**Why monorepo with npm workspaces?** Four packages serve four audiences: @setlist/core for library consumers (Chorus, Ensemble), @setlist/mcp for Claude Code, @setlist/cli for terminal users, @setlist/app for direct human interaction. A single package would force all consumers to depend on Electron, @modelcontextprotocol/sdk, and CLI dependencies they don't need. npm workspaces is the simplest monorepo solution — no Turborepo, no Nx, no Lerna.
 
 **Why ESM-only?** The ecosystem is ESM. @modelcontextprotocol/sdk is ESM. Chorus is ESM. Dual CJS/ESM publishing adds build complexity for no consumer benefit.
+
+**Why a desktop app?** The registry was designed as invisible infrastructure, but the user also wants to see and manage their project landscape directly — not just through agents. A desktop control panel makes the registry a product, not just a service. Electron is the natural choice: the main process imports @setlist/core directly (same as Chorus), and the React/Tailwind/Radix stack matches Chorus's frontend, keeping the ecosystem consistent.
+
+**Why use chorus-ui?** Setlist and Chorus are sibling products in the same ecosystem. The `chorus-ui` package extracts design tokens (CSS custom properties + TypeScript constants) into a single source of truth. Both apps import the same tokens, ensuring visual cohesion without coupling their component implementations. When the design language evolves, one package update propagates to both apps.
 
 ## Appendix B: Glossary
 
@@ -1207,10 +1445,12 @@ All terms from the Python spec glossary apply. Additional terms:
 |------|---------|
 | Setlist | The TypeScript implementation of the Project Registry |
 | @setlist/core | npm package providing the library API — all registry logic |
-| @setlist/mcp | npm package providing the MCP server — 28 tools via @modelcontextprotocol/sdk |
+| @setlist/mcp | npm package providing the MCP server — 32 tools via @modelcontextprotocol/sdk |
 | @setlist/cli | npm package providing the CLI — terminal commands and worker script |
 | better-sqlite3 | Synchronous native SQLite binding for Node.js |
 | Schema v10 | The current SQLite schema version. Evolved from Python's v8 through v9 (observation type) and v10 (unified memory types + chorus-compatible fields) |
+| @setlist/app | npm package providing the desktop control panel — Electron app with React renderer |
+| IPC bridge | The contextBridge-based communication layer between Electron's main process (@setlist/core) and the renderer (React UI) |
 | Experience-port | A spec derived from an existing implementation where the experience stays identical and only the implementation changes |
 
 ## Appendix C: Deferred Futures {#deferred-futures}
@@ -1219,11 +1459,23 @@ All deferred futures from the Python spec apply. The TypeScript implementation i
 
 Additional TypeScript-specific deferred future:
 
-- **Python implementation deprecation.** Once Setlist reaches full parity (all 786 tests passing, all 28 MCP tools operational, migration tested), the Python implementation can be deprecated. The .db file continues as the shared contract during the transition period. Deprecation means: new features are added to Setlist first, the Python MCP server is replaced by @setlist/mcp in Claude Code config, and the Python package is archived. The database is never migrated or converted — both implementations read the same file.
+- **Python implementation deprecation.** Once Setlist reaches full parity (all 786 tests passing, all 32 MCP tools operational, migration tested), the Python implementation can be deprecated. The .db file continues as the shared contract during the transition period. Deprecation means: new features are added to Setlist first, the Python MCP server is replaced by @setlist/mcp in Claude Code config, and the Python package is archived. The database is never migrated or converted — both implementations read the same file.
+
+- **Desktop app: memory write operations.** The Memory tab is read-only in v1. Future versions may allow creating memories, correcting memories, and triggering reflection from the UI.
+
+- **Desktop app: capability write operations.** The Capabilities tab is read-only in v1. Future versions may allow registering and updating capability declarations from the UI.
+
+- **Desktop app: port management.** The Ports tab is read-only in v1. Future versions may allow claiming, releasing, and discovering ports from the UI.
+
+- **Desktop app: task management.** Queuing, monitoring, and reviewing async tasks from the UI is deferred. Tasks remain a programmatic-only surface.
+
+- **Desktop app: project bootstrap from UI.** Creating new projects with folder scaffolding from the UI is deferred. Bootstrap remains CLI/programmatic.
+
+- **Desktop app: web version.** A browser-based version of the control panel (without Electron) is not planned for v1. The desktop app is macOS-native.
 
 ## Appendix D: MCP Tool Reference {#appendix-d-mcp-tool-reference}
 
-Complete tool reference for the 28 MCP tools. The original 27 have identical names, parameters, and response shapes to the Python implementation; `rename_project` is a Setlist addition.
+Complete tool reference for the 32 MCP tools. The original 29 have identical names, parameters, and response shapes to the Python implementation; `bootstrap_project`, `configure_bootstrap`, and `rename_project` are Setlist additions.
 
 **Project Identity:**
 
@@ -1284,3 +1536,10 @@ Complete tool reference for the 28 MCP tools. The original 27 have identical nam
 | queue_task | description, project_name?, schedule, type_filter?, status_filter? | Task ID (or count + names for dispatch) |
 | list_tasks | status_filter?, project_name? | Task entries with session references |
 | cross_query | query, scope? | Synthesized answer with sources |
+
+**Bootstrap:**
+
+| Tool | Parameters | Returns |
+|------|-----------|---------|
+| bootstrap_project | name, type, display_name?, status?, description?, goals?, path_override? | Registered project name + created folder path |
+| configure_bootstrap | type_path_roots, template_dir? | Updated bootstrap configuration |

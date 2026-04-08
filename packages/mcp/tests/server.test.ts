@@ -39,18 +39,18 @@ describe('MCP Server (S21)', () => {
 
   // ── Tool Registration ──────────────────────────────────────
 
-  it('registers exactly 30 tools', async () => {
+  it('registers exactly 33 tools', async () => {
     const tools = await listTools(server);
-    expect(tools).toHaveLength(30);
+    expect(tools).toHaveLength(33);
   });
 
   it('registers all expected tool names', async () => {
     const tools = await listTools(server);
     const names = tools.map(t => t.name).sort();
     expect(names).toEqual([
-      'archive_project', 'batch_update', 'check_port', 'claim_port',
-      'configure_memory', 'correct', 'cross_query', 'discover_ports',
-      'feedback', 'forget', 'get_project', 'get_registry_stats',
+      'archive_project', 'batch_update', 'bootstrap_project', 'check_port', 'claim_port',
+      'configure_bootstrap', 'configure_memory', 'correct', 'cross_query', 'discover_ports',
+      'enrich_project', 'feedback', 'forget', 'get_project', 'get_registry_stats',
       'inspect_memory', 'list_projects', 'list_tasks', 'memory_status',
       'portfolio_brief', 'queue_task', 'recall', 'reflect', 'register_capabilities',
       'register_project', 'release_port', 'rename_project', 'retain',

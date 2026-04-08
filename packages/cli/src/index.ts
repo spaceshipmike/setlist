@@ -135,6 +135,34 @@ switch (command) {
     break;
   }
 
+  case 'ui': {
+    // Launch or focus the Setlist desktop app
+    const { execSync } = await import('node:child_process');
+    const { existsSync } = await import('node:fs');
+    const { resolve } = await import('node:path');
+    const { fileURLToPath } = await import('node:url');
+
+    const thisDir = resolve(fileURLToPath(import.meta.url), '..', '..', '..');
+    const appDir = resolve(thisDir, 'app');
+
+    // Try to find the built .app bundle
+    const appPath = resolve(appDir, 'dist', 'mac-arm64', 'Setlist.app');
+    if (existsSync(appPath)) {
+      execSync(`open "${appPath}"`, { stdio: 'inherit' });
+    } else {
+      // Fall back to running electron-vite dev from the app package
+      const { spawn } = await import('node:child_process');
+      console.log('No built .app found. Starting development mode...');
+      const child = spawn('npx', ['electron-vite', 'dev'], {
+        cwd: appDir,
+        stdio: 'inherit',
+        detached: true,
+      });
+      child.unref();
+    }
+    break;
+  }
+
   default:
     console.log(`setlist — Project Registry CLI (v0.1.0)
 
@@ -144,6 +172,7 @@ Commands:
   migrate-memories [--apply]     Import CC auto-memory and fctry memory into registry
   update <name> [--status ...]   Update a project's core fields
   archive <name>                 Archive a project
+  ui                             Launch the Setlist desktop app
   worker run [--dry-run]         Run one worker cycle
   worker install [--interval N]  Install launchd periodic job
   worker uninstall               Remove launchd job

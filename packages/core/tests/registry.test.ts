@@ -38,7 +38,7 @@ describe('Registry', () => {
       expect(project!.type).toBe('project');
       expect(project!.status).toBe('active');
       expect(project!.description).toBe('A test project');
-      expect(project!.goals).toBe('Test goals');
+      expect(project!.goals).toEqual(['Test goals']);
       expect(project!.paths).toEqual(['/Users/test/Code/my-project']);
     });
 
@@ -101,7 +101,7 @@ describe('Registry', () => {
 
     it('standard depth adds goals, paths, template fields', () => {
       const p = registry.getProject('proj-0', 'standard')!;
-      expect(p.goals).toBe('Goal 0');
+      expect(p.goals).toEqual(['Goal 0']);
       expect(p.paths).toEqual(['/path/0']);
       expect(p.fields).toBeDefined();
     });

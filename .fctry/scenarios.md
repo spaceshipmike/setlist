@@ -545,3 +545,431 @@ and port discovery proposes port claims from config files.
 - Operations are synchronous (better-sqlite3) — no async overhead for basic retain/recall
 - The same registry.db is readable by both the direct import and the MCP server simultaneously (WAL mode)
 - Type exports include: MemoryType (10-member union), MemoryBelief, Memory (with all new fields)
+
+---
+
+## S38: Bootstrap Configuration {#s38}
+**Given** a running registry with no bootstrap configuration
+**When** the user calls `configure_bootstrap` with type-to-path mappings (e.g., `project → ~/Code`, `area_of_focus → ~/Areas`) and a template directory path (e.g., `~/Resources/System/Templates/`)
+**Then** the configuration is stored persistently and the user can verify it was saved by calling the tool again to see current settings.
+
+**Satisfaction criteria:**
+- `configure_bootstrap` accepts a mapping of project types to default path roots
+- `configure_bootstrap` accepts a template directory path
+- Configuration persists across registry restarts (stored in the database, not in-memory)
+- Calling `configure_bootstrap` with no arguments returns the current configuration
+- Partial updates merge with existing configuration rather than replacing it entirely
+- Invalid paths (e.g., nonexistent template directory) produce a clear error, not a silent save
+
+---
+
+## S39: Bootstrap a Code Project {#s39}
+**Given** bootstrap is configured with `project → ~/Code` and a template directory containing project scaffolding files
+**When** the user calls `bootstrap_project` with name "my-new-app", type "project"
+**Then** the project folder exists at `~/Code/my-new-app/` with template files populated, a git repository initialized with an initial commit, and the project is registered in the registry.
+
+**Satisfaction criteria:**
+- A folder is created at the configured path root for the type (`~/Code/my-new-app/`)
+- Template files from the configured template directory are copied into the new folder
+- `git init` is run inside the folder and an initial commit is created
+- The project appears in `list_projects` with the correct name, type, and path
+- `get_project('my-new-app')` returns the project with all registration fields populated
+- The bootstrap is atomic from the user's perspective: if folder creation succeeds but registration fails, the folder is cleaned up (no orphaned directories)
+
+---
+
+## S40: Bootstrap a Non-Code Project {#s40}
+**Given** bootstrap is configured with `project → ~/Code` as the default code path and an additional path root for non-code projects (e.g., `project` type with a path override to `~/Projects`), and a template directory
+**When** the user calls `bootstrap_project` with name "q2-planning", type "project", and a path override to `~/Projects/q2-planning`
+**Then** the project folder exists at `~/Projects/q2-planning/` with template files but no git repository (because the path is outside the code root), and the project is registered in the registry.
+
+**Satisfaction criteria:**
+- A folder is created at `~/Projects/q2-planning/`
+- Template files are copied into the new folder
+- No `.git` directory exists inside the folder (git init is skipped when `skip_git: true` is passed)
+- The project is registered and queryable via `get_project('q2-planning')`
+- The project type is stored as `project` (the standard type — there is no separate `non_code_project` type)
+
+---
+
+## S41: Bootstrap an Area of Focus {#s41}
+**Given** bootstrap is configured with `area_of_focus → ~/Areas` and a template directory
+**When** the user calls `bootstrap_project` with name "health", type "area_of_focus"
+**Then** the folder exists at `~/Areas/health/` with area-appropriate templates, no git, and the area is registered.
+
+**Satisfaction criteria:**
+- A folder is created at `~/Areas/health/`
+- Template files appropriate to the area type are populated
+- No `.git` directory exists (areas live in iCloud-synced paths where git is forbidden)
+- The area is registered and queryable with type `area_of_focus`
+- The area appears in `list_projects` alongside regular projects
+
+---
+
+## S42: Bootstrap Without Configuration {#s42}
+**Given** a registry with no bootstrap configuration (configure_bootstrap has never been called)
+**When** the user calls `bootstrap_project` with any arguments
+**Then** the tool returns a clear error explaining that bootstrap must be configured first, with guidance on how to do so.
+
+**Satisfaction criteria:**
+- The call fails with an error, not a silent fallback to a guessed path
+- The error message names `configure_bootstrap` explicitly as the tool to call
+- The error message explains what needs to be configured (path roots and template directory)
+- No folder is created on the filesystem
+- No project is registered in the registry
+- The error is actionable: a user reading it knows exactly what to do next
+
+---
+
+## S43: Bootstrap with Path Override {#s43}
+**Given** bootstrap is configured with `project → ~/Code`
+**When** the user calls `bootstrap_project` with name "special-project", type "project", and a path override of `~/Code/experiments/special-project`
+**Then** the project is created at the overridden path instead of the default, and registered with that path.
+
+**Satisfaction criteria:**
+- The folder is created at `~/Code/experiments/special-project`, not at `~/Code/special-project`
+- The registered project's path points to the overridden location
+- Templates are still populated from the configured template directory
+- Git init still occurs (type is project, regardless of path override)
+- `get_project('special-project')` returns the overridden path
+
+---
+
+## S44: Bootstrap When Folder Already Exists {#s44}
+**Given** bootstrap is configured and a folder already exists at the target path (e.g., `~/Code/existing-project/` with files in it)
+**When** the user calls `bootstrap_project` with name "existing-project", type "project"
+**Then** the tool refuses to proceed, protecting the existing folder contents.
+
+**Satisfaction criteria:**
+- The call fails with a clear error indicating the folder already exists
+- No files in the existing folder are modified, overwritten, or deleted
+- No project is registered in the registry (the operation is fully aborted, not half-done)
+- The error message suggests the user either choose a different name or remove the existing folder manually
+- If a project with that name is already registered, the error mentions this separately from the folder conflict
+
+---
+
+## S45: App Launch and Window Creation [App] {#s45}
+**Given** the @setlist/app Electron package is built and the registry database exists with projects
+**When** the user launches the app (either via the macOS .app bundle or `setlist ui` from the CLI)
+**Then** a single application window appears showing the home view — a card grid of all registered projects — within a reasonable startup time.
+
+**Satisfaction criteria:**
+- The Electron main process starts and creates a BrowserWindow
+- The main process imports @setlist/core directly (no HTTP API, no spawned server)
+- An IPC bridge connects the renderer to the main process so the UI can call registry operations
+- The home view renders and displays project cards populated from the live registry
+- Window title or chrome identifies the app as Setlist
+- The app window is usable within 3 seconds of launch on a modern Mac
+
+Difficulty: medium
+
+---
+
+## S46: IPC Bridge Isolation [App] {#s46}
+**Given** the Electron app is running with the IPC bridge active
+**When** the renderer process requests project data via the IPC bridge
+**Then** the data flows through well-defined IPC channels — the renderer never imports @setlist/core directly or accesses the database file.
+
+**Satisfaction criteria:**
+- The renderer process communicates with the main process exclusively through `contextBridge`-exposed IPC methods
+- The preload script exposes a typed API object (e.g., `window.setlist`) that the renderer calls
+- Direct `require('@setlist/core')` or `import` from the renderer process does not work (contextIsolation is enabled)
+- Node integration is disabled in the renderer for security
+- All registry read/write operations go through IPC handlers registered in the main process
+
+Difficulty: medium
+
+---
+
+## S47: Home View Card Grid [App] {#s47}
+**Given** the registry contains 8 projects of mixed types (code projects, non-code projects, areas of focus) with varying statuses
+**When** the user is on the home view
+**Then** all projects appear as cards in a responsive grid, each card showing the project's essential identity at a glance.
+
+**Satisfaction criteria:**
+- Every registered, non-archived project has a card in the grid
+- Each card displays: project name, type badge (visually distinguishing code project from area), status indicator, and last-updated timestamp
+- Cards are arranged in a grid that reflows as the window resizes
+- The visual hierarchy makes it easy to scan — project name is the most prominent element on each card
+- Type badges use distinct visual treatments (color, icon, or label) so the user can tell project types apart without reading text
+
+Difficulty: medium
+
+---
+
+## S48: Home View Filtering and Sorting [App] {#s48}
+**Given** the home view is showing 15+ project cards
+**When** the user types a search term in the filter input, or changes the sort order
+**Then** the grid immediately narrows to matching projects or reorders, with no perceptible delay.
+
+**Satisfaction criteria:**
+- A search/filter input is visible on the home view without scrolling
+- Typing filters cards by project name (substring match, case-insensitive)
+- The grid updates as the user types (no submit button required)
+- A sort control lets the user choose between at least: alphabetical, last updated, and project type
+- Clearing the filter restores all cards
+- When no cards match the filter, a helpful empty state is shown (not a blank area)
+
+Difficulty: medium
+
+---
+
+## S49: Project Detail Navigation [App] {#s49}
+**Given** the home view is displayed with project cards
+**When** the user clicks on a project card
+**Then** the view transitions to that project's detail view with a persistent header and tabbed content, and the user can navigate back to the home view.
+
+**Satisfaction criteria:**
+- Clicking a card navigates to the project detail view (not a modal — a full view transition)
+- The detail view shows a persistent project header with the project name, type badge, and status
+- The header remains visible regardless of which tab is active
+- A back button or breadcrumb returns the user to the home view
+- The transition between home and detail views is smooth (no flash of empty content)
+- Browser-style back navigation (if the app supports it) also returns to the home view
+
+Difficulty: medium
+
+---
+
+## S50: Project Detail Tabs [App] {#s50}
+**Given** the user is viewing a project's detail view
+**When** the user switches between the Overview, Memory, Capabilities, and Ports tabs
+**Then** each tab displays its content without reloading the header, and the selected tab is visually indicated.
+
+**Satisfaction criteria:**
+- Four tabs are visible: Overview, Memory, Capabilities, Ports
+- Switching tabs updates the content area without a full-page reload or navigation event
+- The currently selected tab is visually distinct from unselected tabs
+- The project header (name, type, status) remains stable when switching tabs
+- Each tab loads its content promptly (no spinner for more than 1 second on a populated project)
+
+Difficulty: easy
+
+---
+
+## S51: Overview Tab Content [App] {#s51}
+**Given** the user is viewing a project's Overview tab for a project with rich data (description, goals, paths, extended fields)
+**When** the tab content renders
+**Then** the user sees the project's full identity: description, goals, filesystem paths, and all extended fields in a readable layout.
+
+**Satisfaction criteria:**
+- Description is displayed as readable text (not truncated or requiring expansion)
+- Goals are listed individually (not as a single blob of text)
+- Filesystem paths are shown and visually distinct from prose text
+- Extended fields from all producers are displayed with field names as labels
+- The layout uses clear visual grouping (sections or cards) rather than a flat list of key-value pairs
+- Fields with empty values are either omitted or shown as a gentle placeholder — not as "null" or "undefined"
+
+Difficulty: easy
+
+---
+
+## S52: Memory Tab Read-Only View [App] {#s52}
+**Given** the user is viewing the Memory tab for a project that has 20+ memories of mixed types
+**When** the tab content renders
+**Then** the user sees a browsable list of memories with type badges, content previews, and timestamps — but no controls to create, edit, or delete memories.
+
+**Satisfaction criteria:**
+- Memories are listed with: content preview (first ~100 characters), type badge, importance score, and creation timestamp
+- Memory types are visually distinguishable (color-coded badges or icons for decision, pattern, learning, etc.)
+- The list is scrollable when memories exceed the visible area
+- No "Add Memory," "Edit," or "Delete" buttons or controls are present (V1 is read-only)
+- The user can distinguish between high-importance and low-importance memories through visual treatment
+- If the project has no memories, a graceful empty state is shown (e.g., "No memories recorded yet")
+
+Difficulty: easy
+
+---
+
+## S53: Capabilities Tab Read-Only View [App] {#s53}
+**Given** the user is viewing the Capabilities tab for a project that has declared capabilities
+**When** the tab content renders
+**Then** the user sees a list of capability declarations with names, types, descriptions, and input/output schemas.
+
+**Satisfaction criteria:**
+- Each capability is displayed with: name, capability_type, and description
+- Input and output schemas are shown in a readable format (not raw JSON blobs)
+- The producer who declared each capability is visible
+- Capabilities requiring auth are visually flagged
+- If the project has no capabilities, an empty state indicates this clearly
+- No controls for adding, editing, or removing capabilities are present (V1 is read-only)
+
+Difficulty: easy
+
+---
+
+## S54: Ports Tab Read-Only View [App] {#s54}
+**Given** the user is viewing the Ports tab for a project with claimed ports
+**When** the tab content renders
+**Then** the user sees the project's port allocations with port numbers, service labels, and protocols.
+
+**Satisfaction criteria:**
+- Each port allocation shows: port number, service label, protocol, and who claimed it
+- Port numbers are visually prominent (they're the primary identifier)
+- If the project has no port claims, an empty state indicates this
+- No controls for claiming or releasing ports are present (V1 is read-only)
+
+Difficulty: easy
+
+---
+
+## S55: Register New Project via UI [App] {#s55}
+**Given** the user is on the home view
+**When** the user initiates "new project" creation, fills in name, display name, type, and description, then confirms
+**Then** the new project appears in the card grid and is immediately accessible in the detail view.
+
+**Satisfaction criteria:**
+- A clear affordance to create a new project is visible on the home view (button, card, or similar)
+- The creation form collects at minimum: name, display_name, type (from valid types), and description
+- The name field validates in real-time (no spaces, no duplicates)
+- After submission, the new project card appears in the grid without a manual refresh
+- The new project is also visible to the MCP server and CLI (it's in the registry database, not just the UI state)
+- Submitting with a duplicate name shows a clear inline error
+
+Difficulty: medium
+
+---
+
+## S56: Edit Project Fields via UI [App] {#s56}
+**Given** the user is viewing a project's detail view on the Overview tab
+**When** the user clicks Edit, modifies the description and goals, then saves
+**Then** the changes are persisted to the registry and reflected in the UI immediately.
+
+**Satisfaction criteria:**
+- An Edit action is accessible from the project header or Overview tab
+- Editable fields include at minimum: display_name, description, goals, and status
+- The edit state is clearly distinct from the view state (the user knows they're editing)
+- Saving returns to the view state with updated content visible
+- Canceling discards changes and returns to the view state with original content
+- Changes are persisted to the SQLite database (not just UI state) — the MCP server sees them too
+
+Difficulty: medium
+
+---
+
+## S57: Archive Project via UI [App] {#s57}
+**Given** the user is viewing a project's detail view
+**When** the user clicks Archive and confirms the action
+**Then** the project is archived, the user returns to the home view, and the archived project no longer appears in the default card grid.
+
+**Satisfaction criteria:**
+- An Archive action is accessible from the project header
+- Archiving requires confirmation (not a single-click destructive action)
+- After archiving, the home view no longer shows the project in the default card grid
+- The archive operation calls the registry's archive function (the project is archived in the database, not just hidden in the UI)
+- The user can still find archived projects if a filter or view toggle exists for them
+
+Difficulty: medium
+
+---
+
+## S58: Rename Project via UI [App] {#s58}
+**Given** the user is viewing a project's detail view
+**When** the user triggers a rename, enters a new name, and confirms
+**Then** the project header updates to the new name, the home view card updates, and all associated data (ports, capabilities, memories) follows the rename.
+
+**Satisfaction criteria:**
+- A Rename action is accessible from the project header
+- The rename input validates in real-time (no spaces, no duplicates, same rules as registration)
+- After confirming, the project detail header reflects the new name without navigating away
+- Returning to the home view shows the renamed card
+- The rename goes through @setlist/core's `renameProject` (atomic, all associations updated)
+- Attempting to rename to an existing project name shows an inline error
+
+Difficulty: medium
+
+---
+
+## S59: Chorus Design System Applied [App] {#s59}
+**Given** the app is running and displaying any view (home or detail)
+**When** the user looks at the interface
+**Then** the visual design follows the Chorus design system: warm charcoal surfaces, terracotta accent color, Inter font, and Radix UI component patterns.
+
+**Satisfaction criteria:**
+- Background surfaces use warm charcoal tones (not pure black or cold gray)
+- Accent color is terracotta (warm orange-brown) used for interactive elements and highlights
+- Text is rendered in the Inter typeface (or a configured fallback)
+- Interactive components (buttons, tabs, inputs) use Radix UI primitives with consistent styling
+- The overall feel is warm and calm — not clinical or high-contrast
+- Tailwind 4 utility classes are used for styling (no competing CSS framework)
+
+Difficulty: medium
+
+---
+
+## S60: CLI Launcher Opens App [App] {#s60}
+**Given** the app is built and installed as a macOS .app bundle, and the CLI package includes the `setlist ui` command
+**When** the user runs `setlist ui` from the terminal
+**Then** the app launches (or focuses the existing window if already running).
+
+**Satisfaction criteria:**
+- `setlist ui` launches the Electron app if it's not running
+- If the app is already running, `setlist ui` brings its window to the front (does not spawn a second instance)
+- The command exits immediately after launching/focusing (does not block the terminal)
+- If the .app bundle is not found at the expected location, the command prints a helpful error
+
+Difficulty: medium
+
+---
+
+## S61: Empty Registry Greeting [App] {#s61}
+**Given** the registry database exists but contains zero projects
+**When** the user opens the app
+**Then** the home view shows a welcoming empty state that guides the user to register their first project, rather than displaying a blank grid.
+
+**Satisfaction criteria:**
+- The empty state is visually intentional (an illustration, icon, or message) — not just an empty grid container
+- A clear call to action invites the user to create their first project
+- The call to action leads directly to the project creation flow
+- The empty state feels encouraging, not broken (the user understands the app works, it just has no data yet)
+
+Difficulty: easy
+
+---
+
+## S62: Failed Operation Feedback [App] {#s62}
+**Given** the user is performing a CRUD operation (register, edit, archive, rename) via the UI
+**When** the operation fails (duplicate name, invalid input, database error)
+**Then** the user sees a clear error message near the point of failure, and can recover without losing their work.
+
+**Satisfaction criteria:**
+- Validation errors (duplicate name, empty required field) appear inline near the offending field, not as a generic toast
+- Database-level errors (constraint violation, locked database) surface as a user-friendly message, not a raw error trace
+- After a failed save, the user's edits are preserved in the form (they don't have to re-enter everything)
+- After a failed registration, the form remains populated with the user's input
+- Error messages describe what went wrong and suggest what to do (e.g., "A project with this name already exists. Choose a different name.")
+
+Difficulty: medium
+
+---
+
+## S63: Stale Data Refresh [App] {#s63}
+**Given** the app is open showing the home view, and an external consumer (MCP server, CLI, or another agent) registers a new project or updates an existing one
+**When** the user returns focus to the app or navigates to the home view
+**Then** the card grid reflects the current state of the registry, including the externally-made change.
+
+**Satisfaction criteria:**
+- Changes made outside the app are visible in the UI without requiring the user to manually refresh or restart
+- The refresh happens automatically when the app gains focus, or on navigation, or via polling (mechanism is flexible)
+- The refresh does not cause a jarring full-page flash — updated cards appear smoothly
+- If a project the user was viewing was archived externally, navigating to it shows a meaningful state (redirect to home or "project not found" message)
+
+Difficulty: hard
+
+---
+
+## S64: App Package Build [App] [TS] {#s64}
+**Given** the monorepo with @setlist/app as a workspace package alongside core, mcp, and cli
+**When** `npm run build` is executed from the workspace root
+**Then** the app package compiles successfully and produces a runnable Electron application.
+
+**Satisfaction criteria:**
+- @setlist/app is declared as a workspace package in the root package.json
+- The package declares @setlist/core as a workspace dependency
+- TypeScript compilation succeeds with no errors
+- The build produces an Electron main process bundle that can be launched
+- The renderer build (Tailwind 4, Radix UI components) produces valid HTML/CSS/JS assets
+- Electron, Tailwind 4, and Radix UI are declared as dependencies (not globally assumed)
+
+Difficulty: medium

@@ -2,16 +2,16 @@
 
 ## What This Is
 
-Setlist is the TypeScript implementation of the Project Registry — the active intelligence hub for the user's personal ecosystem. It provides project identity, capability declarations, portfolio memory, port allocation, task routing, batch operations, and cross-project intelligence via a local SQLite database and MCP server.
+Setlist is the TypeScript implementation of the Project Registry — the active intelligence hub for the user's personal ecosystem. It provides project identity, capability declarations, portfolio memory, port allocation, task routing, batch operations, cross-project intelligence, and a desktop control panel via a local SQLite database, MCP server, and Electron app.
 
-Originally a direct port of `project-registry-service` (Python), now evolved beyond parity. Schema v10 (unified memory types, belief classification, temporal validity, entity extraction, procedural versioning), 28 MCP tools. Different language (TypeScript), different packaging (npm monorepo).
+Originally a direct port of `project-registry-service` (Python), now evolved beyond parity. Schema v10 (unified memory types, belief classification, temporal validity, entity extraction, procedural versioning), 32 MCP tools, desktop UI sharing Chorus's design system. Different language (TypeScript), different packaging (npm monorepo).
 
 ## Factory Contract
 
 This project is built and maintained using the fctry spec-driven workflow.
 
 - **Spec:** `.fctry/spec.md` — the complete natural-language specification
-- **Scenarios:** `.fctry/scenarios.md` — 30 end-to-end scenarios defining behavioral satisfaction
+- **Scenarios:** `.fctry/scenarios.md` — 44 end-to-end scenarios defining behavioral satisfaction
 - **Config:** `.fctry/config.json` — version registry (external 0.1.0, spec 0.1)
 - **State:** `.fctry/state.json` — current workflow state
 
@@ -40,24 +40,27 @@ npm run typecheck
 ```
 packages/
 ├── core/    # @setlist/core — library (all registry logic)
-├── mcp/     # @setlist/mcp — MCP server (28 tools, stdio)
-└── cli/     # @setlist/cli — CLI commands + async worker
+├── mcp/     # @setlist/mcp — MCP server (32 tools, stdio)
+├── cli/     # @setlist/cli — CLI commands + async worker
+└── app/     # @setlist/app — desktop control panel (Electron + React)
 ```
 
 ### Key Architectural Decisions
 
 - **better-sqlite3** — Synchronous native SQLite binding. No async wrapper overhead.
 - **@modelcontextprotocol/sdk** — Official MCP SDK for the server package.
+- **Electron** — Desktop shell for @setlist/app. Main process imports @setlist/core via IPC bridge.
+- **React + Tailwind CSS 4 + Radix UI** — Renderer stack, shared design system with Chorus.
 - **ESM-only** — All packages produce ESM output. No CJS.
 - **Schema v10** — Evolved from Python's v8. The .db file is the contract.
-- **Library-first** — @setlist/core is the primary interface. MCP and CLI are thin wrappers.
+- **Library-first** — @setlist/core is the primary interface. MCP, CLI, and desktop app are thin wrappers.
 
 ### Database
 
 Location: `~/.local/share/project-registry/registry.db`
 18 tables, schema v10, WAL mode, FTS5 for memory search.
 
-### 30 MCP Tools
+### 32 MCP Tools
 
 **Identity (11):** list_projects, get_project, switch_project, search_projects, get_registry_stats, register_project, update_project, archive_project, rename_project, batch_update, write_fields
 
@@ -70,6 +73,41 @@ Location: `~/.local/share/project-registry/registry.db`
 **Ports (4):** claim_port, release_port, check_port, discover_ports
 
 **Tasks (3):** queue_task, list_tasks, cross_query
+
+**Bootstrap (2):** bootstrap_project, configure_bootstrap
+
+## Project Enrichment
+
+Every project in the registry should be discoverable and understandable by agents. Enrichment happens in three steps:
+
+### Step 1: Identity (`register_project` / `update_project`)
+- `description` — one paragraph explaining what the project is and does. Write for an agent that has never seen this project. Focus on capabilities and architecture, not marketing.
+
+### Step 2: Profile (`enrich_project`)
+- `goals` — what the project is trying to achieve (list of strings)
+- `topics` — searchable tags (e.g. "electron", "mcp", "vector-search")
+- `entities` — other projects, services, or tools this project depends on or integrates with
+
+### Step 3: Structured fields (`write_fields`)
+
+| Field | Required | When to use |
+|-------|----------|-------------|
+| `short_description` | All projects | One line (~10 words). Used in portfolio briefs and search results. |
+| `medium_description` | Code projects | One paragraph. The default description for agent consumption. |
+| `readme_description` | Code projects (optional) | Full context for deep reasoning. 3-5 sentences. |
+| `tech_stack` | Code projects | Languages, frameworks, databases, APIs. Comma-separated string or JSON array. |
+| `patterns` | Code projects | Architectural patterns and approaches. Comma-separated string or JSON array. |
+
+### What makes a good description
+- **Agent-friendly** = capabilities and architecture, not marketing copy
+- Lead with what it *is*, then what it *does*, then how
+- Name the tech stack in the description so search finds it
+- Non-code projects only need `short_description` — skip tech_stack/patterns
+
+### When to enrich
+- When registering a new project
+- When a project's scope or tech stack changes significantly
+- When search fails to find a project that should match a query
 
 ## .fctry/ Directory
 
@@ -105,14 +143,17 @@ Scenarios in `.fctry/scenarios.md` define the behavioral contract. Key categorie
 - **S21-S24:** TypeScript-specific (MCP drop-in, library import, npm build, test parity)
 - **S25:** Async worker
 - **S26-S30:** Administration, context switching, search, task lifecycle, stats
+- **S31:** Rename project
+- **S32-S37:** Schema v10, unified memory types, chorus-compatible fields
+- **S38-S44:** Project bootstrap (configuration, code/non-code/area bootstrapping, error states)
 
 <!-- compact-instructions
 Preserve during auto-compaction:
 - Spec: .fctry/spec.md (Setlist NLSpec, experience-ported from project-registry-service)
-- Scenarios: .fctry/scenarios.md (30 scenarios, S01-S30)
-- Config: .fctry/config.json (external 0.1.0, spec 0.1)
+- Scenarios: .fctry/scenarios.md (44 scenarios, S01-S44)
+- Config: .fctry/config.json (external 0.1.10, spec 0.8)
 - State: .fctry/state.json (current workflow step)
-- Key constraint: Schema v8 compatibility with Python implementation
-- Key constraint: Same 27 MCP tools, same parameters, same response shapes
+- Key constraint: Schema v10 with unified memory types
+- Key constraint: 29 Python-compatible MCP tools + 3 Setlist additions (rename, bootstrap, configure_bootstrap)
 - Key constraint: Library-first (@setlist/core), ESM-only, better-sqlite3
 -->

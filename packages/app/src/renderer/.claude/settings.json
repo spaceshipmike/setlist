@@ -1,0 +1,6 @@
+{
+  "statusLine": {
+    "type": "command",
+    "command": "node /Users/mike/code/fctry/src/statusline/fctry-statusline.js"
+  }
+}

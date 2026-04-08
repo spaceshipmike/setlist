@@ -1,0 +1,83 @@
+import { app, BrowserWindow, ipcMain } from 'electron';
+import { join } from 'node:path';
+import { registerIpcHandlers } from './ipc.js';
+import { initAutoUpdater } from './auto-update.js';
+
+// Single-instance lock
+const gotLock = app.requestSingleInstanceLock();
+if (!gotLock) {
+  app.quit();
+}
+
+let mainWindow: BrowserWindow | null = null;
+
+function createWindow(): void {
+  mainWindow = new BrowserWindow({
+    width: 1200,
+    height: 800,
+    minWidth: 800,
+    minHeight: 600,
+    titleBarStyle: 'hiddenInset',
+    backgroundColor: '#1A1915',
+    webPreferences: {
+      preload: join(__dirname, '../preload/index.mjs'),
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: false, // needed for better-sqlite3 via preload
+    },
+  });
+
+  // Catch renderer crashes
+  mainWindow.webContents.on('render-process-gone', (_e, details) => {
+    console.error('[main] Renderer process gone:', details.reason, details.exitCode);
+  });
+  mainWindow.webContents.on('did-fail-load', (_e, code, desc) => {
+    console.error('[main] Failed to load:', code, desc);
+  });
+  mainWindow.webContents.on('console-message', (_e, level, msg) => {
+    const labels = ['V', 'I', 'W', 'E'];
+    console.log(`[renderer:${labels[level] || level}] ${msg}`);
+  });
+
+  // Load renderer
+  if (process.env.ELECTRON_RENDERER_URL) {
+    console.log('[main] Loading URL:', process.env.ELECTRON_RENDERER_URL);
+    mainWindow.loadURL(process.env.ELECTRON_RENDERER_URL);
+  } else {
+    const htmlPath = join(__dirname, '..', 'renderer', 'index.html');
+    console.log('[main] Loading file:', htmlPath);
+    mainWindow.loadFile(htmlPath);
+  }
+
+  mainWindow.on('closed', () => {
+    mainWindow = null;
+  });
+}
+
+// Focus existing window on second instance
+app.on('second-instance', () => {
+  if (mainWindow) {
+    if (mainWindow.isMinimized()) mainWindow.restore();
+    mainWindow.focus();
+  }
+});
+
+app.whenReady().then(() => {
+  registerIpcHandlers(ipcMain);
+  createWindow();
+
+  // Auto-update (skip in dev)
+  if (!process.env.ELECTRON_RENDERER_URL) {
+    initAutoUpdater('latest');
+  }
+
+  app.on('activate', () => {
+    if (BrowserWindow.getAllWindows().length === 0) {
+      createWindow();
+    }
+  });
+});
+
+app.on('window-all-closed', () => {
+  app.quit();
+});

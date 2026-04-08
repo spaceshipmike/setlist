@@ -350,6 +350,19 @@ function ensureColumns(db: Database.Database): void {
   if (!capColNames.has('audience')) {
     db.exec(`ALTER TABLE project_capabilities ADD COLUMN audience TEXT NOT NULL DEFAULT ''`);
   }
+
+  // Ensure profile columns on projects table
+  const projCols = db.prepare("PRAGMA table_info(projects)").all() as { name: string }[];
+  const projColNames = new Set(projCols.map(c => c.name));
+  if (!projColNames.has('topics')) {
+    db.exec(`ALTER TABLE projects ADD COLUMN topics TEXT NOT NULL DEFAULT '[]'`);
+  }
+  if (!projColNames.has('entities')) {
+    db.exec(`ALTER TABLE projects ADD COLUMN entities TEXT NOT NULL DEFAULT '[]'`);
+  }
+  if (!projColNames.has('concerns')) {
+    db.exec(`ALTER TABLE projects ADD COLUMN concerns TEXT NOT NULL DEFAULT '[]'`);
+  }
 }
 
 function upgradeSchema(db: Database.Database): void {

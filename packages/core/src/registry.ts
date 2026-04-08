@@ -156,10 +156,11 @@ export class Registry {
         LEFT JOIN project_fields pf ON pf.project_id = p.id
         WHERE (
           p.name LIKE ? OR p.display_name LIKE ? OR p.description LIKE ?
-          OR p.goals LIKE ? OR pf.field_value LIKE ?
+          OR p.goals LIKE ? OR p.topics LIKE ? OR p.entities LIKE ?
+          OR p.concerns LIKE ? OR pf.field_value LIKE ?
         )
       `;
-      const params: unknown[] = [q, q, q, q, q];
+      const params: unknown[] = [q, q, q, q, q, q, q, q];
 
       if (opts.type_filter) {
         sql += ' AND p.type = ?';
@@ -316,6 +317,72 @@ export class Registry {
     } finally {
       db.close();
     }
+  }
+
+  // ── Profile Enrichment ────────────────────────────────────────
+
+  enrichProject(name: string, profile: {
+    goals?: string[];
+    topics?: string[];
+    entities?: string[];
+    concerns?: string[];
+  }): { name: string; goals: string[]; topics: string[]; entities: string[]; concerns: string[] } {
+    const db = this.open();
+    try {
+      const row = db.prepare('SELECT id, goals, topics, entities, concerns FROM projects WHERE name = ?')
+        .get(name) as { id: number; goals: string; topics: string; entities: string; concerns: string } | undefined;
+      if (!row) {
+        const allNames = db.prepare('SELECT name FROM projects').all() as { name: string }[];
+        throw new NotFoundError(name, findClosestMatch(name, allNames.map(r => r.name)));
+      }
+
+      // Parse existing values
+      const existingGoals = this._parseGoalsField(row.goals);
+      const existingTopics: string[] = JSON.parse(row.topics || '[]');
+      const existingEntities: string[] = JSON.parse(row.entities || '[]');
+      const existingConcerns: string[] = JSON.parse(row.concerns || '[]');
+
+      // Merge with union semantics
+      const mergedGoals = profile.goals
+        ? [...new Set([...existingGoals, ...profile.goals])]
+        : existingGoals;
+      const mergedTopics = profile.topics
+        ? [...new Set([...existingTopics, ...profile.topics.map(t => t.toLowerCase())])]
+        : existingTopics;
+      const mergedEntities = profile.entities
+        ? [...new Set([...existingEntities, ...profile.entities.map(e => e.toLowerCase())])]
+        : existingEntities;
+      const mergedConcerns = profile.concerns
+        ? [...new Set([...existingConcerns, ...profile.concerns.map(c => c.toLowerCase())])]
+        : existingConcerns;
+
+      // Write back
+      db.prepare(`UPDATE projects SET
+        goals = ?, topics = ?, entities = ?, concerns = ?,
+        updated_at = datetime('now')
+        WHERE id = ?`).run(
+        JSON.stringify(mergedGoals),
+        JSON.stringify(mergedTopics),
+        JSON.stringify(mergedEntities),
+        JSON.stringify(mergedConcerns),
+        row.id,
+      );
+
+      return { name, goals: mergedGoals, topics: mergedTopics, entities: mergedEntities, concerns: mergedConcerns };
+    } finally {
+      db.close();
+    }
+  }
+
+  /** Parse goals from either JSON array or legacy comma-separated string */
+  private _parseGoalsField(goals: string): string[] {
+    if (!goals) return [];
+    const trimmed = goals.trim();
+    if (trimmed.startsWith('[')) {
+      try { return JSON.parse(trimmed); } catch { /* fall through */ }
+    }
+    // Legacy: comma-separated or newline-separated
+    return trimmed.split(/[,\n]/).map(g => g.replace(/^[-•*]\s*/, '').trim()).filter(Boolean);
   }
 
   // ── Fields ────────────────────────────────────────────────────
@@ -772,6 +839,9 @@ export class Registry {
       status: row.status as ProjectStatus,
       description: row.description as string,
       goals: row.goals as string,
+      topics: (row.topics as string) || '[]',
+      entities: (row.entities as string) || '[]',
+      concerns: (row.concerns as string) || '[]',
       paths,
       extended_fields,
       field_producers,

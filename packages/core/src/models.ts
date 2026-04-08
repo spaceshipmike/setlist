@@ -54,6 +54,9 @@ export interface ProjectRecord {
   status: ProjectStatus;
   description: string;
   goals: string;
+  topics: string;
+  entities: string;
+  concerns: string;
   paths: string[];
   extended_fields: Record<string, string>;
   field_producers: Record<string, string>;
@@ -179,6 +182,7 @@ export function toSummary(record: ProjectRecord): Record<string, unknown> {
     display_name: record.display_name,
     type: record.type,
     status: record.status,
+    updated_at: record.updated_at,
   };
   if (record.description) result.description = record.description;
   return result;
@@ -187,8 +191,16 @@ export function toSummary(record: ProjectRecord): Record<string, unknown> {
 /** Format a ProjectRecord at standard depth — includes template-relevant fields */
 export function toStandard(record: ProjectRecord, templateFields: Set<string>): Record<string, unknown> {
   const result = toSummary(record);
-  if (record.goals) result.goals = record.goals;
+  if (record.goals) result.goals = parseJsonArray(record.goals);
   if (record.paths.length > 0) result.paths = record.paths;
+
+  // Profile fields
+  const topics = parseJsonArray(record.topics);
+  const entities = parseJsonArray(record.entities);
+  const concerns = parseJsonArray(record.concerns);
+  if (topics.length > 0) result.topics = topics;
+  if (entities.length > 0) result.entities = entities;
+  if (concerns.length > 0) result.concerns = concerns;
 
   const filtered: Record<string, string> = {};
   for (const [key, value] of Object.entries(record.extended_fields)) {
@@ -200,6 +212,16 @@ export function toStandard(record: ProjectRecord, templateFields: Set<string>): 
   return result;
 }
 
+function parseJsonArray(value: string | undefined | null): string[] {
+  if (!value) return [];
+  const trimmed = value.trim();
+  if (trimmed.startsWith('[')) {
+    try { return JSON.parse(trimmed); } catch { /* fall through */ }
+  }
+  // Legacy comma-separated
+  return trimmed.split(/[,\n]/).map(s => s.replace(/^[-•*]\s*/, '').trim()).filter(Boolean);
+}
+
 /** Format a ProjectRecord at full depth — includes everything */
 export function toFull(record: ProjectRecord): Record<string, unknown> {
   const result: Record<string, unknown> = {
@@ -209,8 +231,17 @@ export function toFull(record: ProjectRecord): Record<string, unknown> {
     status: record.status,
   };
   if (record.description) result.description = record.description;
-  if (record.goals) result.goals = record.goals;
+  if (record.goals) result.goals = parseJsonArray(record.goals);
   if (record.paths.length > 0) result.paths = record.paths;
+
+  // Profile fields
+  const topics = parseJsonArray(record.topics);
+  const entities = parseJsonArray(record.entities);
+  const concerns = parseJsonArray(record.concerns);
+  if (topics.length > 0) result.topics = topics;
+  if (entities.length > 0) result.entities = entities;
+  if (concerns.length > 0) result.concerns = concerns;
+
   if (Object.keys(record.extended_fields).length > 0) {
     result.fields = { ...record.extended_fields };
   }
