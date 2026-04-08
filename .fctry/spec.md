@@ -3,8 +3,8 @@
 ```yaml
 ---
 title: Setlist
-spec-version: "0.8"
-date: 2026-04-07
+spec-version: "0.9"
+date: 2026-04-08
 status: active
 author: Mike (via fctry interview, experience-ported from project-registry-service)
 spec-format: nlspec-v2
@@ -12,11 +12,11 @@ experience-source: project-registry-service/.fctry/spec.md (v1.3)
 ---
 synopsis:
   short: "TypeScript project registry — intelligence hub with desktop control panel, 32 MCP tools, unified memory, and direct library import"
-  medium: "TypeScript monorepo (@setlist/core, @setlist/mcp, @setlist/cli, @setlist/app) implementing the project registry as both invisible infrastructure and a directly operable desktop surface. Local SQLite (better-sqlite3) + MCP server + Electron control panel sharing Chorus's design system (Tailwind 4, Radix UI). Provides project identity, capability declarations, unified portfolio memory (10 types), project bootstrap, port allocation, batch operations, and cross-project intelligence. Schema v10, 32 MCP tools, importable as @setlist/core by Chorus and Ensemble."
+  medium: "TypeScript monorepo (@setlist/core, @setlist/mcp, @setlist/cli, @setlist/app) implementing the project registry as both invisible infrastructure and a directly operable desktop surface. Local SQLite (better-sqlite3) + MCP server + Electron control panel sharing Chorus's design system (Tailwind 4, Radix UI). Provides project identity, capability declarations, unified portfolio memory (10 types with hierarchical compaction, progressive retrieval, knowledge distillation, and graph gap detection), project bootstrap, port allocation, batch operations, and cross-project intelligence. Schema v10, 32 MCP tools, importable as @setlist/core by Chorus and Ensemble."
   readme: "Setlist is the TypeScript implementation of the Project Registry — both invisible infrastructure at the center of the user's personal ecosystem and a directly operable desktop control panel. As infrastructure, it provides structured, queryable identity for every project and area of focus, with programmatic administration, capability declarations, unified portfolio memory (10 types with belief classification, temporal validity, entity extraction, and procedural versioning), budget-controlled hybrid retrieval, port allocation, project bootstrap, batch operations, and cross-project intelligence via 32 MCP tools and direct library import. As a desktop application, it presents a card-grid dashboard of all projects with filtering and sorting, tabbed project detail views (overview, memory, capabilities, ports), and full project CRUD — register, edit, archive, rename — through a native macOS Electron app sharing Chorus's design language (Tailwind CSS 4, Radix UI, terracotta accent, warm charcoal surfaces). The main process imports @setlist/core directly; no API layer sits between the UI and the registry. Distributed as four npm packages (@setlist/core, @setlist/mcp, @setlist/cli, @setlist/app), Setlist is directly consumable by Chorus, Ensemble, and any Node.js tool in the ecosystem, while also standing alone as a full-featured project management surface."
   tech-stack: [typescript, better-sqlite3, "@modelcontextprotocol/sdk", node, npm-monorepo, electron, react, tailwindcss-v4, radix-ui]
-  patterns: [atomized-fields, progressive-disclosure, producer-consumer, registration-not-discovery, invisible-infrastructure, operable-surface, config-file-scanning, hub-and-spoke, capability-declaration, definition-is-truth, fuzzy-match-suggestions, archive-triggered-cleanup, producer-attribution, summary-compactness, freshness-importance-scoring, invocation-metadata, retain-recall-reflect, outcome-aware-reinforcement, content-hash-dedup, embedding-provider-abstraction, budget-controlled-recall, four-level-scoping, hybrid-retrieval, belief-classification, temporal-validity, entity-extraction, procedural-versioning, unified-memory-store, template-driven-bootstrap, configure-then-use, shared-design-system, ipc-bridge]
-  goals: [unified-project-identity, capability-discovery, programmatic-project-administration, batch-operations, cross-project-task-dispatch, conflict-free-port-allocation, automatic-port-discovery, async-task-execution, cross-project-intelligence, crash-resilient-worker, ranked-cross-project-results, capability-invocation-awareness, portfolio-memory, outcome-reinforcement, hybrid-retrieval, npm-packageable-distribution, canonical-memory-store, chorus-memory-unification, project-bootstrap-and-scaffolding, desktop-control-panel, project-dashboard, project-crud-ui]
+  patterns: [atomized-fields, progressive-disclosure, producer-consumer, registration-not-discovery, invisible-infrastructure, operable-surface, config-file-scanning, hub-and-spoke, capability-declaration, definition-is-truth, fuzzy-match-suggestions, archive-triggered-cleanup, producer-attribution, summary-compactness, freshness-importance-scoring, invocation-metadata, retain-recall-reflect, outcome-aware-reinforcement, content-hash-dedup, embedding-provider-abstraction, budget-controlled-recall, four-level-scoping, hybrid-retrieval, belief-classification, temporal-validity, entity-extraction, procedural-versioning, unified-memory-store, template-driven-bootstrap, configure-then-use, shared-design-system, ipc-bridge, native-vector-search, hierarchical-compaction, progressive-retrieval, knowledge-distillation, graph-gap-detection, mcp-startup-validation, progress-notification]
+  goals: [unified-project-identity, capability-discovery, programmatic-project-administration, batch-operations, cross-project-task-dispatch, conflict-free-port-allocation, automatic-port-discovery, async-task-execution, cross-project-intelligence, crash-resilient-worker, ranked-cross-project-results, capability-invocation-awareness, portfolio-memory, outcome-reinforcement, hybrid-retrieval, npm-packageable-distribution, canonical-memory-store, chorus-memory-unification, project-bootstrap-and-scaffolding, desktop-control-panel, project-dashboard, project-crud-ui, implicit-connection-surfacing, fast-first-pass-recall, synthesized-knowledge-from-memory-clusters, memory-graph-blind-spot-detection]
 plugin-version: 0.77.3
 ```
 
@@ -555,6 +555,8 @@ Scope determines retrieval behavior: a recall for a specific project returns tha
 
 An agent calls `recall` with a query (natural language or structured), an optional project scope, and a token budget. The memory system searches across three parallel retrieval legs -- FTS5 keyword matching, vector similarity (when embeddings are available), and graph traversal (following memory edges) -- and fuses the results using Reciprocal Rank Fusion. The fused results are then reranked by a composite score that balances similarity, reinforcement strength, temporal recency, and outcome history.
 
+**Progressive delivery:** Recall supports a two-pass retrieval model. FTS5 keyword results are returned immediately as the first pass, providing usable results with minimal latency. Vector similarity re-ranking proceeds asynchronously and produces a refined, fully fused ranking in the second pass. Callers that need fast answers work from the first pass; the full fused ranking arrives shortly after. This is especially valuable for bootstrap mode, where agents need to start working quickly and can absorb improved rankings as they arrive.
+
 The recall response fills the caller's token budget with the highest-scored memories, using tiered content: L0 summaries (one-sentence abstracts) first, expanding to L1 overviews and then full L2 content as budget allows. An adaptive cutoff stops retrieval when scores drop sharply (a "score cliff").
 
 **Bootstrap mode:** An agent starting a new session calls recall with no query and a project scope. This returns the project's memory profile -- its key decisions, active patterns, preferences, and recent outcomes -- suitable for injection into the agent's context at session start. Pinned memories (memories with `is_pinned` set) always surface at the top of bootstrap recall regardless of score.
@@ -567,13 +569,14 @@ The recall response fills the caller's token budget with the highest-scored memo
 
 Reflection is a background process that maintains the health and quality of the memory store. It runs on its own schedule -- triggered when cumulative new memory importance exceeds a threshold, on a periodic schedule, or via explicit admin invocation.
 
-Reflection performs five operations:
+Reflection performs six operations:
 
 1. **Semantic dedup** -- Finds memories with cosine similarity above 0.95 and merges them.
-2. **Entity and relationship extraction** -- Identifies entities mentioned in memories and creates or updates graph edges.
-3. **Summary block rewriting** -- Maintains summary blocks for each scope level.
+2. **Entity and relationship extraction** -- Identifies entities mentioned in memories and creates or updates graph edges. Also performs **gap detection** -- identifying structural holes in the memory graph where topic clusters exist in isolation without connecting edges. Gaps represent potential blind spots: knowledge areas that should relate but lack documented connections. Gap findings are surfaced as observations (memory type `observation`) so portfolio intelligence can act on them.
+3. **Summary block rewriting** -- Maintains hierarchical compaction trees for each scope level. Rather than flat per-scope summaries, reflection produces multi-level topic hierarchies that capture cross-topic relationships. These compaction trees enable proactive surfacing of relevant context even when a recall query has zero keyword overlap with the stored memory -- the hierarchy bridges topics that search alone cannot connect. Compaction trees are consumed by recall's bootstrap mode as the "holistic view" of a project's or portfolio's accumulated knowledge.
 4. **Stale memory archival** -- Archives memories that pass the triple gate: low quality score (below 0.3) AND low access count (fewer than 2 retrievals) AND old age (more than 90 days). All three conditions must be true.
-5. **Enrichment log update** -- Records what reflection did.
+5. **Knowledge distillation** -- Examines clusters of related memories (outcomes, decisions, learnings) and extracts higher-order knowledge. Recurring outcomes become patterns, repeated decisions become preferences, sequences of corrections become procedural memories. Distillation is distinct from dedup (which merges near-identical content) -- it synthesizes new knowledge from related but distinct memories. Distilled memories link back to their source memories via edges, preserving provenance.
+6. **Enrichment log update** -- Records what reflection did.
 
 **Outcome-aware reinforcement:**
 
@@ -594,6 +597,8 @@ The memory system supports three tiers of embedding generation:
 - **OpenAI** (text-embedding-3-small, 1536 dimensions) -- Highest quality, requires internet and API key.
 - **Local/Ollama** (nomic-embed-text, 768 dimensions) -- Local generation via Ollama. No internet required.
 - **None (FTS5-only)** -- No embedding generation. The system works entirely on FTS5 keyword matching and graph traversal. This is the zero-config baseline.
+
+A fourth tier -- **native vector search** -- accelerates similarity queries when available. When the sqlite-vec extension is loaded, vector similarity queries execute entirely within SQLite as KNN operations on a virtual table, rather than requiring application-level cosine computation. This is faster and more memory-efficient for large memory stores. The three embedding generation tiers (OpenAI, Ollama, FTS5-only) remain unchanged -- sqlite-vec optimizes how vectors are stored and queried, not how they are produced. When sqlite-vec is unavailable, the system falls back to application-level similarity computation with no loss of functionality.
 
 The embedding provider is a runtime configuration. Changing providers does not invalidate existing memories. The dual-column pattern (embedding + embedding_new) supports gradual migration between providers. When the provider is set to "none", recall degrades to FTS5-only. When a provider is re-enabled, vector similarity resumes immediately.
 
@@ -1008,6 +1013,10 @@ See [Appendix D](#appendix-d-mcp-tool-reference) for the complete tool reference
 | fctry post-build hook | Build outcome (success/failure) + recalled memory IDs | fctry writes feedback to registry | Memory outcome scores not updated for explicit builds |
 | chorus-ui package | Design tokens (CSS custom properties + TS constants) for colors, typography, easing | @setlist/app imports `chorus-ui/tokens.css` and `chorus-ui/tokens` | Tokens are the contract; chorus-ui is a direct dependency of @setlist/app |
 
+**MCP tool validation at startup.** The MCP server validates its own tool definitions when it starts -- tool names, parameter schemas, and descriptions are checked for conformance before the server accepts connections. This catches configuration drift between @setlist/core and @setlist/mcp (e.g., a new tool added to core but not wired into the MCP wrapper). If validation fails, the server surfaces the specific tools that are non-conformant rather than silently starting with broken definitions.
+
+**Progress reporting for long-running operations.** Long-running MCP operations -- reflect, batch operations, cross-project queries -- report progress through the MCP protocol's progress notification mechanism rather than blocking until completion. Callers see incremental status updates ("dedup pass complete, starting entity extraction...") instead of a silent wait followed by a large response.
+
 **Direct library import (new with Setlist).** Chorus and Ensemble import @setlist/core as an npm dependency. This is the primary motivation for the TypeScript rewrite. The library is consumed in-process -- no IPC, no MCP server, no subprocess.
 
 **chorus-ui token package (new with @setlist/app).** The desktop app imports design tokens from `chorus-ui`, an extracted package providing CSS custom properties (`chorus-ui/tokens.css`) and TypeScript constants (`chorus-ui/tokens`). This is a direct dependency — @setlist/app lists `chorus-ui` in its `package.json`. There is no shared component library — each app implements its own UI components consuming the shared tokens. If the design language evolves, `chorus-ui` is updated and both apps follow.
@@ -1313,6 +1322,18 @@ All inspirations from the Python spec apply. Additional TypeScript-specific refe
 - **npm workspaces** — Monorepo management. Simple, no additional tooling (no Turborepo, no Nx). `npm install` at the root links all packages.
 
 - **ghostwright/phantom** — Autonomous AI agent platform with three-tier vector memory (episodic/semantic/procedural). Informed Setlist's per-type decay rates, type-priority budget allocation, query-intent weight profiles, and proactive contradiction detection patterns. Phantom uses Qdrant for vector storage; Setlist adapts the conceptual patterns to its SQLite/FTS5 architecture. Not adopted as a dependency.
+
+- **sqlite-vec** — Pure C SQLite extension for native in-database vector search via `vec0` virtual tables. Informed the fourth embedding storage tier -- native KNN queries within SQLite rather than application-level cosine computation.
+
+- **hipocampus** — Hierarchical compaction tree for proactive agent memory. Informed reflect's multi-level topic tree summarization and the insight that search-based recall misses implicit connections when there is zero keyword overlap between query and stored memory.
+
+- **frankensearch** — Two-tier progressive hybrid search with Reciprocal Rank Fusion. Informed recall's progressive delivery model -- fast FTS5 results first, refined vector re-ranking second.
+
+- **hindsight** — Agent memory system distinguishing storage/retrieval from knowledge extraction/generalization. Informed reflect's knowledge distillation operation -- synthesizing higher-order patterns and preferences from clusters of related memories.
+
+- **infranodus** — Knowledge graph with structural gap detection via network science. Informed reflect's gap detection in entity/relationship extraction -- identifying isolated topic clusters that lack connecting edges.
+
+- **mcp-ts-core** — TypeScript MCP framework with startup tool validation and long-running operation lifecycle management. Informed the MCP server's self-validation at startup and progress reporting for long-running operations.
 
 ### 6.2 Ecosystem Context {#ecosystem-context}
 
