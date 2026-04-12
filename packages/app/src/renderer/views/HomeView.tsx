@@ -153,7 +153,7 @@ export function HomeView({
   sort, onSortChange,
   onRefreshRef,
 }: HomeViewProps) {
-  const { projects, loading, error, statuses, archivedCount, refresh } = useProjects({
+  const { projects, loading, refreshing, error, statuses, archivedCount, refresh } = useProjects({
     filter, statusFilters, sort,
   });
 
@@ -228,6 +228,9 @@ export function HomeView({
         />
         <span className="text-xs text-[var(--color-text-tertiary)]">
           {projects.length} project{projects.length !== 1 ? 's' : ''}
+          {refreshing && (
+            <span className="ml-1.5 text-[var(--color-text-tertiary)] opacity-60">updating...</span>
+          )}
         </span>
       </div>
 

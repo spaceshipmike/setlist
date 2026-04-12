@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import api, { type ProjectSummary } from '../lib/api';
 
 export type SortField = 'name' | 'updated_at' | 'type' | 'status';
@@ -12,18 +12,27 @@ interface UseProjectsOpts {
 export function useProjects({ filter, statusFilters, sort }: UseProjectsOpts) {
   const [allProjects, setAllProjects] = useState<ProjectSummary[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const hasLoaded = useRef(false);
 
   const refresh = useCallback(async () => {
     try {
-      setLoading(true);
+      // First load shows full loading state; subsequent loads show subtle refreshing indicator
+      if (hasLoaded.current) {
+        setRefreshing(true);
+      } else {
+        setLoading(true);
+      }
       setError(null);
       const result = await api.listProjects({ depth: 'standard' });
       setAllProjects(result);
+      hasLoaded.current = true;
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to load projects');
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   }, []);
 
@@ -79,5 +88,5 @@ export function useProjects({ filter, statusFilters, sort }: UseProjectsOpts) {
   // Count of archived projects (for the "show archived" affordance)
   const archivedCount = allProjects.filter(p => p.status === 'archived').length;
 
-  return { projects, loading, error, statuses, archivedCount, refresh };
+  return { projects, loading, refreshing, error, statuses, archivedCount, refresh };
 }

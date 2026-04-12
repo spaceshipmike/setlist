@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import api from '../lib/api';
+import { friendlyError } from '../lib/errors';
 
 interface EditProjectFormProps {
   name: string;
@@ -41,7 +42,7 @@ export function EditProjectForm({ name, currentValues, projectType, onSave, onCa
       });
       onSave();
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to save changes');
+      setError(friendlyError(e));
     } finally {
       setSaving(false);
     }

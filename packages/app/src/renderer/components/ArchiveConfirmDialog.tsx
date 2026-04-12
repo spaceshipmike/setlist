@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import * as Dialog from '@radix-ui/react-dialog';
 import api from '../lib/api';
+import { friendlyError } from '../lib/errors';
 
 interface ArchiveConfirmDialogProps {
   open: boolean;
@@ -21,7 +22,7 @@ export function ArchiveConfirmDialog({ open, onOpenChange, projectName, onSucces
       onOpenChange(false);
       onSuccess();
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to archive project');
+      setError(friendlyError(e));
     } finally {
       setArchiving(false);
     }

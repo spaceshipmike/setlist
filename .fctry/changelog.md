@@ -1,5 +1,14 @@
 # Setlist — Changelog
 
+## 2026-04-11T20:50:00Z — /fctry:review (drift reconciliation)
+- `#what-this-is` (1.2): [modified] Fixed tool count 32 → 33, added `enrich_project` to Setlist-specific additions
+- `#desktop-app` (2.14): [modified] Documented multiselect status filtering and archived-by-default behavior
+- `#appendix-d` (D): [modified] Added `enrich_project` to tool reference table, fixed tool count
+- Synopsis: [modified] Updated readme description to mention multiselect filtering
+- All references: [modified] "32 MCP tools" → "33 MCP tools" throughout spec
+- CLAUDE.md: [modified] Fixed tool count (33), scenario count (64, S01-S64), added S45-S64 app scenario category, updated compact instructions
+(0 added, 6 modified, 0 removed)
+
 ## 2026-04-08T12:00:00Z — /fctry:ref (6 external references)
 - `#portfolio-memory` (2.12): [modified] Added native vector search tier (sqlite-vec) to embedding provider model
 - `#portfolio-memory` (2.12): [modified] Evolved summary block rewriting to hierarchical compaction trees (hipocampus)

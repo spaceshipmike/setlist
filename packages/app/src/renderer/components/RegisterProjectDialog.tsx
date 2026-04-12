@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import * as Dialog from '@radix-ui/react-dialog';
 import api, { type BootstrapConfig } from '../lib/api';
+import { friendlyError } from '../lib/errors';
 
 interface RegisterProjectDialogProps {
   open: boolean;
@@ -27,7 +28,9 @@ export function RegisterProjectDialog({ open, onOpenChange, onSuccess }: Registe
   const [type, setType] = useState('code_project');
   const [description, setDescription] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [nameWarning, setNameWarning] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const checkTimer = useRef<ReturnType<typeof setTimeout>>();
 
   // Bootstrap mode
   const [createFolder, setCreateFolder] = useState(false);
@@ -40,6 +43,28 @@ export function RegisterProjectDialog({ open, onOpenChange, onSuccess }: Registe
       api.getBootstrapConfig().then(setConfig).catch(() => setConfig(null));
     }
   }, [open]);
+
+  // Debounced duplicate name check
+  useEffect(() => {
+    const trimmed = name.trim();
+    setNameWarning(null);
+
+    if (!trimmed || !/^[a-z0-9][a-z0-9_-]*$/.test(trimmed)) return;
+
+    clearTimeout(checkTimer.current);
+    checkTimer.current = setTimeout(async () => {
+      try {
+        const existing = await api.getProject(trimmed, 'minimal');
+        if (existing) {
+          setNameWarning(`A project named "${trimmed}" already exists. Choose a different name.`);
+        }
+      } catch {
+        // Ignore — check is best-effort
+      }
+    }, 300);
+
+    return () => clearTimeout(checkTimer.current);
+  }, [name]);
 
   const pathKey = TYPE_TO_PATH_KEY[type];
   const pathRoot = config?.path_roots?.[pathKey];
@@ -95,7 +120,7 @@ export function RegisterProjectDialog({ open, onOpenChange, onSuccess }: Registe
       onOpenChange(false);
       onSuccess();
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to create project');
+      setError(friendlyError(e));
     } finally {
       setSaving(false);
     }
@@ -123,6 +148,9 @@ export function RegisterProjectDialog({ open, onOpenChange, onSuccess }: Registe
                 className="input-field font-mono"
                 autoFocus
               />
+              {nameWarning && (
+                <div className="mt-1 text-xs text-[var(--color-warning)]">{nameWarning}</div>
+              )}
             </Field>
 
             <Field label="Display name (optional)">

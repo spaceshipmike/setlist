@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import * as Dialog from '@radix-ui/react-dialog';
 import api from '../lib/api';
+import { friendlyError } from '../lib/errors';
 
 interface RenameDialogProps {
   open: boolean;
@@ -12,19 +13,58 @@ interface RenameDialogProps {
 export function RenameDialog({ open, onOpenChange, currentName, onSuccess }: RenameDialogProps) {
   const [newName, setNewName] = useState(currentName);
   const [error, setError] = useState<string | null>(null);
+  const [duplicateWarning, setDuplicateWarning] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const checkTimer = useRef<ReturnType<typeof setTimeout>>();
+
+  // Reset state when dialog opens
+  useEffect(() => {
+    if (open) {
+      setNewName(currentName);
+      setError(null);
+      setDuplicateWarning(null);
+    }
+  }, [open, currentName]);
+
+  // Debounced duplicate check
+  useEffect(() => {
+    const trimmed = newName.trim();
+    setDuplicateWarning(null);
+
+    if (!trimmed || trimmed === currentName || !/^[a-z0-9][a-z0-9_-]*$/.test(trimmed)) return;
+
+    clearTimeout(checkTimer.current);
+    checkTimer.current = setTimeout(async () => {
+      try {
+        const existing = await api.getProject(trimmed, 'minimal');
+        if (existing) {
+          setDuplicateWarning(`A project named "${trimmed}" already exists. Choose a different name.`);
+        }
+      } catch {
+        // Ignore — check is best-effort
+      }
+    }, 300);
+
+    return () => clearTimeout(checkTimer.current);
+  }, [newName, currentName]);
+
+  const formatError = (): string | null => {
+    const trimmed = newName.trim();
+    if (!trimmed || trimmed === currentName) return null;
+    if (!/^[a-z0-9][a-z0-9_-]*$/.test(trimmed)) {
+      return 'Name must be lowercase, start with a letter or number, and contain only letters, numbers, hyphens, and underscores.';
+    }
+    return null;
+  };
+
+  const validationError = formatError();
 
   const handleRename = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
 
     const trimmed = newName.trim();
-    if (!trimmed || trimmed === currentName) return;
-
-    if (!/^[a-z0-9][a-z0-9_-]*$/.test(trimmed)) {
-      setError('Name must be lowercase, start with a letter or number, and contain only letters, numbers, hyphens, and underscores');
-      return;
-    }
+    if (!trimmed || trimmed === currentName || validationError || duplicateWarning) return;
 
     try {
       setSaving(true);
@@ -32,7 +72,7 @@ export function RenameDialog({ open, onOpenChange, currentName, onSuccess }: Ren
       onOpenChange(false);
       onSuccess(trimmed);
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to rename project');
+      setError(friendlyError(e));
     } finally {
       setSaving(false);
     }
@@ -62,6 +102,12 @@ export function RenameDialog({ open, onOpenChange, currentName, onSuccess }: Ren
               />
             </label>
 
+            {(validationError || duplicateWarning) && (
+              <div className="text-sm text-[var(--color-warning)] bg-[var(--color-bg-card)] rounded-md p-2">
+                {validationError || duplicateWarning}
+              </div>
+            )}
+
             {error && (
               <div className="text-sm text-[var(--color-error)] bg-[var(--color-bg-card)] rounded-md p-2">
                 {error}
@@ -80,7 +126,7 @@ export function RenameDialog({ open, onOpenChange, currentName, onSuccess }: Ren
               </Dialog.Close>
               <button
                 type="submit"
-                disabled={saving || !newName.trim() || newName.trim() === currentName}
+                disabled={saving || !newName.trim() || newName.trim() === currentName || !!validationError || !!duplicateWarning}
                 className="px-4 py-2 rounded-md text-sm font-medium
                   bg-[var(--color-accent)] text-white
                   hover:bg-[var(--color-accent-hover)]

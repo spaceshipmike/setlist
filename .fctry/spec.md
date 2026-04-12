@@ -4,23 +4,23 @@
 ---
 title: Setlist
 spec-version: "0.9"
-date: 2026-04-08
+date: 2026-04-11
 status: active
 author: Mike (via fctry interview, experience-ported from project-registry-service)
 spec-format: nlspec-v2
 experience-source: project-registry-service/.fctry/spec.md (v1.3)
 ---
 synopsis:
-  short: "TypeScript project registry — intelligence hub with desktop control panel, 32 MCP tools, unified memory, and direct library import"
-  medium: "TypeScript monorepo (@setlist/core, @setlist/mcp, @setlist/cli, @setlist/app) implementing the project registry as both invisible infrastructure and a directly operable desktop surface. Local SQLite (better-sqlite3) + MCP server + Electron control panel sharing Chorus's design system (Tailwind 4, Radix UI). Provides project identity, capability declarations, unified portfolio memory (10 types with hierarchical compaction, progressive retrieval, knowledge distillation, and graph gap detection), project bootstrap, port allocation, batch operations, and cross-project intelligence. Schema v10, 32 MCP tools, importable as @setlist/core by Chorus and Ensemble."
-  readme: "Setlist is the TypeScript implementation of the Project Registry — both invisible infrastructure at the center of the user's personal ecosystem and a directly operable desktop control panel. As infrastructure, it provides structured, queryable identity for every project and area of focus, with programmatic administration, capability declarations, unified portfolio memory (10 types with belief classification, temporal validity, entity extraction, and procedural versioning), budget-controlled hybrid retrieval, port allocation, project bootstrap, batch operations, and cross-project intelligence via 32 MCP tools and direct library import. As a desktop application, it presents a card-grid dashboard of all projects with filtering and sorting, tabbed project detail views (overview, memory, capabilities, ports), and full project CRUD — register, edit, archive, rename — through a native macOS Electron app sharing Chorus's design language (Tailwind CSS 4, Radix UI, terracotta accent, warm charcoal surfaces). The main process imports @setlist/core directly; no API layer sits between the UI and the registry. Distributed as four npm packages (@setlist/core, @setlist/mcp, @setlist/cli, @setlist/app), Setlist is directly consumable by Chorus, Ensemble, and any Node.js tool in the ecosystem, while also standing alone as a full-featured project management surface."
+  short: "TypeScript project registry — intelligence hub with desktop control panel, 33 MCP tools, unified memory, and direct library import"
+  medium: "TypeScript monorepo (@setlist/core, @setlist/mcp, @setlist/cli, @setlist/app) implementing the project registry as both invisible infrastructure and a directly operable desktop surface. Local SQLite (better-sqlite3) + MCP server + Electron control panel sharing Chorus's design system (Tailwind 4, Radix UI). Provides project identity, capability declarations, unified portfolio memory (10 types with hierarchical compaction, progressive retrieval, knowledge distillation, and graph gap detection), project bootstrap, port allocation, batch operations, and cross-project intelligence. Schema v10, 33 MCP tools, importable as @setlist/core by Chorus and Ensemble."
+  readme: "Setlist is the TypeScript implementation of the Project Registry — both invisible infrastructure at the center of the user's personal ecosystem and a directly operable desktop control panel. As infrastructure, it provides structured, queryable identity for every project and area of focus, with programmatic administration, capability declarations, unified portfolio memory (10 types with belief classification, temporal validity, entity extraction, and procedural versioning), budget-controlled hybrid retrieval, port allocation, project bootstrap, batch operations, and cross-project intelligence via 33 MCP tools and direct library import. As a desktop application, it presents a card-grid dashboard of all projects with multiselect status filtering (archived hidden by default), tabbed project detail views (overview, memory, capabilities, ports), and full project CRUD — register, edit, archive, rename — through a native macOS Electron app sharing Chorus's design language (Tailwind CSS 4, Radix UI, terracotta accent, warm charcoal surfaces). The main process imports @setlist/core directly; no API layer sits between the UI and the registry. Distributed as four npm packages (@setlist/core, @setlist/mcp, @setlist/cli, @setlist/app), Setlist is directly consumable by Chorus, Ensemble, and any Node.js tool in the ecosystem, while also standing alone as a full-featured project management surface."
   tech-stack: [typescript, better-sqlite3, "@modelcontextprotocol/sdk", node, npm-monorepo, electron, react, tailwindcss-v4, radix-ui]
   patterns: [atomized-fields, progressive-disclosure, producer-consumer, registration-not-discovery, invisible-infrastructure, operable-surface, config-file-scanning, hub-and-spoke, capability-declaration, definition-is-truth, fuzzy-match-suggestions, archive-triggered-cleanup, producer-attribution, summary-compactness, freshness-importance-scoring, invocation-metadata, retain-recall-reflect, outcome-aware-reinforcement, content-hash-dedup, embedding-provider-abstraction, budget-controlled-recall, four-level-scoping, hybrid-retrieval, belief-classification, temporal-validity, entity-extraction, procedural-versioning, unified-memory-store, template-driven-bootstrap, configure-then-use, shared-design-system, ipc-bridge, native-vector-search, hierarchical-compaction, progressive-retrieval, knowledge-distillation, graph-gap-detection, mcp-startup-validation, progress-notification]
   goals: [unified-project-identity, capability-discovery, programmatic-project-administration, batch-operations, cross-project-task-dispatch, conflict-free-port-allocation, automatic-port-discovery, async-task-execution, cross-project-intelligence, crash-resilient-worker, ranked-cross-project-results, capability-invocation-awareness, portfolio-memory, outcome-reinforcement, hybrid-retrieval, npm-packageable-distribution, canonical-memory-store, chorus-memory-unification, project-bootstrap-and-scaffolding, desktop-control-panel, project-dashboard, project-crud-ui, implicit-connection-surfacing, fast-first-pass-recall, synthesized-knowledge-from-memory-clusters, memory-graph-blind-spot-detection]
 plugin-version: 0.77.3
 ```
 
-Setlist is the TypeScript implementation of the Project Registry — the active intelligence hub at the center of the user's personal ecosystem. Originally a direct port of the Python project-registry-service, it has since evolved beyond parity: schema v10 (unified memory types, belief classification, temporal validity, entity extraction, procedural versioning), 32 MCP tools (the original 27 plus `rename_project`, `bootstrap_project`, and `configure_bootstrap`), an expanded portfolio memory subsystem, and a native desktop control panel for direct human interaction. The .db file is the shared contract — both implementations read and write the same database, though the Python implementation remains at schema v8.
+Setlist is the TypeScript implementation of the Project Registry — the active intelligence hub at the center of the user's personal ecosystem. Originally a direct port of the Python project-registry-service, it has since evolved beyond parity: schema v10 (unified memory types, belief classification, temporal validity, entity extraction, procedural versioning), 33 MCP tools (the original 29 plus `enrich_project`, `rename_project`, `bootstrap_project`, and `configure_bootstrap`), an expanded portfolio memory subsystem, and a native desktop control panel for direct human interaction. The .db file is the shared contract — both implementations read and write the same database, though the Python implementation remains at schema v8.
 
 The rewrite exists because Chorus (Electron + React) and Ensemble need the registry as a direct npm dependency, not a subprocess or MCP-only integration. @setlist/core provides the library API importable from any Node.js process. @setlist/mcp wraps it as an MCP server. @setlist/cli exposes it from the terminal. @setlist/app provides a desktop control panel — an Electron app that imports @setlist/core directly, giving the user a visual surface for project management alongside the programmatic interfaces. The 786 Python tests define the behavioral contract to port against.
 
@@ -97,7 +97,7 @@ Setlist is a TypeScript monorepo providing the Project Registry as four npm pack
 
 - **@setlist/core** -- The library. All registry logic: project identity, field model, variable-depth querying, filtering, migration, port management, capability declarations, portfolio memory (retain/recall/reflect), task queue, cross-project queries, batch operations. Importable from any Node.js process. This is what Chorus, Ensemble, and the desktop app consume directly.
 
-- **@setlist/mcp** -- The MCP server. A thin translation layer wrapping @setlist/core as 32 MCP tools via @modelcontextprotocol/sdk, using stdio transport managed by Claude Code's lifecycle. The original 29 tools match the Python server identically; `bootstrap_project`, `configure_bootstrap`, and `rename_project` are Setlist-specific additions.
+- **@setlist/mcp** -- The MCP server. A thin translation layer wrapping @setlist/core as 33 MCP tools via @modelcontextprotocol/sdk, using stdio transport managed by Claude Code's lifecycle. The original 29 tools match the Python server identically; `enrich_project`, `bootstrap_project`, `configure_bootstrap`, and `rename_project` are Setlist-specific additions.
 
 - **@setlist/cli** -- The CLI. Terminal commands for project management, migration, worker installation, and diagnostics. Entry point: `setlist`.
 
@@ -698,7 +698,7 @@ The app has two entry points: a standalone macOS `.app` bundle (double-click to 
 
 On launch, the user sees a card grid of all registered projects. Each card shows the project name, a type badge (project or area of focus), a status indicator, and a last-updated timestamp. The grid is the user's panoramic view of their ecosystem.
 
-Filter and sort controls sit at the top of the view. The user can filter by type (projects, areas of focus, or both), filter by status (active, paused, archived, etc.), and sort by name, status, or last updated. Filtering and sorting are immediate — no loading states for a local database of this size.
+Filter and sort controls sit at the top of the view. The user can filter by type (projects, areas of focus, or both), filter by status using a multiselect dropdown (multiple statuses can be active simultaneously — e.g., show only "active" and "paused" projects), and sort by name, status, or last updated. Archived projects are hidden by default; the user sees an "N archived projects" link below the grid that adds the archived filter with one click. Filtering and sorting are immediate — no loading states for a local database of this size.
 
 **Project detail: the tabbed view.**
 
@@ -834,7 +834,7 @@ The fctry-owned field domain includes: tech_stack, patterns, short_description, 
 
 **Desktop project CRUD.** Provides UI forms for registering new projects, editing project identity fields (display name, status, description, goals), archiving projects, and renaming projects. Each operation delegates to the corresponding @setlist/core method through the IPC bridge.
 
-**MCP server access.** @setlist/mcp wraps @setlist/core as 32 MCP tools via @modelcontextprotocol/sdk using stdio transport managed by Claude Code's lifecycle. The 29 original tools match the Python server; `bootstrap_project`, `configure_bootstrap`, and `rename_project` are Setlist-specific additions. The server provides:
+**MCP server access.** @setlist/mcp wraps @setlist/core as 33 MCP tools via @modelcontextprotocol/sdk using stdio transport managed by Claude Code's lifecycle. The 29 original tools match the Python server; `enrich_project`, `bootstrap_project`, `configure_bootstrap`, and `rename_project` are Setlist-specific additions. The server provides:
 
 - `list_projects` -- List projects at a given depth with optional filters.
 - `get_project` -- Get a single project by name at a given depth.
@@ -1097,7 +1097,7 @@ All Python spec hard constraints apply, plus:
 
 - **Schema evolution from v8.** The SQLite schema originated as v8, byte-compatible with the Python implementation. Setlist has since evolved the schema: v9 added the `observation` memory type, v10 adds unified memory types (learning, context, procedural), new fields (belief, extraction_confidence, valid_from, valid_until, entities, parent_version_id, is_current), and migrates `skill` → `procedural`. The Python implementation remains at v8; the shared .db file is forward-compatible (Python can read v10 databases but will not recognize new types or fields). Schema migrations are incremental and non-destructive.
 
-- **32 MCP tools with Python-compatible core.** The original 29 tools are a drop-in replacement for the Python server — same names, parameters, and response shapes. Setlist adds `bootstrap_project`, `configure_bootstrap`, and `rename_project` as Setlist-specific tools (#30--#32). An agent that works with the Python MCP server works identically with Setlist's for the original 29.
+- **33 MCP tools with Python-compatible core.** The original 29 tools are a drop-in replacement for the Python server — same names, parameters, and response shapes. Setlist adds `enrich_project`, `bootstrap_project`, `configure_bootstrap`, and `rename_project` as Setlist-specific tools (#30--#33). An agent that works with the Python MCP server works identically with Setlist's for the original 29.
 
 - **ESM-only.** All packages produce ESM output. No CommonJS dual-publishing.
 
@@ -1287,7 +1287,7 @@ The port follows a strict behavioral contract: every Python test, translated to 
 | cross_query.py | cross-query.ts | 3 scopes, freshness+importance scoring |
 | tasks.py | registry.ts | Task CRUD consolidated into Registry |
 | scripts/migrate_memories.py | migrate-memories.ts | CC auto-memory + fctry memory migration |
-| server.py | server.ts | 32 MCP tools via @modelcontextprotocol/sdk |
+| server.py | server.ts | 33 MCP tools via @modelcontextprotocol/sdk |
 | cli.py | index.ts | CLI entry point |
 | worker.py | worker.ts | Launchd integration |
 
@@ -1382,7 +1382,7 @@ All satisfaction criteria from the Python spec (section 6.1) apply identically, 
 
 **Then layer in:** Migration, port management, port discovery. Port tests.
 
-**Then layer in:** @setlist/mcp — wrap the core library as 32 MCP tools. Verify tool-by-tool against the Python server's behavior.
+**Then layer in:** @setlist/mcp — wrap the core library as 33 MCP tools. Verify tool-by-tool against the Python server's behavior.
 
 **Then layer in:** Portfolio memory — retain, recall, reflect. Content-hash dedup. FTS5 retrieval. Port memory tests.
 
@@ -1480,7 +1480,7 @@ All deferred futures from the Python spec apply. The TypeScript implementation i
 
 Additional TypeScript-specific deferred future:
 
-- **Python implementation deprecation.** Once Setlist reaches full parity (all 786 tests passing, all 32 MCP tools operational, migration tested), the Python implementation can be deprecated. The .db file continues as the shared contract during the transition period. Deprecation means: new features are added to Setlist first, the Python MCP server is replaced by @setlist/mcp in Claude Code config, and the Python package is archived. The database is never migrated or converted — both implementations read the same file.
+- **Python implementation deprecation.** Once Setlist reaches full parity (all 786 tests passing, all 33 MCP tools operational, migration tested), the Python implementation can be deprecated. The .db file continues as the shared contract during the transition period. Deprecation means: new features are added to Setlist first, the Python MCP server is replaced by @setlist/mcp in Claude Code config, and the Python package is archived. The database is never migrated or converted — both implementations read the same file.
 
 - **Desktop app: memory write operations.** The Memory tab is read-only in v1. Future versions may allow creating memories, correcting memories, and triggering reflection from the UI.
 
@@ -1496,7 +1496,7 @@ Additional TypeScript-specific deferred future:
 
 ## Appendix D: MCP Tool Reference {#appendix-d-mcp-tool-reference}
 
-Complete tool reference for the 32 MCP tools. The original 29 have identical names, parameters, and response shapes to the Python implementation; `bootstrap_project`, `configure_bootstrap`, and `rename_project` are Setlist additions.
+Complete tool reference for the 33 MCP tools. The original 29 have identical names, parameters, and response shapes to the Python implementation; `enrich_project`, `bootstrap_project`, `configure_bootstrap`, and `rename_project` are Setlist additions.
 
 **Project Identity:**
 
@@ -1513,6 +1513,7 @@ Complete tool reference for the 32 MCP tools. The original 29 have identical nam
 | rename_project | name, new_name | Confirmation (all references updated) |
 | batch_update | type_filter?, status_filter?, fields, dry_run? | Count and names of affected projects |
 | write_fields | project_name, fields, producer? | Count of fields written |
+| enrich_project | name, goals?, topics?, entities?, concerns? | Updated profile (union merge) |
 
 **Capabilities:**
 

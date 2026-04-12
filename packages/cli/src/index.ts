@@ -145,20 +145,30 @@ switch (command) {
     const thisDir = resolve(fileURLToPath(import.meta.url), '..', '..', '..');
     const appDir = resolve(thisDir, 'app');
 
-    // Try to find the built .app bundle
-    const appPath = resolve(appDir, 'dist', 'mac-arm64', 'Setlist.app');
-    if (existsSync(appPath)) {
+    // Try to find the built .app bundle in common locations
+    const candidates = [
+      resolve(appDir, 'dist', 'mac-arm64', 'Setlist.app'),
+      resolve(appDir, 'dist', 'mac', 'Setlist.app'),
+      '/Applications/Setlist.app',
+    ];
+
+    const appPath = candidates.find(p => existsSync(p));
+    if (appPath) {
+      // open(1) handles single-instance: if already running, brings window to front
       execSync(`open "${appPath}"`, { stdio: 'inherit' });
-    } else {
+    } else if (existsSync(resolve(appDir, 'package.json'))) {
       // Fall back to running electron-vite dev from the app package
       const { spawn } = await import('node:child_process');
       console.log('No built .app found. Starting development mode...');
       const child = spawn('npx', ['electron-vite', 'dev'], {
         cwd: appDir,
-        stdio: 'inherit',
+        stdio: 'ignore',
         detached: true,
       });
       child.unref();
+    } else {
+      console.error('Setlist.app not found. Build it with: npm run build -w packages/app');
+      process.exit(1);
     }
     break;
   }
