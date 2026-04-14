@@ -1,7 +1,9 @@
-import { useEffect } from 'react';
+// @fctry: #health-assessment
+import { useEffect, useState } from 'react';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import { useProjects, type SortField } from '../hooks/useProjects';
 import { EmptyState } from '../components/EmptyState';
+import api, { type HealthTier } from '../lib/api';
 
 interface HomeViewProps {
   onProjectClick: (name: string) => void;
@@ -24,6 +26,41 @@ const STATUS_DOT: Record<string, string> = {
   complete: 'bg-[var(--color-accent)]',
   archived: 'bg-[var(--color-text-tertiary)]',
 };
+
+const HEALTH_DOT: Record<HealthTier, string> = {
+  healthy: 'bg-[var(--color-success)]',
+  at_risk: 'bg-[var(--color-warning)]',
+  stale: 'bg-[var(--color-error)]',
+  unknown: 'bg-[var(--color-text-tertiary)]',
+};
+
+const HEALTH_LABEL: Record<HealthTier, string> = {
+  healthy: 'Healthy',
+  at_risk: 'At risk',
+  stale: 'Stale',
+  unknown: 'Unknown',
+};
+
+function useHealthMap(): { map: Record<string, HealthTier>; loaded: boolean } {
+  const [map, setMap] = useState<Record<string, HealthTier>>({});
+  const [loaded, setLoaded] = useState(false);
+  useEffect(() => {
+    let cancelled = false;
+    api.assessPortfolioHealth()
+      .then(result => {
+        if (cancelled) return;
+        const next: Record<string, HealthTier> = {};
+        for (const p of result.projects) next[p.name] = p.overall;
+        setMap(next);
+        setLoaded(true);
+      })
+      .catch(() => {
+        if (!cancelled) setLoaded(true);
+      });
+    return () => { cancelled = true; };
+  }, []);
+  return { map, loaded };
+}
 
 function timeAgo(dateStr: string): string {
   const date = new Date(dateStr);
@@ -156,6 +193,7 @@ export function HomeView({
   const { projects, loading, refreshing, error, statuses, archivedCount, refresh } = useProjects({
     filter, statusFilters, sort,
   });
+  const { map: healthMap } = useHealthMap();
 
   useEffect(() => {
     onRefreshRef(refresh);
@@ -260,8 +298,17 @@ export function HomeView({
                 hover:bg-[var(--color-bg-elevated)] transition-colors
                 focus:outline-none focus:bg-[var(--color-bg-elevated)]"
             >
-              <span className="text-sm text-[var(--color-text-primary)] truncate">
-                {p.display_name || p.name}
+              <span className="text-sm text-[var(--color-text-primary)] truncate flex items-center gap-2">
+                {p.status !== 'archived' && (
+                  <span
+                    title={healthMap[p.name] ? `Health: ${HEALTH_LABEL[healthMap[p.name]]}` : 'Health: assessing...'}
+                    aria-label={healthMap[p.name] ? `Health: ${HEALTH_LABEL[healthMap[p.name]]}` : 'Health: assessing'}
+                    className={`inline-block w-1.5 h-1.5 rounded-full shrink-0 ${
+                      healthMap[p.name] ? HEALTH_DOT[healthMap[p.name]] : 'bg-[var(--color-text-tertiary)]/40'
+                    }`}
+                  />
+                )}
+                <span className="truncate">{p.display_name || p.name}</span>
               </span>
               <div className="flex items-center gap-1.5">
                 <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${STATUS_DOT[p.status] || STATUS_DOT.draft}`} />
