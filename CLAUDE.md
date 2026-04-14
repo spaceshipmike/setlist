@@ -47,7 +47,7 @@ packages/
 
 ### Key Architectural Decisions
 
-- **better-sqlite3** — Synchronous native SQLite binding. No async wrapper overhead.
+- **better-sqlite3** — Synchronous native SQLite binding. No async wrapper overhead. The app and the MCP server need different native ABIs (Electron's Node vs standalone Node 22). `packages/app/scripts/with-electron-abi.sh` wraps `dev`/`build`/`preview`/`start` to swap binaries via `native-cache/` and always restore the Node binary on exit, so the Claude Desktop MCP server keeps working after running the app. If the MCP server ever fails with a `NODE_MODULE_VERSION` mismatch, run `npm run sqlite:node -w packages/app` to manually restore.
 - **@modelcontextprotocol/sdk** — Official MCP SDK for the server package.
 - **Electron** — Desktop shell for @setlist/app. Main process imports @setlist/core via IPC bridge.
 - **React + Tailwind CSS 4 + Radix UI** — Renderer stack, shared design system with Chorus.

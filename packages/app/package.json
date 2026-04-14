@@ -5,11 +5,12 @@
   "type": "module",
   "main": "./out/main/index.js",
   "scripts": {
-    "rebuild-native": "cd ../../node_modules/better-sqlite3 && npx node-gyp rebuild --target=$(npx electron -v | tr -d v) --arch=arm64 --dist-url=https://electronjs.org/headers",
-    "dev": "npm run rebuild-native && electron-vite dev",
-    "build": "electron-vite build",
-    "preview": "electron-vite preview",
-    "start": "electron .",
+    "sqlite:node": "bash scripts/swap-sqlite-abi.sh node",
+    "sqlite:electron": "bash scripts/swap-sqlite-abi.sh electron",
+    "dev": "bash scripts/with-electron-abi.sh electron-vite dev",
+    "build": "bash scripts/with-electron-abi.sh electron-vite build",
+    "preview": "bash scripts/with-electron-abi.sh electron-vite preview",
+    "start": "bash scripts/with-electron-abi.sh electron .",
     "test:e2e": "playwright test",
     "test:e2e:headed": "playwright test --headed"
   },
