@@ -1,4 +1,8 @@
-import type { ProjectFull } from '../../lib/api';
+// @fctry: #health-assessment
+import { useEffect, useState } from 'react';
+import api, {
+  type ProjectFull, type HealthAssessment, type HealthTier, type HealthDimensionResult,
+} from '../../lib/api';
 
 interface OverviewTabProps {
   project: ProjectFull;
@@ -17,6 +21,7 @@ function parseArray(value: unknown): string[] {
 }
 
 export function OverviewTab({ project }: OverviewTabProps) {
+  const health = useProjectHealth(project.name, project.updated_at);
   const goals = parseArray(project.goals);
   const topics = parseArray((project as Record<string, unknown>).topics);
   const entities = parseArray((project as Record<string, unknown>).entities);
@@ -25,6 +30,9 @@ export function OverviewTab({ project }: OverviewTabProps) {
 
   return (
     <div className="space-y-6">
+      {/* Health */}
+      <HealthSection health={health} />
+
       {/* Goals */}
       {goals.length > 0 && (
         <Section title="Goals">
@@ -109,6 +117,107 @@ function Section({ title, children }: { title: string; children: React.ReactNode
         {title}
       </h3>
       {children}
+    </div>
+  );
+}
+
+// ── Health ────────────────────────────────────────────────────
+
+interface HealthState {
+  loading: boolean;
+  error: string | null;
+  data: HealthAssessment | null;
+}
+
+function useProjectHealth(name: string, updatedAt: string): HealthState {
+  const [state, setState] = useState<HealthState>({ loading: true, error: null, data: null });
+  useEffect(() => {
+    let cancelled = false;
+    setState(s => ({ ...s, loading: true }));
+    // fresh=true on mount/update so the Health section reflects the
+    // current row, not a 2-minute-old cache after the user just edited.
+    api.assessProjectHealth(name, { fresh: true })
+      .then(data => { if (!cancelled) setState({ loading: false, error: null, data }); })
+      .catch(err => { if (!cancelled) setState({ loading: false, error: String(err?.message ?? err), data: null }); });
+    return () => { cancelled = true; };
+  }, [name, updatedAt]);
+  return state;
+}
+
+const TIER_LABEL: Record<HealthTier, string> = {
+  healthy: 'Healthy',
+  at_risk: 'At risk',
+  stale: 'Stale',
+  unknown: 'Unknown',
+};
+
+const TIER_DOT: Record<HealthTier, string> = {
+  healthy: 'bg-[var(--color-success)]',
+  at_risk: 'bg-[var(--color-warning)]',
+  stale: 'bg-[var(--color-error)]',
+  unknown: 'bg-[var(--color-text-tertiary)]',
+};
+
+function HealthSection({ health }: { health: HealthState }) {
+  return (
+    <div>
+      <h3 className="text-xs font-medium uppercase tracking-wider text-[var(--color-text-tertiary)] mb-2">
+        Health
+      </h3>
+      {health.loading && (
+        <div className="text-sm text-[var(--color-text-tertiary)]">Assessing...</div>
+      )}
+      {health.error && (
+        <div className="text-sm text-[var(--color-error)]">{health.error}</div>
+      )}
+      {health.data && (
+        <div className="space-y-3">
+          <div className="flex items-center gap-2">
+            <span
+              aria-label={`Overall health: ${TIER_LABEL[health.data.overall]}`}
+              title={TIER_LABEL[health.data.overall]}
+              className={`w-2.5 h-2.5 rounded-full shrink-0 ${TIER_DOT[health.data.overall]}`}
+            />
+            <span className="text-sm font-medium text-[var(--color-text-primary)]">
+              {TIER_LABEL[health.data.overall]}
+            </span>
+          </div>
+          <div className="grid grid-cols-3 gap-2">
+            <DimensionCell label="Activity" dim={health.data.dimensions.activity} />
+            <DimensionCell label="Completeness" dim={health.data.dimensions.completeness} />
+            <DimensionCell label="Outcomes" dim={health.data.dimensions.outcomes} />
+          </div>
+          {health.data.reasons.length > 0 && (
+            <ul className="space-y-1">
+              {health.data.reasons.map((r, i) => (
+                <li
+                  key={`${i}-${r}`}
+                  className="text-xs text-[var(--color-text-secondary)] flex gap-2"
+                >
+                  <span className="text-[var(--color-text-tertiary)] shrink-0">•</span>
+                  {r}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function DimensionCell({ label, dim }: { label: string; dim: HealthDimensionResult }) {
+  return (
+    <div className="rounded border border-[var(--color-border)] bg-[var(--color-bg-elevated)] p-2">
+      <div className="flex items-center gap-1.5 mb-0.5">
+        <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${TIER_DOT[dim.tier]}`} />
+        <span className="text-[10px] uppercase tracking-wider text-[var(--color-text-tertiary)]">
+          {label}
+        </span>
+      </div>
+      <div className="text-xs text-[var(--color-text-secondary)]">
+        {TIER_LABEL[dim.tier]}
+      </div>
     </div>
   );
 }
