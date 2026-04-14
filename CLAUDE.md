@@ -4,14 +4,14 @@
 
 Setlist is the TypeScript implementation of the Project Registry — the active intelligence hub for the user's personal ecosystem. It provides project identity, capability declarations, portfolio memory, port allocation, task routing, batch operations, cross-project intelligence, and a desktop control panel via a local SQLite database, MCP server, and Electron app.
 
-Originally a direct port of `project-registry-service` (Python), now evolved beyond parity. Schema v10 (unified memory types, belief classification, temporal validity, entity extraction, procedural versioning), 33 MCP tools, desktop UI sharing Chorus's design system with multiselect status filtering and archived project visibility. Different language (TypeScript), different packaging (npm monorepo).
+Originally a direct port of `project-registry-service` (Python), now evolved beyond parity. Schema v10 (unified memory types, belief classification, temporal validity, entity extraction, procedural versioning), 34 MCP tools, desktop UI sharing Chorus's design system with multiselect status filtering and archived project visibility. Different language (TypeScript), different packaging (npm monorepo).
 
 ## Factory Contract
 
 This project is built and maintained using the fctry spec-driven workflow.
 
 - **Spec:** `.fctry/spec.md` — the complete natural-language specification
-- **Scenarios:** `.fctry/scenarios.md` — 64 end-to-end scenarios defining behavioral satisfaction
+- **Scenarios:** `.fctry/scenarios.md` — 70 end-to-end scenarios defining behavioral satisfaction
 - **Config:** `.fctry/config.json` — version registry (external 0.1.0, spec 0.1)
 - **State:** `.fctry/state.json` — current workflow state
 
@@ -40,7 +40,7 @@ npm run typecheck
 ```
 packages/
 ├── core/    # @setlist/core — library (all registry logic)
-├── mcp/     # @setlist/mcp — MCP server (33 tools, stdio)
+├── mcp/     # @setlist/mcp — MCP server (34 tools, stdio)
 ├── cli/     # @setlist/cli — CLI commands + async worker
 └── app/     # @setlist/app — desktop control panel (Electron + React)
 ```
@@ -60,7 +60,7 @@ packages/
 Location: `~/.local/share/project-registry/registry.db`
 18 tables, schema v10, WAL mode, FTS5 for memory search.
 
-### 33 MCP Tools
+### 34 MCP Tools
 
 **Identity (12):** list_projects, get_project, switch_project, search_projects, get_registry_stats, register_project, update_project, archive_project, rename_project, batch_update, write_fields, enrich_project
 
@@ -75,6 +75,8 @@ Location: `~/.local/share/project-registry/registry.db`
 **Tasks (3):** queue_task, list_tasks, cross_query
 
 **Bootstrap (2):** bootstrap_project, configure_bootstrap
+
+**Health (1):** assess_health
 
 ## Project Enrichment
 
@@ -114,7 +116,7 @@ Every project in the registry should be discoverable and understandable by agent
 | File | Purpose |
 |------|---------|
 | spec.md | NLSpec v2 — the complete specification |
-| scenarios.md | Holdout scenario set (64 scenarios) |
+| scenarios.md | Holdout scenario set (70 scenarios) |
 | config.json | Version registry |
 | state.json | Current workflow state |
 | interview-state.md | Interview completion record |
@@ -147,11 +149,12 @@ Scenarios in `.fctry/scenarios.md` define the behavioral contract. Key categorie
 - **S32-S37:** Schema v10, unified memory types, chorus-compatible fields
 - **S38-S44:** Project bootstrap (configuration, code/non-code/area bootstrapping, error states)
 - **S45-S64:** Desktop app (window management, IPC bridge, card grid, filtering/sorting, detail tabs, CRUD operations, design system, CLI launcher, empty state, error feedback, data refresh, packaging)
+- **S65-S70:** Project health assessment (composite tier, activity/completeness/outcomes dimensions, assess_health MCP tool, Home view health dot and Overview Health section)
 
 <!-- compact-instructions
 Preserve during auto-compaction:
 - Spec: .fctry/spec.md (Setlist NLSpec, experience-ported from project-registry-service)
-- Scenarios: .fctry/scenarios.md (64 scenarios, S01-S64)
+- Scenarios: .fctry/scenarios.md (70 scenarios, S01-S70)
 - Config: .fctry/config.json (external 0.1.10, spec 0.9)
 - State: .fctry/state.json (current workflow step)
 - Key constraint: Schema v10 with unified memory types, 18 tables
