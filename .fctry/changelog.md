@@ -1,5 +1,21 @@
 # Setlist — Changelog
 
+## 2026-04-14T16:30:00Z — /fctry:evolve (project health assessment)
+- `#health-assessment` (2.15): [added] New section introducing composite project health assessment — four qualitative tiers (Healthy / At risk / Stale / Unknown), worst-tier-wins composition across three dimensions (activity, completeness, outcomes), on-demand computation with brief cache, and the `assess_health` MCP tool
+- `#desktop-app` (2.14): [modified] Card grid now shows a colored health dot alongside the status indicator; Overview tab gains a Health section showing tier, per-dimension breakdown, and reasons
+- `#appendix-d` (D): [modified] Added `assess_health` tool reference row and Health category; tool count 33 → 34
+- Synopsis: [modified] Added health assessment to medium description and three new pattern/goal entries (worst-tier-wins, on-demand-assessment, qualitative-tiers / project-health-assessment, composite-tier-surfacing, glanceable-portfolio-health)
+- Scenarios: [added] S65–S70 covering composite tier, activity buckets, completeness criteria, outcome-based health, `assess_health` tool, and home-view/detail-view surfacing
+- Frontmatter: [modified] spec-version 0.10 → 0.11, date 2026-04-14
+(1 added, 4 modified, 0 removed)
+
+## 2026-04-13T00:00:00Z — /fctry:ref (EngramMemory pattern study)
+- `#portfolio-memory` (2.12): [modified] Added "Pattern study: tiered recall and activation-based reinforcement" note — ACT-R activation curves, hot-tier cache, LSH-on-Matryoshka-prefix as open questions, not commitments
+- `#inspirations` (6.1): [added] Engram Memory reference (Tier 2 pattern study) with latency characteristics and open questions informed
+- Frontmatter: [modified] spec-version 0.9 → 0.10, date 2026-04-13
+- Scope guardrail: explicitly framed as pattern study; setlist remains a project registry with memory, not a general-purpose memory engine
+(1 added, 3 modified, 0 removed)
+
 ## 2026-04-11T20:50:00Z — /fctry:review (drift reconciliation)
 - `#what-this-is` (1.2): [modified] Fixed tool count 32 → 33, added `enrich_project` to Setlist-specific additions
 - `#desktop-app` (2.14): [modified] Documented multiselect status filtering and archived-by-default behavior

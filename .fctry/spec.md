@@ -3,24 +3,24 @@
 ```yaml
 ---
 title: Setlist
-spec-version: "0.9"
-date: 2026-04-11
+spec-version: "0.11"
+date: 2026-04-14
 status: active
 author: Mike (via fctry interview, experience-ported from project-registry-service)
 spec-format: nlspec-v2
 experience-source: project-registry-service/.fctry/spec.md (v1.3)
 ---
 synopsis:
-  short: "TypeScript project registry — intelligence hub with desktop control panel, 33 MCP tools, unified memory, and direct library import"
-  medium: "TypeScript monorepo (@setlist/core, @setlist/mcp, @setlist/cli, @setlist/app) implementing the project registry as both invisible infrastructure and a directly operable desktop surface. Local SQLite (better-sqlite3) + MCP server + Electron control panel sharing Chorus's design system (Tailwind 4, Radix UI). Provides project identity, capability declarations, unified portfolio memory (10 types with hierarchical compaction, progressive retrieval, knowledge distillation, and graph gap detection), project bootstrap, port allocation, batch operations, and cross-project intelligence. Schema v10, 33 MCP tools, importable as @setlist/core by Chorus and Ensemble."
-  readme: "Setlist is the TypeScript implementation of the Project Registry — both invisible infrastructure at the center of the user's personal ecosystem and a directly operable desktop control panel. As infrastructure, it provides structured, queryable identity for every project and area of focus, with programmatic administration, capability declarations, unified portfolio memory (10 types with belief classification, temporal validity, entity extraction, and procedural versioning), budget-controlled hybrid retrieval, port allocation, project bootstrap, batch operations, and cross-project intelligence via 33 MCP tools and direct library import. As a desktop application, it presents a card-grid dashboard of all projects with multiselect status filtering (archived hidden by default), tabbed project detail views (overview, memory, capabilities, ports), and full project CRUD — register, edit, archive, rename — through a native macOS Electron app sharing Chorus's design language (Tailwind CSS 4, Radix UI, terracotta accent, warm charcoal surfaces). The main process imports @setlist/core directly; no API layer sits between the UI and the registry. Distributed as four npm packages (@setlist/core, @setlist/mcp, @setlist/cli, @setlist/app), Setlist is directly consumable by Chorus, Ensemble, and any Node.js tool in the ecosystem, while also standing alone as a full-featured project management surface."
+  short: "TypeScript project registry — intelligence hub with desktop control panel, 34 MCP tools, unified memory, and direct library import"
+  medium: "TypeScript monorepo (@setlist/core, @setlist/mcp, @setlist/cli, @setlist/app) implementing the project registry as both invisible infrastructure and a directly operable desktop surface. Local SQLite (better-sqlite3) + MCP server + Electron control panel sharing Chorus's design system (Tailwind 4, Radix UI). Provides project identity, capability declarations, unified portfolio memory (10 types with hierarchical compaction, progressive retrieval, knowledge distillation, and graph gap detection), project bootstrap, port allocation, batch operations, cross-project intelligence, and composite project health assessment (activity + completeness + outcomes). Schema v10, 34 MCP tools, importable as @setlist/core by Chorus and Ensemble."
+  readme: "Setlist is the TypeScript implementation of the Project Registry — both invisible infrastructure at the center of the user's personal ecosystem and a directly operable desktop control panel. As infrastructure, it provides structured, queryable identity for every project and area of focus, with programmatic administration, capability declarations, unified portfolio memory (10 types with belief classification, temporal validity, entity extraction, and procedural versioning), budget-controlled hybrid retrieval, port allocation, project bootstrap, batch operations, and cross-project intelligence via 34 MCP tools and direct library import. As a desktop application, it presents a card-grid dashboard of all projects with multiselect status filtering (archived hidden by default), tabbed project detail views (overview, memory, capabilities, ports), and full project CRUD — register, edit, archive, rename — through a native macOS Electron app sharing Chorus's design language (Tailwind CSS 4, Radix UI, terracotta accent, warm charcoal surfaces). The main process imports @setlist/core directly; no API layer sits between the UI and the registry. Distributed as four npm packages (@setlist/core, @setlist/mcp, @setlist/cli, @setlist/app), Setlist is directly consumable by Chorus, Ensemble, and any Node.js tool in the ecosystem, while also standing alone as a full-featured project management surface."
   tech-stack: [typescript, better-sqlite3, "@modelcontextprotocol/sdk", node, npm-monorepo, electron, react, tailwindcss-v4, radix-ui]
-  patterns: [atomized-fields, progressive-disclosure, producer-consumer, registration-not-discovery, invisible-infrastructure, operable-surface, config-file-scanning, hub-and-spoke, capability-declaration, definition-is-truth, fuzzy-match-suggestions, archive-triggered-cleanup, producer-attribution, summary-compactness, freshness-importance-scoring, invocation-metadata, retain-recall-reflect, outcome-aware-reinforcement, content-hash-dedup, embedding-provider-abstraction, budget-controlled-recall, four-level-scoping, hybrid-retrieval, belief-classification, temporal-validity, entity-extraction, procedural-versioning, unified-memory-store, template-driven-bootstrap, configure-then-use, shared-design-system, ipc-bridge, native-vector-search, hierarchical-compaction, progressive-retrieval, knowledge-distillation, graph-gap-detection, mcp-startup-validation, progress-notification]
-  goals: [unified-project-identity, capability-discovery, programmatic-project-administration, batch-operations, cross-project-task-dispatch, conflict-free-port-allocation, automatic-port-discovery, async-task-execution, cross-project-intelligence, crash-resilient-worker, ranked-cross-project-results, capability-invocation-awareness, portfolio-memory, outcome-reinforcement, hybrid-retrieval, npm-packageable-distribution, canonical-memory-store, chorus-memory-unification, project-bootstrap-and-scaffolding, desktop-control-panel, project-dashboard, project-crud-ui, implicit-connection-surfacing, fast-first-pass-recall, synthesized-knowledge-from-memory-clusters, memory-graph-blind-spot-detection]
+  patterns: [atomized-fields, progressive-disclosure, producer-consumer, registration-not-discovery, invisible-infrastructure, operable-surface, config-file-scanning, hub-and-spoke, capability-declaration, definition-is-truth, fuzzy-match-suggestions, archive-triggered-cleanup, producer-attribution, summary-compactness, freshness-importance-scoring, invocation-metadata, retain-recall-reflect, outcome-aware-reinforcement, content-hash-dedup, embedding-provider-abstraction, budget-controlled-recall, four-level-scoping, hybrid-retrieval, belief-classification, temporal-validity, entity-extraction, procedural-versioning, unified-memory-store, template-driven-bootstrap, configure-then-use, shared-design-system, ipc-bridge, native-vector-search, hierarchical-compaction, progressive-retrieval, knowledge-distillation, graph-gap-detection, mcp-startup-validation, progress-notification, worst-tier-wins, on-demand-assessment, qualitative-tiers]
+  goals: [unified-project-identity, capability-discovery, programmatic-project-administration, batch-operations, cross-project-task-dispatch, conflict-free-port-allocation, automatic-port-discovery, async-task-execution, cross-project-intelligence, crash-resilient-worker, ranked-cross-project-results, capability-invocation-awareness, portfolio-memory, outcome-reinforcement, hybrid-retrieval, npm-packageable-distribution, canonical-memory-store, chorus-memory-unification, project-bootstrap-and-scaffolding, desktop-control-panel, project-dashboard, project-crud-ui, implicit-connection-surfacing, fast-first-pass-recall, synthesized-knowledge-from-memory-clusters, memory-graph-blind-spot-detection, project-health-assessment, composite-tier-surfacing, glanceable-portfolio-health]
 plugin-version: 0.77.3
 ```
 
-Setlist is the TypeScript implementation of the Project Registry — the active intelligence hub at the center of the user's personal ecosystem. Originally a direct port of the Python project-registry-service, it has since evolved beyond parity: schema v10 (unified memory types, belief classification, temporal validity, entity extraction, procedural versioning), 33 MCP tools (the original 29 plus `enrich_project`, `rename_project`, `bootstrap_project`, and `configure_bootstrap`), an expanded portfolio memory subsystem, and a native desktop control panel for direct human interaction. The .db file is the shared contract — both implementations read and write the same database, though the Python implementation remains at schema v8.
+Setlist is the TypeScript implementation of the Project Registry — the active intelligence hub at the center of the user's personal ecosystem. Originally a direct port of the Python project-registry-service, it has since evolved beyond parity: schema v10 (unified memory types, belief classification, temporal validity, entity extraction, procedural versioning), 34 MCP tools (the original 29 plus `enrich_project`, `rename_project`, `bootstrap_project`, `configure_bootstrap`, and `assess_health`), an expanded portfolio memory subsystem, a composite project health assessment, and a native desktop control panel for direct human interaction. The .db file is the shared contract — both implementations read and write the same database, though the Python implementation remains at schema v8.
 
 The rewrite exists because Chorus (Electron + React) and Ensemble need the registry as a direct npm dependency, not a subprocess or MCP-only integration. @setlist/core provides the library API importable from any Node.js process. @setlist/mcp wraps it as an MCP server. @setlist/cli exposes it from the terminal. @setlist/app provides a desktop control panel — an Electron app that imports @setlist/core directly, giving the user a visual surface for project management alongside the programmatic interfaces. The 786 Python tests define the behavioral contract to port against.
 
@@ -48,6 +48,7 @@ The rewrite exists because Chorus (Electron + React) and Ensemble need the regis
    - 2.12 [Portfolio Memory](#212-portfolio-memory) `#portfolio-memory`
    - 2.13 [Project Bootstrap](#213-project-bootstrap) `#project-bootstrap`
    - 2.14 [Desktop Control Panel](#214-desktop-control-panel) `#desktop-app`
+   - 2.15 [Project Health Assessment](#215-project-health-assessment) `#health-assessment`
 3. [System Behavior](#3-system-behavior)
    - 3.1 [Core Capabilities](#31-core-capabilities) `#capabilities`
    - 3.2 [Things the System Keeps Track Of](#32-things-the-system-keeps-track-of) `#entities`
@@ -97,7 +98,7 @@ Setlist is a TypeScript monorepo providing the Project Registry as four npm pack
 
 - **@setlist/core** -- The library. All registry logic: project identity, field model, variable-depth querying, filtering, migration, port management, capability declarations, portfolio memory (retain/recall/reflect), task queue, cross-project queries, batch operations. Importable from any Node.js process. This is what Chorus, Ensemble, and the desktop app consume directly.
 
-- **@setlist/mcp** -- The MCP server. A thin translation layer wrapping @setlist/core as 33 MCP tools via @modelcontextprotocol/sdk, using stdio transport managed by Claude Code's lifecycle. The original 29 tools match the Python server identically; `enrich_project`, `bootstrap_project`, `configure_bootstrap`, and `rename_project` are Setlist-specific additions.
+- **@setlist/mcp** -- The MCP server. A thin translation layer wrapping @setlist/core as 34 MCP tools via @modelcontextprotocol/sdk, using stdio transport managed by Claude Code's lifecycle. The original 29 tools match the Python server identically; `enrich_project`, `bootstrap_project`, `configure_bootstrap`, `rename_project`, and `assess_health` are Setlist-specific additions.
 
 - **@setlist/cli** -- The CLI. Terminal commands for project management, migration, worker installation, and diagnostics. Entry point: `setlist`.
 
@@ -602,6 +603,8 @@ A fourth tier -- **native vector search** -- accelerates similarity queries when
 
 The embedding provider is a runtime configuration. Changing providers does not invalidate existing memories. The dual-column pattern (embedding + embedding_new) supports gradual migration between providers. When the provider is set to "none", recall degrades to FTS5-only. When a provider is re-enabled, vector similarity resumes immediately.
 
+**Pattern study: tiered recall and activation-based reinforcement (Engram Memory).** Setlist's current recall scoring already blends importance, similarity, recency, and access count. Engram Memory (see §6.1) formalizes a closely related idea using the ACT-R cognitive-architecture activation equation: each memory carries an activation strength that grows on access and decays exponentially with elapsed time, and the system is structured as a three-tier pipeline where an in-memory hot-tier cache answers repeat queries in sub-millisecond time without touching vector search or disk, multi-head LSH on a Matryoshka prefix of the embedding prunes candidates in O(1) for near-miss queries, and full hybrid vector + BM25 re-ranking runs only on novel queries — with top results self-promoting into the hot tier. This is retained as a pattern study rather than a commitment: setlist remains a project registry with memory, not a general-purpose memory engine. The specific open questions this pattern informs are (a) whether setlist's access-count and reinforcement terms should be re-expressed as an ACT-R activation curve with explicit exponential time decay, so that frequently-accessed memories rise and idle memories fall in a principled rather than ad-hoc way; (b) whether the recall path should acquire a hot-tier activation cache in front of the sqlite-vec / FTS5 layer, so that repeated bootstrap recalls and dashboard refreshes short-circuit the full retrieval pipeline; and (c) whether candidate pre-filtering via LSH on a Matryoshka prefix of the embedding is worth adopting as the memory corpus grows beyond what brute-force cosine comparison handles comfortably. These are evaluations, not decisions — none of them expand setlist's scope, and any adoption would be validated against setlist's existing scenario set before being promoted out of this pattern-study note.
+
 **Agent and admin tool surfaces:**
 
 *Agent tools* (used during normal development work):
@@ -696,7 +699,7 @@ The app has two entry points: a standalone macOS `.app` bundle (double-click to 
 
 **Home view: the project dashboard.**
 
-On launch, the user sees a card grid of all registered projects. Each card shows the project name, a type badge (project or area of focus), a status indicator, and a last-updated timestamp. The grid is the user's panoramic view of their ecosystem.
+On launch, the user sees a card grid of all registered projects. Each card shows the project name, a type badge (project or area of focus), a status indicator, a small colored health dot (green Healthy, amber At risk, red Stale, gray Unknown — see `#health-assessment` (2.15)), and a last-updated timestamp. The grid is the user's panoramic view of their ecosystem and its health at a glance.
 
 Filter and sort controls sit at the top of the view. The user can filter by type (projects, areas of focus, or both), filter by status using a multiselect dropdown (multiple statuses can be active simultaneously — e.g., show only "active" and "paused" projects), and sort by name, status, or last updated. Archived projects are hidden by default; the user sees an "N archived projects" link below the grid that adds the archived filter with one click. Filtering and sorting are immediate — no loading states for a local database of this size.
 
@@ -704,7 +707,7 @@ Filter and sort controls sit at the top of the view. The user can filter by type
 
 Clicking a project card opens a detail view with a persistent header showing the project name, type badge, status, description, and action buttons (Edit, Archive). Below the header, content is organized into tabs:
 
-- **Overview tab** — Displays the project's fields, filesystem paths, and goals. For code projects, this includes tech stack, patterns, and tooling fields. For non-code projects, stakeholders, timeline, and domain. This is the project's identity card.
+- **Overview tab** — Displays the project's fields, filesystem paths, and goals. For code projects, this includes tech stack, patterns, and tooling fields. For non-code projects, stakeholders, timeline, and domain. The tab also shows a Health section (see `#health-assessment` (2.15)) with the project's overall health tier, per-dimension breakdown, and the full list of reasons behind the assessment. This is the project's identity card.
 
 - **Memory tab** — A read-only browse of the project's memories: decisions, outcomes, patterns, preferences, and other retained knowledge. Memories are displayed in score order with type badges and timestamps. The user can see what agents have learned about this project but cannot create, edit, or delete memories from the UI in v1.
 
@@ -763,6 +766,51 @@ The tokens provide surfaces (warm charcoal palette), accents (terracotta), text 
 **Relationship to Chorus.**
 
 Setlist and Chorus are separate products. Setlist is the registry control panel — it manages project identity, shows what agents have learned, and lets the user administer their ecosystem. Chorus is the AI workspace — it hosts conversations, builds projects, and manages knowledge. They share a design system and a database, but they serve different purposes and run as independent applications. Setlist does not depend on Chorus being installed, and Chorus does not depend on the Setlist desktop app (Chorus imports @setlist/core directly as a library).
+
+---
+
+### 2.15 Project Health Assessment {#health-assessment}
+
+The user and their agents need to know, at a glance, which projects are thriving, which are drifting, and which are neglected. Setlist answers that with a composite health assessment — a single human-readable verdict per project, with the reasons spelled out.
+
+**The four tiers.**
+
+Every non-archived project is placed into one of four tiers:
+
+- **Healthy** — the project is alive and well on every dimension the assessment looks at
+- **At risk** — something is slipping. The project isn't broken, but a dimension is trending the wrong way and deserves attention
+- **Stale** — a dimension has crossed a threshold that makes the project effectively dormant or incomplete enough that it can't be acted on confidently
+- **Unknown** — there isn't enough signal to evaluate (e.g., an archived project, or a freshly-registered project with no data yet)
+
+Tiers are qualitative by design. The user sees "Healthy" or "Stale," not "72/100." Behind the tier is always a list of contributing reasons in plain language: "no activity in 45 days," "description missing," "3 unresolved contradictions in project memories."
+
+**Three dimensions.**
+
+The composite tier is the *worst* of three dimension tiers. Any single dimension at Stale makes the whole project Stale. This is conservative by design — it surfaces red flags instead of letting them average out.
+
+- **Activity** — when was the project last meaningfully touched? Updates to core registry fields, memory retains scoped to the project, and (if a path with a git repository is declared) commits inside the project folder all count as a touch. Healthy is within 7 days, At risk is 8–30 days, Stale is beyond 30 days.
+
+- **Completeness** — is the project's profile filled in enough that agents and humans can act on it? A project needs a description, at least one goal, and at least one path. Code projects additionally need tech_stack and patterns. Every project benefits from topics and entities being populated. Missing description or goals drops completeness to Stale; missing the enrichment fields drops it to At risk.
+
+- **Outcomes** — what do the memories say? A project with recent positive build feedback and no unresolved contradictions is Healthy. A project with recent failures or with active contradictions is At risk. A project with a high ratio of corrections to original decisions is Stale. A project with no feedback history at all is Healthy — absence of signal is not a negative signal.
+
+**Where health shows up.**
+
+Health is both a human signal and an agent signal. It appears in three places:
+
+- **Home view dot** — the desktop app's home view shows a small colored dot on each project row alongside the existing status indicator. Green for Healthy, amber for At risk, red for Stale, gray for Unknown. The user can glance at the grid and immediately see which projects need attention. Archived projects do not show a dot.
+
+- **Project detail Overview tab** — opening a project's detail view shows a Health section on the Overview tab. The section displays the overall tier, the three dimension tiers, and the full list of reasons. This is where the user drills in to understand *why* a project is flagged.
+
+- **`assess_health` MCP tool** — a dedicated MCP tool exposes the same assessment to agents. `assess_health(name)` returns a structured result for a single project. `assess_health()` without arguments returns a portfolio-wide snapshot — every active project ordered worst-to-best, plus summary counts per tier. This is the structured counterpart to the home view dot — the orchestrator and other agents consume it to reason about where attention is needed.
+
+**How often it's computed.**
+
+Health is computed on demand. The MCP tool and the desktop app both request fresh assessments when the user or agent asks. Results are cached briefly (a few minutes) so that scrolling the home view or an agent making multiple calls in quick succession doesn't hammer the database. There is no background worker and no stored health field in the registry — the assessment is always derived from current data, not from a maybe-stale snapshot.
+
+**What health does not do.**
+
+Health does not prescribe actions. It surfaces what needs attention and why — it doesn't archive projects, flag them in the database, notify external systems, or rewrite anything. Those decisions remain with the user or the agent reading the assessment. Health is a lens, not a lever.
 
 ---
 
@@ -834,7 +882,7 @@ The fctry-owned field domain includes: tech_stack, patterns, short_description, 
 
 **Desktop project CRUD.** Provides UI forms for registering new projects, editing project identity fields (display name, status, description, goals), archiving projects, and renaming projects. Each operation delegates to the corresponding @setlist/core method through the IPC bridge.
 
-**MCP server access.** @setlist/mcp wraps @setlist/core as 33 MCP tools via @modelcontextprotocol/sdk using stdio transport managed by Claude Code's lifecycle. The 29 original tools match the Python server; `enrich_project`, `bootstrap_project`, `configure_bootstrap`, and `rename_project` are Setlist-specific additions. The server provides:
+**MCP server access.** @setlist/mcp wraps @setlist/core as 34 MCP tools via @modelcontextprotocol/sdk using stdio transport managed by Claude Code's lifecycle. The 29 original tools match the Python server; `enrich_project`, `bootstrap_project`, `configure_bootstrap`, `rename_project`, and `assess_health` are Setlist-specific additions. The server provides:
 
 - `list_projects` -- List projects at a given depth with optional filters.
 - `get_project` -- Get a single project by name at a given depth.
@@ -1097,7 +1145,7 @@ All Python spec hard constraints apply, plus:
 
 - **Schema evolution from v8.** The SQLite schema originated as v8, byte-compatible with the Python implementation. Setlist has since evolved the schema: v9 added the `observation` memory type, v10 adds unified memory types (learning, context, procedural), new fields (belief, extraction_confidence, valid_from, valid_until, entities, parent_version_id, is_current), and migrates `skill` → `procedural`. The Python implementation remains at v8; the shared .db file is forward-compatible (Python can read v10 databases but will not recognize new types or fields). Schema migrations are incremental and non-destructive.
 
-- **33 MCP tools with Python-compatible core.** The original 29 tools are a drop-in replacement for the Python server — same names, parameters, and response shapes. Setlist adds `enrich_project`, `bootstrap_project`, `configure_bootstrap`, and `rename_project` as Setlist-specific tools (#30--#33). An agent that works with the Python MCP server works identically with Setlist's for the original 29.
+- **34 MCP tools with Python-compatible core.** The original 29 tools are a drop-in replacement for the Python server — same names, parameters, and response shapes. Setlist adds `enrich_project`, `bootstrap_project`, `configure_bootstrap`, `rename_project`, and `assess_health` as Setlist-specific tools (#30--#34). An agent that works with the Python MCP server works identically with Setlist's for the original 29.
 
 - **ESM-only.** All packages produce ESM output. No CommonJS dual-publishing.
 
@@ -1287,7 +1335,7 @@ The port follows a strict behavioral contract: every Python test, translated to 
 | cross_query.py | cross-query.ts | 3 scopes, freshness+importance scoring |
 | tasks.py | registry.ts | Task CRUD consolidated into Registry |
 | scripts/migrate_memories.py | migrate-memories.ts | CC auto-memory + fctry memory migration |
-| server.py | server.ts | 33 MCP tools via @modelcontextprotocol/sdk |
+| server.py | server.ts | 34 MCP tools via @modelcontextprotocol/sdk |
 | cli.py | index.ts | CLI entry point |
 | worker.py | worker.ts | Launchd integration |
 
@@ -1334,6 +1382,8 @@ All inspirations from the Python spec apply. Additional TypeScript-specific refe
 - **infranodus** — Knowledge graph with structural gap detection via network science. Informed reflect's gap detection in entity/relationship extraction -- identifying isolated topic clusters that lack connecting edges.
 
 - **mcp-ts-core** — TypeScript MCP framework with startup tool validation and long-running operation lifecycle management. Informed the MCP server's self-validation at startup and progress reporting for long-running operations.
+
+- **EngramMemory/engram-memory-community** (https://github.com/engrammemory/engram-memory-community) — Self-hosted three-tiered memory pipeline for AI agents (Qdrant + FastEmbed + MCP, MIT). Tier 1 is an in-memory hot cache driven by ACT-R activation math (strength grows on access, decays exponentially with elapsed time); tier 2 runs multi-head LSH over the first 64 dimensions of a Matryoshka-trained embedding for O(1) candidate lookup; tier 3 performs hybrid 768-dim cosine + BM25 re-ranking in Qdrant with Reciprocal Rank Fusion, and top results self-promote into the hot tier. Reported latencies on Apple Silicon: ~25ms for repeat queries (embedding floor), ~30ms for similar queries, ~190ms for novel queries with graph expansion. **Tier 2 pattern study, not adopted.** Informs setlist's open questions about expressing recall scoring as an explicit ACT-R activation curve, adding a hot-tier cache in front of the sqlite-vec / FTS5 layer, and using LSH-on-Matryoshka-prefix for candidate pre-filtering as the corpus grows. Cited inline in §2.12 Portfolio Memory.
 
 ### 6.2 Ecosystem Context {#ecosystem-context}
 
@@ -1382,7 +1432,7 @@ All satisfaction criteria from the Python spec (section 6.1) apply identically, 
 
 **Then layer in:** Migration, port management, port discovery. Port tests.
 
-**Then layer in:** @setlist/mcp — wrap the core library as 33 MCP tools. Verify tool-by-tool against the Python server's behavior.
+**Then layer in:** @setlist/mcp — wrap the core library as 34 MCP tools. Verify tool-by-tool against the Python server's behavior.
 
 **Then layer in:** Portfolio memory — retain, recall, reflect. Content-hash dedup. FTS5 retrieval. Port memory tests.
 
@@ -1480,7 +1530,7 @@ All deferred futures from the Python spec apply. The TypeScript implementation i
 
 Additional TypeScript-specific deferred future:
 
-- **Python implementation deprecation.** Once Setlist reaches full parity (all 786 tests passing, all 33 MCP tools operational, migration tested), the Python implementation can be deprecated. The .db file continues as the shared contract during the transition period. Deprecation means: new features are added to Setlist first, the Python MCP server is replaced by @setlist/mcp in Claude Code config, and the Python package is archived. The database is never migrated or converted — both implementations read the same file.
+- **Python implementation deprecation.** Once Setlist reaches full parity (all 786 tests passing, all 34 MCP tools operational, migration tested), the Python implementation can be deprecated. The .db file continues as the shared contract during the transition period. Deprecation means: new features are added to Setlist first, the Python MCP server is replaced by @setlist/mcp in Claude Code config, and the Python package is archived. The database is never migrated or converted — both implementations read the same file.
 
 - **Desktop app: memory write operations.** The Memory tab is read-only in v1. Future versions may allow creating memories, correcting memories, and triggering reflection from the UI.
 
@@ -1496,7 +1546,7 @@ Additional TypeScript-specific deferred future:
 
 ## Appendix D: MCP Tool Reference {#appendix-d-mcp-tool-reference}
 
-Complete tool reference for the 33 MCP tools. The original 29 have identical names, parameters, and response shapes to the Python implementation; `enrich_project`, `bootstrap_project`, `configure_bootstrap`, and `rename_project` are Setlist additions.
+Complete tool reference for the 34 MCP tools. The original 29 have identical names, parameters, and response shapes to the Python implementation; `enrich_project`, `bootstrap_project`, `configure_bootstrap`, `rename_project`, and `assess_health` are Setlist additions.
 
 **Project Identity:**
 
@@ -1565,3 +1615,9 @@ Complete tool reference for the 33 MCP tools. The original 29 have identical nam
 |------|-----------|---------|
 | bootstrap_project | name, type, display_name?, status?, description?, goals?, path_override? | Registered project name + created folder path |
 | configure_bootstrap | type_path_roots, template_dir? | Updated bootstrap configuration |
+
+**Health:**
+
+| Tool | Parameters | Returns |
+|------|-----------|---------|
+| assess_health | name? | Per-project (name given) or portfolio-wide (no arg) health assessment: overall tier, dimension tiers, reasons |

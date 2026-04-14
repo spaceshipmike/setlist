@@ -973,3 +973,103 @@ Difficulty: hard
 - Electron, Tailwind 4, and Radix UI are declared as dependencies (not globally assumed)
 
 Difficulty: medium
+
+---
+
+## S65: Health Assessment Composite Tier {#s65}
+**Given** a portfolio with projects at various levels of activity, completeness, and outcome history
+**When** the user or an agent requests a health assessment for a project
+**Then** the project receives one of four tiers — Healthy, At risk, Stale, or Unknown — computed as the worst tier across three dimensions: activity, completeness, and outcomes.
+
+**Satisfaction criteria:**
+- Every non-archived project can be assessed and receives exactly one overall tier
+- The overall tier is the worst of the three dimension tiers (if activity is At risk and completeness is Stale, the overall is Stale)
+- Archived projects return tier Unknown with a reason noting they are not evaluated
+- A project with too little data to evaluate any dimension returns Unknown with a reason explaining what's missing
+- The response includes the overall tier, a list of plain-language contributing reasons, and the per-dimension tiers
+
+Difficulty: medium
+
+---
+
+## S66: Activity Staleness Buckets {#s66}
+**Given** a project whose last meaningful update happened some time ago
+**When** its activity dimension is evaluated
+**Then** it is bucketed into Healthy (≤7 days), At risk (8–30 days), Stale (31–90 days), or Stale (>90 days) based on the most recent meaningful touch.
+
+**Satisfaction criteria:**
+- A project touched within the last 7 days is Healthy on the activity dimension
+- A project last touched 8–30 days ago is At risk on activity
+- A project last touched more than 30 days ago is Stale on activity
+- "Touch" includes any registry update to core fields, any memory retain scoped to the project, and (if the project has a path with a git repository) any commit within the project folder
+- The reason string names the exact age in days, e.g., "no activity in 45 days"
+
+Difficulty: medium
+
+---
+
+## S67: Completeness Criteria {#s67}
+**Given** projects with varying levels of profile enrichment
+**When** the completeness dimension is evaluated
+**Then** a project is Healthy when its description, at least one goal, at least one path, and (for code projects) tech_stack and patterns, plus topics and entities, are all present.
+
+**Satisfaction criteria:**
+- Missing description or no goals moves completeness to Stale with reasons naming the missing fields
+- Missing path moves completeness to At risk (projects without a filesystem anchor are less actionable but not fundamentally broken)
+- For code projects, missing tech_stack or patterns moves completeness to At risk
+- Missing topics or entities moves completeness to At risk (not Stale — they are enrichment, not basic identity)
+- Non-code projects are not penalized for missing tech_stack or patterns
+- The reason string lists specific missing fields, e.g., "description missing; no goals"
+
+Difficulty: medium
+
+---
+
+## S68: Outcome-Based Health {#s68}
+**Given** a project with memory feedback history (successful builds, corrections, contradictions)
+**When** the outcomes dimension is evaluated
+**Then** projects with recent positive outcomes and no unresolved contradictions are Healthy; projects with recent negative outcomes or unresolved contradictions are At risk or Stale.
+
+**Satisfaction criteria:**
+- A project with no memory feedback history evaluates as Healthy on outcomes (absence of signal is not a negative signal)
+- A project with recent positive build feedback is Healthy on outcomes
+- A project with recent negative build feedback (failure outcomes) is At risk on outcomes
+- A project with active unresolved contradictions in its memories is At risk on outcomes
+- A project with a high ratio of corrections to original decisions is Stale on outcomes
+- The reason string names the specific signal, e.g., "3 unresolved contradictions in project memories"
+
+Difficulty: hard
+
+---
+
+## S69: assess_health MCP Tool {#s69}
+**Given** a user or agent invoking the MCP interface
+**When** they call `assess_health` with or without a project name argument
+**Then** they receive a structured health assessment — per-project when a name is provided, portfolio-wide when called without arguments.
+
+**Satisfaction criteria:**
+- `assess_health(name)` returns the overall tier, dimension tiers, and reasons for the named project
+- `assess_health()` with no arguments returns an array of assessments across all active projects plus a portfolio summary (counts per tier)
+- The portfolio-wide response is ordered worst-to-best so the most concerning projects surface first
+- Calls within a short TTL window return cached assessments; calls after the TTL recompute
+- The tool is exposed from @setlist/mcp and callable from the desktop app via the IPC bridge
+- Calling for an unknown project name returns a helpful NotFoundError with a fuzzy-match suggestion, consistent with other project tools
+
+Difficulty: hard
+
+---
+
+## S70: Health Indicator on Home View and Detail View [App] {#s70}
+**Given** the desktop app is open showing the home view or a project detail view
+**When** the user looks at a project
+**Then** a health indicator is visible — a colored dot on the home view list row, and a Health section on the Overview tab of the detail view showing the tier, per-dimension breakdown, and reasons.
+
+**Satisfaction criteria:**
+- Each home view row shows a colored dot representing the project's overall health tier alongside the existing status indicator
+- The dot uses a distinct color per tier (green Healthy, amber At risk, red Stale, gray Unknown) and is accessible via a hover tooltip naming the tier
+- Clicking into a project's detail view shows a Health section on the Overview tab with the overall tier, the three dimension tiers, and the list of reasons
+- The Health section updates when the project is re-assessed (e.g., after editing fields that affect completeness)
+- Archived projects do not show a health dot on the home view
+- Health computation for the home view is batched so scrolling a large portfolio stays smooth
+
+Difficulty: medium
