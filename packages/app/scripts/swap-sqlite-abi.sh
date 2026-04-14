@@ -43,21 +43,19 @@ target_cache() {
 
 build_for() {
   local which="$1"
-  cd "$REPO_ROOT"
   if [[ "$which" == "node" ]]; then
     echo "[swap] rebuilding better-sqlite3 for Node ($(node --version))..."
-    npm rebuild better-sqlite3 >/dev/null 2>&1
+    (cd "$REPO_ROOT" && npm rebuild better-sqlite3 >/dev/null 2>&1)
   else
     echo "[swap] rebuilding better-sqlite3 for Electron..."
-    local electron_ver
-    electron_ver=$(cd "$APP_DIR" && npx --no-install electron --version 2>/dev/null | tr -d v)
-    (
-      cd "$REPO_ROOT/node_modules/better-sqlite3"
-      npx --no-install node-gyp rebuild \
-        --target="$electron_ver" \
-        --arch=arm64 \
-        --dist-url=https://electronjs.org/headers >/dev/null 2>&1
-    )
+    (cd "$APP_DIR" && npx --no-install electron-rebuild -f -w better-sqlite3)
+    # @electron/rebuild produces a LINKER-signed ad-hoc signature (flags=0x20002)
+    # that Electron's hardened runtime on ARM64 macOS refuses to dlopen
+    # (EXC_BAD_ACCESS / Code Signature Invalid / Invalid Page). Force a fresh
+    # ad-hoc sign (flags=0x2) via codesign to produce a signature the runtime
+    # will accept.
+    echo "[swap] re-signing (codesign --force -s -) to fix linker-signed sig..."
+    codesign --force -s - "$BINARY_PATH" 2>&1 | /usr/bin/grep -v "replacing existing signature" || true
   fi
 }
 
