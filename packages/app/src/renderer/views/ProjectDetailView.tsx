@@ -51,7 +51,7 @@ export function ProjectDetailView({ projectName, onBack, onNavigate }: ProjectDe
         displayName={project.display_name}
         type={project.type}
         status={project.status}
-        description={project.description}
+        description={project.description ?? ''}
         onBack={onBack}
         onEdit={() => setEditing(true)}
         onArchive={() => setShowArchive(true)}
@@ -65,8 +65,8 @@ export function ProjectDetailView({ projectName, onBack, onNavigate }: ProjectDe
             currentValues={{
               display_name: project.display_name,
               status: project.status,
-              description: project.description,
-              goals: project.goals,
+              description: project.description ?? '',
+              goals: Array.isArray(project.goals) ? project.goals.join(', ') : (project.goals ?? ''),
             }}
             projectType={project.type}
             onSave={() => { setEditing(false); refresh(); }}

@@ -261,7 +261,7 @@ export function HomeView({
                 focus:outline-none focus:bg-[var(--color-bg-elevated)]"
             >
               <span className="text-sm text-[var(--color-text-primary)] truncate">
-                {p.display_name}
+                {p.display_name || p.name}
               </span>
               <div className="flex items-center gap-1.5">
                 <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${STATUS_DOT[p.status] || STATUS_DOT.draft}`} />
@@ -269,7 +269,7 @@ export function HomeView({
               </div>
               <span className="text-xs text-[var(--color-text-tertiary)]">
                 {p.type === 'area_of_focus' ? 'Area' :
-                 p.paths?.some((path: string) => path.includes('/Code/')) ? 'Code' :
+                 Array.isArray(p.paths) && p.paths.some((path: string) => path.includes('/Code/')) ? 'Code' :
                  'Project'}
               </span>
               <span className="text-xs text-[var(--color-text-tertiary)]">

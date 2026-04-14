@@ -8,11 +8,17 @@ export interface ProjectSummary {
   display_name: string;
   type: string;
   status: string;
-  description: string;
-  goals: string;
+  // Core's toStandard omits empty strings and returns goals as an array.
+  // Always treat these as possibly missing when reading from a listing.
+  description?: string;
+  goals?: string[] | string;
   updated_at: string;
-  created_at: string;
+  created_at?: string;
   paths?: string[];
+  topics?: string[];
+  entities?: string[];
+  concerns?: string[];
+  fields?: Record<string, unknown>;
 }
 
 export interface ProjectFull extends ProjectSummary {

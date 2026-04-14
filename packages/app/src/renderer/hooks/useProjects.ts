@@ -47,7 +47,7 @@ export function useProjects({ filter, statusFilters, sort }: UseProjectsOpts) {
     return () => window.removeEventListener('focus', handleFocus);
   }, [refresh]);
 
-  // Filter
+  // Filter (defensive: archived projects may omit description/goals/paths)
   const filtered = allProjects.filter((p) => {
     // When no status filters selected, hide archived by default
     if (statusFilters.length === 0 && p.status === 'archived') return false;
@@ -56,27 +56,27 @@ export function useProjects({ filter, statusFilters, sort }: UseProjectsOpts) {
     if (filter) {
       const q = filter.toLowerCase();
       return (
-        p.name.toLowerCase().includes(q) ||
-        p.display_name.toLowerCase().includes(q) ||
-        p.description.toLowerCase().includes(q) ||
-        p.type.toLowerCase().includes(q) ||
-        p.status.toLowerCase().includes(q)
+        (p.name ?? '').toLowerCase().includes(q) ||
+        (p.display_name ?? '').toLowerCase().includes(q) ||
+        (p.description ?? '').toLowerCase().includes(q) ||
+        (p.type ?? '').toLowerCase().includes(q) ||
+        (p.status ?? '').toLowerCase().includes(q)
       );
     }
     return true;
   });
 
-  // Sort
+  // Sort (defensive: tolerate missing fields)
   const projects = [...filtered].sort((a, b) => {
     switch (sort) {
       case 'name':
-        return a.name.localeCompare(b.name);
+        return (a.name ?? '').localeCompare(b.name ?? '');
       case 'updated_at':
-        return b.updated_at.localeCompare(a.updated_at);
+        return (b.updated_at ?? '').localeCompare(a.updated_at ?? '');
       case 'type':
-        return a.type.localeCompare(b.type) || a.name.localeCompare(b.name);
+        return (a.type ?? '').localeCompare(b.type ?? '') || (a.name ?? '').localeCompare(b.name ?? '');
       case 'status':
-        return a.status.localeCompare(b.status) || a.name.localeCompare(b.name);
+        return (a.status ?? '').localeCompare(b.status ?? '') || (a.name ?? '').localeCompare(b.name ?? '');
       default:
         return 0;
     }
