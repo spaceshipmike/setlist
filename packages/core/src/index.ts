@@ -11,3 +11,4 @@ export { MemoryReflection, type ReflectionResult } from './memory-reflection.js'
 export { scanLocations, applyProposals, type MigrationProposal } from './migration.js';
 export { scanMemories, applyMemoryMigration, type MemoryMigrationProposal, type MemoryMigrationResult } from './migrate-memories.js';
 export { Bootstrap, BootstrapNotConfiguredError, BootstrapFolderExistsError, type BootstrapConfig, type BootstrapProjectOpts, type BootstrapResult } from './bootstrap.js';
+export { HealthAssessor, HEALTH_CACHE_TTL_MS, type HealthTier, type HealthDimension, type DimensionResult, type HealthAssessment, type PortfolioHealth } from './health.js';
