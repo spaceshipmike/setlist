@@ -2,6 +2,7 @@ import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { CallToolRequestSchema, ListToolsRequestSchema } from '@modelcontextprotocol/sdk/types.js';
 import {
   Registry, MemoryStore, MemoryRetrieval, MemoryReflection, CrossQuery, Bootstrap,
+  HealthAssessor,
   type CapabilityDeclaration, type QueryDepth,
 } from '@setlist/core';
 
@@ -12,6 +13,7 @@ export function createServer(dbPath?: string): Server {
   const crossQuery = new CrossQuery(dbPath);
   const memoryReflection = new MemoryReflection(dbPath);
   const bootstrapManager = new Bootstrap(dbPath);
+  const healthAssessor = new HealthAssessor(dbPath);
 
   const server = new Server(
     { name: 'setlist', version: '0.1.0' },
@@ -62,6 +64,8 @@ export function createServer(dbPath?: string): Server {
       // Bootstrap (2)
       { name: 'bootstrap_project', description: 'Create a new project end-to-end: register in registry, create folder, apply templates, init git (code projects). Requires configure_bootstrap first.', inputSchema: { type: 'object' as const, properties: { name: { type: 'string' }, project_type: { type: 'string', enum: ['project', 'area_of_focus'], default: 'project' }, status: { type: 'string', default: 'active' }, description: { type: 'string' }, goals: { type: 'string' }, display_name: { type: 'string' }, path_override: { type: 'string' }, skip_git: { type: 'boolean', default: false }, producer: { type: 'string', default: 'bootstrap' } }, required: ['name'] } },
       { name: 'configure_bootstrap', description: 'Configure bootstrap: set path roots per project type and template directory. Call with no arguments to view current config.', inputSchema: { type: 'object' as const, properties: { path_roots: { type: 'object', description: 'Mapping of project type to default path root (e.g., {"project": "~/Code", "area_of_focus": "~/Areas"})' }, template_dir: { type: 'string', description: 'Path to the template directory' } } } },
+      // Health (1)
+      { name: 'assess_health', description: 'Assess project health. With a name, returns overall tier, per-dimension tiers (activity/completeness/outcomes), and reasons. Without a name, returns a portfolio-wide snapshot ordered worst-to-best plus summary counts. Cached briefly; pass fresh=true to bypass.', inputSchema: { type: 'object' as const, properties: { name: { type: 'string' }, fresh: { type: 'boolean', default: false } } } },
     ],
   }));
 
@@ -319,6 +323,18 @@ export function createServer(dbPath?: string): Server {
             template_dir: a.template_dir as string | undefined,
           });
           break;
+
+        // Health
+        case 'assess_health': {
+          const noCache = Boolean(a.fresh);
+          const targetName = a.name as string | undefined;
+          if (targetName) {
+            result = healthAssessor.assessProject(targetName, { noCache });
+          } else {
+            result = healthAssessor.assessPortfolio({ noCache });
+          }
+          break;
+        }
 
         default:
           return { content: [{ type: 'text', text: `Error [INVALID_INPUT]: Unknown tool '${name}'.` }] };

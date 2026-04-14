@@ -39,16 +39,16 @@ describe('MCP Server (S21)', () => {
 
   // ── Tool Registration ──────────────────────────────────────
 
-  it('registers exactly 33 tools', async () => {
+  it('registers exactly 34 tools', async () => {
     const tools = await listTools(server);
-    expect(tools).toHaveLength(33);
+    expect(tools).toHaveLength(34);
   });
 
   it('registers all expected tool names', async () => {
     const tools = await listTools(server);
     const names = tools.map(t => t.name).sort();
     expect(names).toEqual([
-      'archive_project', 'batch_update', 'bootstrap_project', 'check_port', 'claim_port',
+      'archive_project', 'assess_health', 'batch_update', 'bootstrap_project', 'check_port', 'claim_port',
       'configure_bootstrap', 'configure_memory', 'correct', 'cross_query', 'discover_ports',
       'enrich_project', 'feedback', 'forget', 'get_project', 'get_registry_stats',
       'inspect_memory', 'list_projects', 'list_tasks', 'memory_status',
@@ -335,6 +335,46 @@ describe('MCP Server (S21)', () => {
     }) as Record<string, unknown>;
     expect(result.results).toBeTruthy();
     expect(result.summary).toBeTruthy();
+  });
+
+  // ── Health (S69) ──────────────────────────────────────────
+
+  it('assess_health(name) returns tier + dimensions + reasons', async () => {
+    await callTool(server, 'register_project', {
+      name: 'hp', project_type: 'project', status: 'active',
+      description: 'Health probe', goals: 'Stay healthy',
+    });
+    const r = await callTool(server, 'assess_health', { name: 'hp' }) as Record<string, unknown>;
+    expect(r.name).toBe('hp');
+    expect(['healthy', 'at_risk', 'stale', 'unknown']).toContain(r.overall);
+    const dims = r.dimensions as Record<string, { tier: string; reasons: string[] }>;
+    expect(dims.activity).toBeTruthy();
+    expect(dims.completeness).toBeTruthy();
+    expect(dims.outcomes).toBeTruthy();
+    expect(Array.isArray(r.reasons)).toBe(true);
+  });
+
+  it('assess_health() without args returns a portfolio snapshot with summary counts, worst-first', async () => {
+    await callTool(server, 'register_project', { name: 'hp-ok', project_type: 'project', status: 'active', description: 'd', goals: 'g' });
+    await callTool(server, 'register_project', { name: 'hp-bad', project_type: 'project', status: 'active', description: '', goals: 'g' });
+    const r = await callTool(server, 'assess_health', {}) as Record<string, unknown>;
+    expect(Array.isArray(r.projects)).toBe(true);
+    const projects = r.projects as Array<{ name: string; overall: string }>;
+    expect(projects.map(p => p.name)).toContain('hp-ok');
+    expect(projects.map(p => p.name)).toContain('hp-bad');
+    expect(r.summary).toBeTruthy();
+    // hp-bad (stale) should surface before hp-ok
+    const idxBad = projects.findIndex(p => p.name === 'hp-bad');
+    const idxOk = projects.findIndex(p => p.name === 'hp-ok');
+    expect(idxBad).toBeLessThan(idxOk);
+  });
+
+  it('assess_health for an unknown project returns a NotFoundError with suggestion', async () => {
+    await callTool(server, 'register_project', { name: 'hp', project_type: 'project', status: 'active', description: 'd', goals: 'g' });
+    const result = await callTool(server, 'assess_health', { name: 'hpp' }) as string;
+    // server.ts catches errors and returns them as plain text content
+    expect(typeof result).toBe('string');
+    expect(result).toMatch(/hp/);
   });
 
   // ── Error Handling ─────────────────────────────────────────
