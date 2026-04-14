@@ -64,6 +64,30 @@ export interface RegistryStats {
   by_status: Record<string, number>;
 }
 
+// ── Health ────────────────────────────────────────────────────
+
+export type HealthTier = 'healthy' | 'at_risk' | 'stale' | 'unknown';
+export type HealthDimensionKey = 'activity' | 'completeness' | 'outcomes';
+
+export interface HealthDimensionResult {
+  tier: HealthTier;
+  reasons: string[];
+}
+
+export interface HealthAssessment {
+  name: string;
+  overall: HealthTier;
+  reasons: string[];
+  dimensions: Record<HealthDimensionKey, HealthDimensionResult>;
+  computed_at: string;
+}
+
+export interface PortfolioHealth {
+  projects: HealthAssessment[];
+  summary: Record<HealthTier, number>;
+  computed_at: string;
+}
+
 const api = {
   listProjects: (opts?: { depth?: string; type_filter?: string; status_filter?: string }) =>
     window.setlist.listProjects(opts) as Promise<ProjectSummary[]>,
@@ -134,6 +158,15 @@ const api = {
     path_override?: string;
     skip_git?: boolean;
   }) => window.setlist.bootstrapProject(opts) as Promise<BootstrapResult>,
+
+  assessHealth: (name?: string, opts?: { fresh?: boolean }) =>
+    window.setlist.assessHealth(name, opts) as Promise<HealthAssessment | PortfolioHealth>,
+
+  assessProjectHealth: (name: string, opts?: { fresh?: boolean }) =>
+    window.setlist.assessHealth(name, opts) as Promise<HealthAssessment>,
+
+  assessPortfolioHealth: (opts?: { fresh?: boolean }) =>
+    window.setlist.assessHealth(undefined, opts) as Promise<PortfolioHealth>,
 };
 
 export interface BootstrapConfig {

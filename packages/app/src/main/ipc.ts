@@ -1,11 +1,18 @@
+// @fctry: #health-assessment
 import type { IpcMain } from 'electron';
-import { Registry, MemoryStore, MemoryRetrieval, Bootstrap } from '@setlist/core';
+import { Registry, MemoryStore, MemoryRetrieval, Bootstrap, HealthAssessor } from '@setlist/core';
 
 let registry: Registry | null = null;
+let healthAssessor: HealthAssessor | null = null;
 
 function getRegistry(): Registry {
   if (!registry) registry = new Registry();
   return registry;
+}
+
+function getHealth(): HealthAssessor {
+  if (!healthAssessor) healthAssessor = new HealthAssessor(getRegistry().dbPath);
+  return healthAssessor;
 }
 
 export function registerIpcHandlers(ipcMain: IpcMain): void {
@@ -120,6 +127,15 @@ export function registerIpcHandlers(ipcMain: IpcMain): void {
   }) => {
     const bootstrap = new Bootstrap(reg.dbPath);
     return bootstrap.configureBootstrap(opts);
+  });
+
+  // ── Health ───────────────────────────────────────────────────
+
+  ipcMain.handle('assessHealth', (_e, name?: string, opts?: { fresh?: boolean }) => {
+    const health = getHealth();
+    const noCache = Boolean(opts?.fresh);
+    if (name) return health.assessProject(name, { noCache });
+    return health.assessPortfolio({ noCache });
   });
 
   ipcMain.handle('bootstrapProject', (_e, opts: {

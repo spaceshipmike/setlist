@@ -1,3 +1,4 @@
+// @fctry: #health-assessment
 import { contextBridge, ipcRenderer } from 'electron';
 
 const api = {
@@ -62,6 +63,10 @@ const api = {
     template_dir?: string;
     archive_path_root?: string;
   }) => ipcRenderer.invoke('configureBootstrap', opts),
+  // Health
+  assessHealth: (name?: string, opts?: { fresh?: boolean }) =>
+    ipcRenderer.invoke('assessHealth', name, opts),
+
   bootstrapProject: (opts: {
     name: string;
     type: string;
