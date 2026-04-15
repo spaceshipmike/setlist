@@ -1,5 +1,11 @@
 # Setlist — Changelog
 
+## 2026-04-15T00:00:00Z — /fctry:ref (OpenKL pattern study)
+- `#inspirations` (6.1): [modified] Added nowledge-co/OpenKL reference (knowmark 14312, Tier 2 pattern study, not adopted). Catalogs four patterns relevant to setlist's memory layer: memory vs grounding-store separation, first-class memory-distillation prompts, citations with retention classes / verify+open ops, and multi-surface hybrid search. Framed as open questions only — no scope expansion.
+- Frontmatter: [modified] spec-version 0.11 → 0.12, date 2026-04-15
+- Scope guardrail: explicitly pattern study; setlist's flat 10-type memory model and single-surface hybrid recall remain unchanged
+(0 added, 2 modified, 0 removed)
+
 ## 2026-04-14T16:30:00Z — /fctry:evolve (project health assessment)
 - `#health-assessment` (2.15): [added] New section introducing composite project health assessment — four qualitative tiers (Healthy / At risk / Stale / Unknown), worst-tier-wins composition across three dimensions (activity, completeness, outcomes), on-demand computation with brief cache, and the `assess_health` MCP tool
 - `#desktop-app` (2.14): [modified] Card grid now shows a colored health dot alongside the status indicator; Overview tab gains a Health section showing tier, per-dimension breakdown, and reasons

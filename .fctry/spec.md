@@ -3,8 +3,8 @@
 ```yaml
 ---
 title: Setlist
-spec-version: "0.11"
-date: 2026-04-14
+spec-version: "0.12"
+date: 2026-04-15
 status: active
 author: Mike (via fctry interview, experience-ported from project-registry-service)
 spec-format: nlspec-v2
@@ -1384,6 +1384,8 @@ All inspirations from the Python spec apply. Additional TypeScript-specific refe
 - **mcp-ts-core** — TypeScript MCP framework with startup tool validation and long-running operation lifecycle management. Informed the MCP server's self-validation at startup and progress reporting for long-running operations.
 
 - **EngramMemory/engram-memory-community** (https://github.com/engrammemory/engram-memory-community) — Self-hosted three-tiered memory pipeline for AI agents (Qdrant + FastEmbed + MCP, MIT). Tier 1 is an in-memory hot cache driven by ACT-R activation math (strength grows on access, decays exponentially with elapsed time); tier 2 runs multi-head LSH over the first 64 dimensions of a Matryoshka-trained embedding for O(1) candidate lookup; tier 3 performs hybrid 768-dim cosine + BM25 re-ranking in Qdrant with Reciprocal Rank Fusion, and top results self-promote into the hot tier. Reported latencies on Apple Silicon: ~25ms for repeat queries (embedding floor), ~30ms for similar queries, ~190ms for novel queries with graph expansion. **Tier 2 pattern study, not adopted.** Informs setlist's open questions about expressing recall scoring as an explicit ACT-R activation curve, adding a hot-tier cache in front of the sqlite-vec / FTS5 layer, and using LSH-on-Matryoshka-prefix for candidate pre-filtering as the corpus grows. Cited inline in §2.12 Portfolio Memory.
+
+- **nowledge-co/OpenKL** (https://github.com/nowledge-co/openkl) — Local-first open-source knowledge and memory layer for personal AI agents (Python + Kùzu DB, Apache 2.0; early-stage, knowmark 14312). Exposes a unified `ok` CLI over four surfaces: (1) a **memory store** for distilled insights, facts, and user notes with temporal organization; (2) a **grounding store** — a separate raw-corpus surface for external docs, media, logs, and transcripts with automatic chunking — explicitly distinct from memory; (3) a Kùzu-backed **knowledge graph** with provenance; and (4) **citations** as first-class objects with transient and persisted modes, retention classes, and `cite verify` / `cite open` operations. Hybrid search runs across memory and grounding store in a single call. Agent-facing **memory distillation prompts** are a first-class primitive (`ok distill get-prompt memory-synthesis`), letting agents share a standardized synthesis contract instead of each crafting its own retain content. **Tier 2 pattern study, not adopted.** Informs setlist's open questions about: (a) whether a separate raw-ingest grounding surface is warranted alongside the current flat memory model (10 types, all treated as distilled knowledge), or whether setlist's flatter model is intentional; (b) shipping a standardized distillation-prompt library alongside `retain` to reduce variance in retained content quality across agents; (c) introducing explicit retention-class tiers on citations/sources as a complement to the existing `reinforcement_count` / `importance` / decay model; and (d) extending recall's hybrid FTS5+vector search from single-surface (memory-only) to multi-surface if a grounding store is ever added. No spec behavior changes; pattern catalog entry only.
 
 ### 6.2 Ecosystem Context {#ecosystem-context}
 
