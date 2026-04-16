@@ -2,7 +2,7 @@
   "versions": {
     "external": {
       "type": "external",
-      "current": "0.1.24",
+      "current": "0.1.26",
       "propagationTargets": [],
       "incrementRules": {
         "patch": "auto-per-chunk",
@@ -12,7 +12,7 @@
     },
     "spec": {
       "type": "internal",
-      "current": "0.13",
+      "current": "0.14",
       "propagationTargets": [
         {
           "file": ".fctry/spec.md",

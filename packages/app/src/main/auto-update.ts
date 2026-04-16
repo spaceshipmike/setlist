@@ -1,8 +1,12 @@
+// @fctry: #auto-update
 import pkg from 'electron-updater'
+import { getChannel } from './prefs.js'
 const { autoUpdater } = pkg
 
-export function initAutoUpdater(channel: 'latest' | 'beta' = 'latest'): void {
-  autoUpdater.channel = channel
+export function initAutoUpdater(channel?: 'latest' | 'beta' | 'stable'): void {
+  // Map spec's "stable" to electron-updater's "latest" tag naming.
+  const resolved = channel ?? getChannel()
+  autoUpdater.channel = resolved === 'stable' ? 'latest' : resolved
   autoUpdater.autoDownload = true
   autoUpdater.autoInstallOnAppQuit = true
 
