@@ -1,6 +1,21 @@
 // @fctry: #health-assessment
+// @fctry: #auto-update
 import type { IpcMain } from 'electron';
+import { app } from 'electron';
 import { Registry, MemoryStore, MemoryRetrieval, Bootstrap, HealthAssessor } from '@setlist/core';
+import { getChannel, setChannel, getLastCheck, type UpdateChannel } from './prefs.js';
+import {
+  applyChannel,
+  checkForUpdates,
+  isCheckInFlight,
+  isUpdateDownloaded,
+  getDownloadedVersion,
+  quitAndInstall,
+} from './auto-update.js';
+
+function isDev(): boolean {
+  return Boolean(process.env.ELECTRON_RENDERER_URL);
+}
 
 let registry: Registry | null = null;
 let healthAssessor: HealthAssessor | null = null;
@@ -146,6 +161,38 @@ export function registerIpcHandlers(ipcMain: IpcMain): void {
     const noCache = Boolean(opts?.fresh);
     if (name) return health.assessProject(name, { noCache });
     return health.assessPortfolio({ noCache });
+  });
+
+  // ── Auto-Update (#auto-update) ───────────────────────────────
+
+  ipcMain.handle('getUpdateStatus', () => {
+    return {
+      channel: getChannel(),
+      version: app.getVersion(),
+      last_check: getLastCheck(),
+      in_flight: isCheckInFlight(),
+      downloaded: isUpdateDownloaded(),
+      downloaded_version: getDownloadedVersion(),
+      dev_mode: isDev(),
+    };
+  });
+
+  ipcMain.handle('setUpdateChannel', (_e, channel: UpdateChannel) => {
+    setChannel(channel);
+    if (!isDev()) applyChannel(channel);
+    return getChannel();
+  });
+
+  ipcMain.handle('checkForUpdates', async () => {
+    if (isDev()) return { dev_skip: true };
+    const initiated = await checkForUpdates();
+    return { initiated };
+  });
+
+  ipcMain.handle('quitAndInstallUpdate', () => {
+    if (!isUpdateDownloaded()) return false;
+    quitAndInstall();
+    return true;
   });
 
   ipcMain.handle('bootstrapProject', (_e, opts: {
