@@ -6,6 +6,9 @@ import { Registry } from './registry.js';
 import { RegistryError } from './errors.js';
 import type { ProjectType } from './models.js';
 
+// spec 0.13 retired 'area_of_focus' — bootstrap only creates 'project' rows now.
+// 'non_code_project' is still accepted for routing to a different pathRoot; it
+// still writes db.type = 'project' and the caller is expected to assign an area.
 type BootstrapType = ProjectType | 'code_project' | 'non_code_project';
 
 function resolveBootstrapType(type: BootstrapType): {
@@ -13,9 +16,6 @@ function resolveBootstrapType(type: BootstrapType): {
   dbType: ProjectType;
   isCodeProject: boolean;
 } {
-  if (type === 'area_of_focus') {
-    return { pathRootKey: 'area_of_focus', dbType: 'area_of_focus', isCodeProject: false };
-  }
   if (type === 'non_code_project') {
     return { pathRootKey: 'non_code_project', dbType: 'project', isCodeProject: false };
   }
@@ -95,10 +95,12 @@ export class Bootstrap {
 
       if (opts.path_roots !== undefined) {
         for (const [type, path] of Object.entries(opts.path_roots)) {
+          // spec 0.13: retained 'area_of_focus' path_root key for backward-compat
+          // in BootstrapConfig only — config still routes existing non-code roots.
           if (type !== 'project' && type !== 'non_code_project' && type !== 'area_of_focus') {
             throw new RegistryError(
               'INVALID_INPUT',
-              `Invalid project type '${type}' in path_roots. Must be 'project', 'non_code_project', or 'area_of_focus'.`,
+              `Invalid project type '${type}' in path_roots. Must be 'project' or 'non_code_project'.`,
             );
           }
           upsert.run(`bootstrap_path_root_${type}`, path);

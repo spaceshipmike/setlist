@@ -147,6 +147,60 @@ export class MemoryRetrieval {
     }
   }
 
+  /**
+   * spec 0.13 § S78: build the visibility filter for a project recall.
+   * Returns a SQL fragment (column-qualified via `alias`) and params array.
+   *
+   * Four-level hierarchy: project (own) → area (siblings in same area) →
+   * portfolio → global. A project with no area_id sees only its own
+   * project-scoped memories + portfolio + global (no area bubble-up).
+   */
+  private buildProjectVisibilityFilter(
+    db: Database.Database,
+    projectId: string,
+    alias: string = '',
+  ): { sql: string; params: unknown[] } {
+    const col = alias ? `${alias}.` : '';
+    const params: unknown[] = [projectId];
+
+    // Look up this project's area_id. project_id in memories is the project
+    // NAME (TEXT), so we match on name to find the area.
+    const row = db.prepare('SELECT area_id FROM projects WHERE name = ?').get(projectId) as { area_id: number | null } | undefined;
+    const areaId = row?.area_id ?? null;
+
+    if (areaId == null) {
+      // Unassigned: project + portfolio + global only. No area bubble-up.
+      return {
+        sql: `(${col}project_id = ? OR ${col}scope IN ('portfolio', 'global'))`,
+        params,
+      };
+    }
+
+    // Find sibling project names (same area, excluding self) to scope area memories.
+    const siblingRows = db.prepare(
+      'SELECT name FROM projects WHERE area_id = ? AND name != ?'
+    ).all(areaId, projectId) as { name: string }[];
+    const siblings = siblingRows.map(r => r.name);
+
+    if (siblings.length === 0) {
+      // Only project in its area — no siblings to bubble up from. The project
+      // still sees its own area-scoped memories via the project_id match below.
+      return {
+        sql: `(${col}project_id = ? OR ${col}scope IN ('portfolio', 'global'))`,
+        params,
+      };
+    }
+
+    // Sibling bubble-up: include memories where scope='area' AND project_id is
+    // any sibling in the same area. Own area-scoped memories ride along via
+    // project_id = ? on the main branch.
+    const placeholders = siblings.map(() => '?').join(', ');
+    return {
+      sql: `(${col}project_id = ? OR (${col}scope = 'area' AND ${col}project_id IN (${placeholders})) OR ${col}scope IN ('portfolio', 'global'))`,
+      params: [...params, ...siblings],
+    };
+  }
+
   private bootstrapRecall(db: Database.Database, projectId: string | null | undefined): RecallResult[] {
     // Bootstrap: return pinned memories first, then highest-scored active memories
     // Filter out superseded procedural memories (is_current = false)
@@ -157,8 +211,9 @@ export class MemoryRetrieval {
     const params: unknown[] = [];
 
     if (projectId) {
-      sql += ` AND (project_id = ? OR scope IN ('portfolio', 'global'))`;
-      params.push(projectId);
+      const { sql: vis, params: visParams } = this.buildProjectVisibilityFilter(db, projectId);
+      sql += ` AND ${vis}`;
+      params.push(...visParams);
     } else {
       // No project filter — return all scopes
     }
@@ -188,6 +243,7 @@ export class MemoryRetrieval {
       const params: unknown[] = [];
 
       if (projectId) {
+        const { sql: vis, params: visParams } = this.buildProjectVisibilityFilter(db, projectId, 'm');
         sql = `
           SELECT m.*, fts.rank
           FROM memory_fts fts
@@ -195,11 +251,11 @@ export class MemoryRetrieval {
           WHERE memory_fts MATCH ?
             AND m.status = 'active'
             AND (m.type != 'procedural' OR m.is_current = 1)
-            AND (m.project_id = ? OR m.scope IN ('portfolio', 'global'))
+            AND ${vis}
           ORDER BY fts.rank
           LIMIT 50
         `;
-        params.push(ftsQuery, projectId);
+        params.push(ftsQuery, ...visParams);
       } else {
         sql = `
           SELECT m.*, fts.rank
@@ -233,8 +289,9 @@ export class MemoryRetrieval {
     const params: unknown[] = [likeQ, likeQ];
 
     if (projectId) {
-      sql += ` AND (project_id = ? OR scope IN ('portfolio', 'global'))`;
-      params.push(projectId);
+      const { sql: vis, params: visParams } = this.buildProjectVisibilityFilter(db, projectId);
+      sql += ` AND ${vis}`;
+      params.push(...visParams);
     }
 
     sql += ' ORDER BY importance DESC LIMIT 50';

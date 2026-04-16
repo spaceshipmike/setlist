@@ -32,9 +32,10 @@ describe('Edge Cases — Project Identity', () => {
     expect(registry.getRegistryStats().total).toBe(6);
   });
 
-  it('area_of_focus rejects complete and archived', () => {
-    expect(() => registry.register({ name: 'a', type: 'area_of_focus', status: 'complete' })).toThrow();
-    expect(() => registry.register({ name: 'b', type: 'area_of_focus', status: 'archived' })).toThrow();
+  // spec 0.13: area_of_focus type retired — legacy test now asserts rejection.
+  it('area_of_focus type is rejected (spec 0.13 retired the type)', () => {
+    expect(() => registry.register({ name: 'a', type: 'area_of_focus' as unknown as 'project', status: 'active' }))
+      .toThrow(/area_of_focus/);
   });
 
   it('empty description and goals are valid', () => {

@@ -93,7 +93,7 @@ describe('Migration (S07)', () => {
     expect(proposals.length).toBe(1);
     expect(proposals[0].source).toBe('brief');
     expect(proposals[0].description).toContain('kitchen renovation');
-    expect(proposals[0].project_type).toBe('area_of_focus');
+    expect(proposals[0].project_type).toBe('project');
   });
 
   it('creates sparse entries for directory-only projects', () => {

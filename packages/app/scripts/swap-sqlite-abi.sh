@@ -71,3 +71,16 @@ else
   cp "$cache" "$BINARY_PATH"
   echo "[swap] restored $TARGET binary from cache"
 fi
+
+# Always re-sign after a swap or build. @electron/rebuild and npm rebuild both
+# produce LINKER-signed ad-hoc signatures (flags=0x20002) that macOS's hardened
+# runtime refuses to dlopen — manifesting as ERR_IPC_CHANNEL_CLOSED inside
+# vitest workers or exit 137 from `node -e`. A fresh ad-hoc sign (flags=0x2)
+# via codesign fixes both ABIs. Idempotent: safe to re-run on an already-signed
+# binary. Cached binaries are also re-signed because cache copy discards the
+# extended attributes that carry the signature on APFS.
+codesign --force -s - "$BINARY_PATH" 2>&1 | /usr/bin/grep -v "replacing existing signature" || true
+if [[ -f "$ELECTRON_CACHE" && "$TARGET" == "electron" ]]; then
+  codesign --force -s - "$ELECTRON_CACHE" 2>&1 | /usr/bin/grep -v "replacing existing signature" || true
+fi
+echo "[swap] re-signed $BINARY_PATH (hardened-runtime compatible)"

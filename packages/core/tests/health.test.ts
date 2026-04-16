@@ -128,10 +128,12 @@ describe('HealthAssessor', () => {
   });
 
   it('S67: non-code project not penalized for missing tech_stack', () => {
+    // spec 0.13: non-code work is a project with no tech_stack and area='Personal'.
     registry.register({
-      name: 'areax', type: 'area_of_focus', status: 'active',
+      name: 'areax', type: 'project', status: 'active',
       description: 'd', goals: 'g',
       paths: [join(tmpDir, 'areas/areax')],
+      area: 'Personal',
     });
     registry.enrichProject('areax', { topics: ['a'], entities: ['b'] });
     const r = health.assessProject('areax', { noCache: true });

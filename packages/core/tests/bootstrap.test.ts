@@ -192,35 +192,38 @@ describe('Bootstrap', () => {
     });
   });
 
-  // ── S41: Bootstrap an Area of Focus ──────────────────────────────
+  // ── S41: Bootstrap a Non-Code Project (spec 0.13: retired area_of_focus type)
 
-  describe('bootstrapProject - area of focus (S41)', () => {
+  describe('bootstrapProject - non-code project (S41, spec 0.13)', () => {
     beforeEach(() => {
       bootstrap.configureBootstrap({
-        path_roots: { project: codeRoot, area_of_focus: areaRoot },
+        path_roots: { project: codeRoot, non_code_project: areaRoot },
         template_dir: templateDir,
       });
     });
 
-    it('creates folder at area path root with templates, no git', () => {
+    it('creates folder at non_code path root, no git, registers as project', () => {
       const result = bootstrap.bootstrapProject({
-        name: 'health',
-        type: 'area_of_focus',
+        name: 'health-tracking',
+        type: 'non_code_project',
       });
 
-      expect(result.path).toBe(join(areaRoot, 'health'));
+      expect(result.path).toBe(join(areaRoot, 'health-tracking'));
       expect(result.git_initialized).toBe(false);
-      expect(result.templates_applied).toBe(true);
 
-      // Folder exists with area templates
-      expect(existsSync(join(areaRoot, 'health', 'notes.md'))).toBe(true);
       // No git
-      expect(existsSync(join(areaRoot, 'health', '.git'))).toBe(false);
+      expect(existsSync(join(areaRoot, 'health-tracking', '.git'))).toBe(false);
 
-      // Registered as area_of_focus
-      const project = registry.getProject('health', 'full');
+      // spec 0.13: registered as db type='project'; area is a separate assignment
+      const project = registry.getProject('health-tracking', 'full');
       expect(project).not.toBeNull();
-      expect(project!.type).toBe('area_of_focus');
+      expect(project!.type).toBe('project');
+      expect(project!.area).toBeNull();
+
+      // Producer can attach an area via set_project_area after bootstrap
+      registry.setProjectArea('health-tracking', 'Health');
+      const reloaded = registry.getProject('health-tracking', 'full')!;
+      expect(reloaded.area).toBe('Health');
     });
   });
 

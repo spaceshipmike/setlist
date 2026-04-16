@@ -242,8 +242,8 @@ CREATE VIRTUAL TABLE IF NOT EXISTS memory_fts USING fts5(
 CREATE INDEX IF NOT EXISTS idx_projects_type ON projects(type);
 CREATE INDEX IF NOT EXISTS idx_projects_status ON projects(status);
 CREATE INDEX IF NOT EXISTS idx_projects_type_status ON projects(type, status);
-CREATE INDEX IF NOT EXISTS idx_projects_area_id ON projects(area_id);
-CREATE INDEX IF NOT EXISTS idx_projects_parent_project_id ON projects(parent_project_id);
+-- v11 area_id + parent_project_id indexes are created after ensureColumns runs
+-- in case the projects table was created by an older schema (no area columns).
 CREATE INDEX IF NOT EXISTS idx_project_fields_project_id ON project_fields(project_id);
 CREATE INDEX IF NOT EXISTS idx_project_fields_field_name ON project_fields(field_name);
 CREATE INDEX IF NOT EXISTS idx_project_paths_project_id ON project_paths(project_id);
@@ -404,6 +404,10 @@ function ensureColumns(db: Database.Database): void {
   if (!projColNames.has('parent_project_id')) {
     db.exec(`ALTER TABLE projects ADD COLUMN parent_project_id INTEGER REFERENCES projects(id) ON DELETE SET NULL`);
   }
+  // Indexes that depend on v11 columns must be created after the columns exist
+  // (SCHEMA_SQL can't assume the columns are present when upgrading from v0).
+  db.exec(`CREATE INDEX IF NOT EXISTS idx_projects_area_id ON projects(area_id)`);
+  db.exec(`CREATE INDEX IF NOT EXISTS idx_projects_parent_project_id ON projects(parent_project_id)`);
 }
 
 function upgradeSchema(db: Database.Database): void {
@@ -813,16 +817,12 @@ export function initDb(dbPath?: string): string {
 
 /**
  * Get the template fields for a project type.
+ * spec 0.13: only 'project' exists; template defaults to code_project. The
+ * legacy 'area_of_focus' template row is retained in seed data for migration
+ * diff purposes but is never selected at runtime.
  */
-export function getTemplateFields(db: Database.Database, projectType: string): Set<string> {
-  // Map project type to template name
-  let templateName: string;
-  if (projectType === 'area_of_focus') {
-    templateName = 'area_of_focus';
-  } else {
-    // Default to code_project; could be determined by field presence
-    templateName = 'code_project';
-  }
+export function getTemplateFields(db: Database.Database, _projectType: string): Set<string> {
+  const templateName = 'code_project';
 
   const rows = db.prepare(`
     SELECT tf.field_name

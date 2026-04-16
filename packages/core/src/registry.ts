@@ -3,7 +3,9 @@ import { initDb, connect, getDbPath, getTemplateFields } from './db.js';
 import {
   type ProjectRecord, type ProjectType, type ProjectStatus, type QueryDepth,
   type CapabilityDeclaration, type PortClaim,
+  type AreaName,
   validateStatus, toSummary, toStandard, toFull,
+  AREA_NAME_SET, AREA_NAMES, UNASSIGNED_AREA_SENTINEL,
 } from './models.js';
 import { DuplicateProjectError, NotFoundError, InvalidInputError, findClosestMatch } from './errors.js';
 import { writeFields, deserializeFieldValue } from './fields.js';
@@ -33,7 +35,7 @@ export class Registry {
 
   register(opts: {
     name: string;
-    type: ProjectType;
+    type?: ProjectType;
     status: string;
     description?: string;
     goals?: string;
@@ -41,8 +43,19 @@ export class Registry {
     paths?: string[];
     fields?: Record<string, unknown>;
     producer?: string;
+    // spec 0.13: optional structural area + parent
+    area?: AreaName | string | null;
+    parent_project?: string | null;
   }): number {
-    validateStatus(opts.type, opts.status);
+    // spec 0.13: type is narrowed to 'project' — callers may still pass it but
+    // legacy 'area_of_focus' is rejected at the DB CHECK and surfaced here.
+    const type: ProjectType = 'project';
+    if (opts.type && opts.type !== 'project') {
+      throw new InvalidInputError(
+        `Unknown project type: ${opts.type}. Must be 'project' (spec 0.13 retired 'area_of_focus' — use area assignment instead).`
+      );
+    }
+    validateStatus(type, opts.status);
     const displayName = opts.display_name || opts.name;
     const producer = opts.producer ?? 'system';
 
@@ -51,9 +64,31 @@ export class Registry {
       const existing = db.prepare('SELECT id FROM projects WHERE name = ?').get(opts.name);
       if (existing) throw new DuplicateProjectError(opts.name);
 
+      // Resolve area_id if provided
+      let areaIdForInsert: number | null = null;
+      if (opts.area != null) {
+        areaIdForInsert = this.resolveAreaIdOrThrow(db, opts.area);
+      }
+
+      // Resolve parent_project_id if provided
+      let parentIdForInsert: number | null = null;
+      if (opts.parent_project != null) {
+        if (opts.parent_project === opts.name) {
+          throw new InvalidInputError(
+            `Cannot set parent: ${opts.name} is a descendant of ${opts.name}. Moving it would create a cycle.`
+          );
+        }
+        const prow = db.prepare('SELECT id FROM projects WHERE name = ?').get(opts.parent_project) as { id: number } | undefined;
+        if (!prow) {
+          const allNames = db.prepare('SELECT name FROM projects').all() as { name: string }[];
+          throw new NotFoundError(opts.parent_project, findClosestMatch(opts.parent_project, allNames.map(r => r.name)));
+        }
+        parentIdForInsert = prow.id;
+      }
+
       const result = db.prepare(
-        `INSERT INTO projects (name, display_name, type, status, description, goals) VALUES (?, ?, ?, ?, ?, ?)`
-      ).run(opts.name, displayName, opts.type, opts.status, opts.description ?? '', opts.goals ?? '');
+        `INSERT INTO projects (name, display_name, type, status, description, goals, area_id, parent_project_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+      ).run(opts.name, displayName, type, opts.status, opts.description ?? '', opts.goals ?? '', areaIdForInsert, parentIdForInsert);
 
       const projectId = Number(result.lastInsertRowid);
 
@@ -111,27 +146,38 @@ export class Registry {
     depth?: QueryDepth;
     type_filter?: string;
     status_filter?: string;
+    area_filter?: string;
   }): Record<string, unknown>[] {
     const depth = opts?.depth ?? 'summary';
     const db = this.open();
     try {
-      let sql = 'SELECT * FROM projects';
+      let sql = 'SELECT p.* FROM projects p';
       const conditions: string[] = [];
       const params: unknown[] = [];
 
       if (opts?.type_filter) {
-        conditions.push('type = ?');
+        // spec 0.13: only 'project' exists; legacy 'area_of_focus' filter yields 0 rows.
+        conditions.push('p.type = ?');
         params.push(opts.type_filter);
       }
       if (opts?.status_filter) {
-        conditions.push('status = ?');
+        conditions.push('p.status = ?');
         params.push(opts.status_filter);
+      }
+      if (opts?.area_filter) {
+        if (opts.area_filter === UNASSIGNED_AREA_SENTINEL) {
+          conditions.push('p.area_id IS NULL');
+        } else {
+          const areaId = this.resolveAreaIdOrThrow(db, opts.area_filter);
+          conditions.push('p.area_id = ?');
+          params.push(areaId);
+        }
       }
 
       if (conditions.length > 0) {
         sql += ' WHERE ' + conditions.join(' AND ');
       }
-      sql += ' ORDER BY name';
+      sql += ' ORDER BY p.name';
 
       const rows = db.prepare(sql).all(...params) as Record<string, unknown>[];
       return rows.map(row => {
@@ -147,6 +193,7 @@ export class Registry {
     query: string;
     type_filter?: string;
     status_filter?: string;
+    area_filter?: string;
   }): Record<string, unknown>[] {
     const db = this.open();
     try {
@@ -170,6 +217,15 @@ export class Registry {
         sql += ' AND p.status = ?';
         params.push(opts.status_filter);
       }
+      if (opts.area_filter) {
+        if (opts.area_filter === UNASSIGNED_AREA_SENTINEL) {
+          sql += ' AND p.area_id IS NULL';
+        } else {
+          const areaId = this.resolveAreaIdOrThrow(db, opts.area_filter);
+          sql += ' AND p.area_id = ?';
+          params.push(areaId);
+        }
+      }
       sql += ' ORDER BY p.name';
 
       const rows = db.prepare(sql).all(...params) as Record<string, unknown>[];
@@ -182,7 +238,13 @@ export class Registry {
     }
   }
 
-  getRegistryStats(): { total: number; by_type: Record<string, number>; by_status: Record<string, number> } {
+  getRegistryStats(): {
+    total: number;
+    by_type: Record<string, number>;
+    by_status: Record<string, number>;
+    by_area: Record<string, number>;
+    unassigned: number;
+  } {
     const db = this.open();
     try {
       const total = (db.prepare('SELECT COUNT(*) as count FROM projects').get() as { count: number }).count;
@@ -195,7 +257,20 @@ export class Registry {
       const by_status: Record<string, number> = {};
       for (const r of statusRows) by_status[r.status] = r.count;
 
-      return { total, by_type, by_status };
+      // spec 0.13: per-area distribution + unassigned count
+      const by_area: Record<string, number> = {};
+      for (const name of AREA_NAMES) by_area[name] = 0;
+      const areaRows = db.prepare(`
+        SELECT a.name as name, COUNT(p.id) as count
+        FROM areas a LEFT JOIN projects p ON p.area_id = a.id
+        GROUP BY a.id, a.name
+      `).all() as { name: string; count: number }[];
+      for (const r of areaRows) {
+        if (AREA_NAME_SET.has(r.name)) by_area[r.name] = r.count;
+      }
+      const unassigned = (db.prepare('SELECT COUNT(*) as c FROM projects WHERE area_id IS NULL').get() as { c: number }).c;
+
+      return { total, by_type, by_status, by_area, unassigned };
     } finally {
       db.close();
     }
@@ -230,6 +305,9 @@ export class Registry {
     description?: string;
     goals?: string;
     display_name?: string;
+    // spec 0.13: structural area + parent on update. Use null to clear.
+    area?: AreaName | string | null;
+    parent_project?: string | null;
   }): void {
     const db = this.open();
     try {
@@ -251,12 +329,130 @@ export class Registry {
       if (updates.description !== undefined) { sets.push('description = ?'); params.push(updates.description); }
       if (updates.goals !== undefined) { sets.push('goals = ?'); params.push(updates.goals); }
 
-      if (sets.length === 0) return;
+      // area/parent handled below via dedicated setters so we get validation + cycle check
+      const touchedCore = sets.length > 0;
+      if (touchedCore) {
+        sets.push("updated_at = datetime('now')");
+        params.push(row.id);
+        db.prepare(`UPDATE projects SET ${sets.join(', ')} WHERE id = ?`).run(...params);
+      }
+    } finally {
+      db.close();
+    }
 
-      sets.push("updated_at = datetime('now')");
-      params.push(row.id);
+    // Delegate area/parent updates to the dedicated setters so validation and
+    // cycle-prevention logic live in one place.
+    if (updates.area !== undefined) {
+      this.setProjectArea(name, updates.area);
+    }
+    if (updates.parent_project !== undefined) {
+      this.setParentProject(name, updates.parent_project);
+    }
+  }
 
-      db.prepare(`UPDATE projects SET ${sets.join(', ')} WHERE id = ?`).run(...params);
+  // ── Area / Parent structural operations (spec 0.13) ──────────
+
+  /** Resolve an area name (case-sensitive) to an area_id, throwing InvalidInputError if unknown. */
+  private resolveAreaIdOrThrow(db: Database.Database, areaName: string): number {
+    if (!AREA_NAME_SET.has(areaName)) {
+      throw new InvalidInputError(
+        `Invalid area '${areaName}'. Valid canonical areas: ${AREA_NAMES.join(', ')}.`
+      );
+    }
+    const row = db.prepare('SELECT id FROM areas WHERE name = ?').get(areaName) as { id: number } | undefined;
+    if (!row) {
+      // Should not happen — canonical areas are seeded at initDb.
+      throw new InvalidInputError(
+        `Area '${areaName}' is canonical but missing from seed table. Run initDb.`
+      );
+    }
+    return row.id;
+  }
+
+  /** S74: Assign or clear a project's area. Null clears to Unassigned. */
+  setProjectArea(name: string, area: AreaName | string | null): Record<string, unknown> {
+    const db = this.open();
+    try {
+      const row = db.prepare('SELECT id FROM projects WHERE name = ?').get(name) as { id: number } | undefined;
+      if (!row) {
+        const allNames = db.prepare('SELECT name FROM projects').all() as { name: string }[];
+        throw new NotFoundError(name, findClosestMatch(name, allNames.map(r => r.name)));
+      }
+
+      let areaId: number | null = null;
+      if (area != null) areaId = this.resolveAreaIdOrThrow(db, area);
+
+      db.prepare(
+        "UPDATE projects SET area_id = ?, updated_at = datetime('now') WHERE id = ?"
+      ).run(areaId, row.id);
+
+      const record = this.loadRecord(db, { projectId: row.id })!;
+      return this.formatRecord(db, record, 'standard');
+    } finally {
+      db.close();
+    }
+  }
+
+  /**
+   * S75/S76: Set or clear a project's parent. Rejects self-parenting and
+   * cycles by walking the ancestor chain of the proposed parent upward.
+   * Error message format: "Cannot set parent: {child-name} is a descendant of {proposed-parent-name}. Moving it would create a cycle."
+   */
+  setParentProject(childName: string, parentName: string | null): Record<string, unknown> {
+    const db = this.open();
+    try {
+      const child = db.prepare('SELECT id FROM projects WHERE name = ?').get(childName) as { id: number } | undefined;
+      if (!child) {
+        const allNames = db.prepare('SELECT name FROM projects').all() as { name: string }[];
+        throw new NotFoundError(childName, findClosestMatch(childName, allNames.map(r => r.name)));
+      }
+
+      if (parentName === null) {
+        db.prepare("UPDATE projects SET parent_project_id = NULL, updated_at = datetime('now') WHERE id = ?").run(child.id);
+        const record = this.loadRecord(db, { projectId: child.id })!;
+        return this.formatRecord(db, record, 'standard');
+      }
+
+      // Self-parent check
+      if (parentName === childName) {
+        throw new InvalidInputError(
+          `Cannot set parent: ${childName} is a descendant of ${parentName}. Moving it would create a cycle.`
+        );
+      }
+
+      const parent = db.prepare('SELECT id FROM projects WHERE name = ?').get(parentName) as { id: number } | undefined;
+      if (!parent) {
+        const allNames = db.prepare('SELECT name FROM projects').all() as { name: string }[];
+        throw new NotFoundError(parentName, findClosestMatch(parentName, allNames.map(r => r.name)));
+      }
+
+      // Cycle walker: walk from proposed parent upward through ancestors. If we
+      // ever hit the child, the proposed move would create a cycle.
+      // Bounded by total project count to terminate on any pathological loop.
+      const maxHops = (db.prepare('SELECT COUNT(*) as c FROM projects').get() as { c: number }).c + 1;
+      let cursor: number | null = parent.id;
+      let hops = 0;
+      while (cursor != null) {
+        if (hops++ > maxHops) {
+          throw new InvalidInputError(
+            `Cannot set parent: ${childName} is a descendant of ${parentName}. Moving it would create a cycle.`
+          );
+        }
+        if (cursor === child.id) {
+          throw new InvalidInputError(
+            `Cannot set parent: ${childName} is a descendant of ${parentName}. Moving it would create a cycle.`
+          );
+        }
+        const next = db.prepare('SELECT parent_project_id FROM projects WHERE id = ?').get(cursor) as { parent_project_id: number | null } | undefined;
+        cursor = next?.parent_project_id ?? null;
+      }
+
+      db.prepare(
+        "UPDATE projects SET parent_project_id = ?, updated_at = datetime('now') WHERE id = ?"
+      ).run(parent.id, child.id);
+
+      const record = this.loadRecord(db, { projectId: child.id })!;
+      return this.formatRecord(db, record, 'standard');
     } finally {
       db.close();
     }
@@ -803,6 +999,31 @@ export class Registry {
   private rowToRecord(db: Database.Database, row: Record<string, unknown>): ProjectRecord {
     const id = row.id as number;
 
+    // Load structural area + parent/children (spec 0.13)
+    const areaId = (row.area_id as number | null) ?? null;
+    const parentId = (row.parent_project_id as number | null) ?? null;
+
+    let areaName: AreaName | null = null;
+    if (areaId != null) {
+      const arow = db.prepare('SELECT name FROM areas WHERE id = ?').get(areaId) as { name: string } | undefined;
+      if (arow && AREA_NAME_SET.has(arow.name)) areaName = arow.name as AreaName;
+    }
+
+    let parentName: string | null = null;
+    let parentArchived = false;
+    if (parentId != null) {
+      const prow = db.prepare('SELECT name, status FROM projects WHERE id = ?').get(parentId) as { name: string; status: string } | undefined;
+      if (prow) {
+        parentName = prow.name;
+        parentArchived = prow.status === 'archived';
+      }
+    }
+
+    const childRows = db.prepare(
+      'SELECT name FROM projects WHERE parent_project_id = ? ORDER BY name'
+    ).all(id) as { name: string }[];
+    const children = childRows.map(r => r.name);
+
     // Load paths
     const pathRows = db.prepare('SELECT path FROM project_paths WHERE project_id = ? ORDER BY path').all(id) as { path: string }[];
     const paths = pathRows.map(r => r.path);
@@ -846,6 +1067,12 @@ export class Registry {
       extended_fields,
       field_producers,
       capabilities,
+      area: areaName,
+      area_id: areaId,
+      parent_project: parentName,
+      parent_project_id: parentId,
+      parent_archived: parentArchived,
+      children,
       created_at: row.created_at as string,
       updated_at: row.updated_at as string,
     };
@@ -854,7 +1081,14 @@ export class Registry {
   private formatRecord(db: Database.Database, record: ProjectRecord, depth: QueryDepth): Record<string, unknown> {
     switch (depth) {
       case 'minimal':
-        return { name: record.name, type: record.type, status: record.status };
+        return {
+          name: record.name,
+          type: record.type,
+          status: record.status,
+          area: record.area,
+          parent_project: record.parent_project,
+          children: record.children,
+        };
       case 'summary':
         return toSummary(record);
       case 'standard': {

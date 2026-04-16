@@ -9,7 +9,7 @@ const SKIP_DIRS = new Set(['.DS_Store', '.git', '__pycache__', 'node_modules', '
 
 export interface MigrationProposal {
   name: string;
-  project_type: 'project' | 'area_of_focus';
+  project_type: 'project';
   status: string;
   description: string;
   goals: string;
@@ -204,7 +204,7 @@ function extractNonCodeProject(projectDir: string): MigrationProposal {
   if (existsSync(thinkingSpec)) {
     const proposal = extractFromFctrySpec(thinkingSpec, projectDir);
     if (proposal) {
-      proposal.project_type = 'area_of_focus';
+      proposal.project_type = 'project';
       return proposal;
     }
   }
@@ -214,7 +214,7 @@ function extractNonCodeProject(projectDir: string): MigrationProposal {
   if (existsSync(briefPath)) {
     const proposal = extractFromBrief(briefPath, projectDir);
     if (proposal) {
-      proposal.project_type = 'area_of_focus';
+      proposal.project_type = 'project';
       return proposal;
     }
   }
@@ -223,7 +223,7 @@ function extractNonCodeProject(projectDir: string): MigrationProposal {
   const dirName = basename(projectDir);
   return {
     name: dirName,
-    project_type: 'area_of_focus',
+    project_type: 'project',
     status: 'active',
     description: '',
     goals: '',

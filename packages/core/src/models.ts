@@ -3,22 +3,31 @@ export const PROJECT_STATUSES = new Set([
   'idea', 'draft', 'active', 'paused', 'archived', 'complete',
 ] as const);
 
-export const AREA_STATUSES = new Set([
-  'active', 'paused',
-] as const);
-
+// spec 0.13: area_of_focus retired as a type; area is now a structural attribute
+// (projects.area_id). area_of_focus is still accepted by validateStatus only as a
+// legacy alias that maps to PROJECT_STATUSES, so historical callers fail loudly
+// elsewhere (register narrows to 'project') but don't explode on status validation.
 export const STATUS_BY_TYPE: Record<string, Set<string>> = {
   project: PROJECT_STATUSES as Set<string>,
-  area_of_focus: AREA_STATUSES as Set<string>,
 };
 
-export type ProjectType = 'project' | 'area_of_focus';
+export type ProjectType = 'project';
 export type ProjectStatus = 'idea' | 'draft' | 'active' | 'paused' | 'archived' | 'complete';
 export type QueryDepth = 'minimal' | 'summary' | 'standard' | 'full';
 
+// spec 0.13: canonical seven areas. Must match db.ts CANONICAL_AREAS.
+export const AREA_NAMES = [
+  'Work', 'Family', 'Home', 'Health', 'Finance', 'Personal', 'Infrastructure',
+] as const;
+export type AreaName = (typeof AREA_NAMES)[number];
+export const AREA_NAME_SET: Set<string> = new Set(AREA_NAMES);
+
+/** Sentinel accepted by list/search filters to match area_id IS NULL. */
+export const UNASSIGNED_AREA_SENTINEL = '__unassigned__';
+
 export type MemoryType = 'decision' | 'outcome' | 'pattern' | 'preference' | 'dependency' | 'correction' | 'learning' | 'context' | 'procedural' | 'observation';
 export type MemoryBelief = 'fact' | 'opinion' | 'hypothesis';
-export type MemoryScope = 'project' | 'area_of_focus' | 'portfolio' | 'global';
+export type MemoryScope = 'project' | 'area' | 'portfolio' | 'global';
 export type MemoryStatus = 'active' | 'consolidating' | 'archived' | 'superseded';
 export type MemoryEdgeType = 'updates' | 'extends' | 'derives' | 'contradicts' | 'caused_by' | 'related_to';
 export type MemoryChangeType = 'created' | 'updated' | 'corrected' | 'archived' | 'superseded';
@@ -32,7 +41,7 @@ export const MEMORY_TYPES = new Set<MemoryType>([
 export const MEMORY_BELIEFS = new Set<MemoryBelief>(['fact', 'opinion', 'hypothesis']);
 
 export const MEMORY_SCOPES = new Set<MemoryScope>([
-  'project', 'area_of_focus', 'portfolio', 'global',
+  'project', 'area', 'portfolio', 'global',
 ]);
 
 export interface CapabilityDeclaration {
@@ -61,6 +70,13 @@ export interface ProjectRecord {
   extended_fields: Record<string, string>;
   field_producers: Record<string, string>;
   capabilities: CapabilityDeclaration[];
+  // spec 0.13: structural area + parent/children
+  area: AreaName | null;
+  area_id: number | null;
+  parent_project: string | null;
+  parent_project_id: number | null;
+  parent_archived: boolean;
+  children: string[];
   created_at: string;
   updated_at: string;
 }
@@ -166,7 +182,7 @@ export interface Task {
 export function validateStatus(projectType: string, status: string): void {
   const allowed = STATUS_BY_TYPE[projectType];
   if (!allowed) {
-    throw new Error(`Unknown project type: ${projectType}. Must be 'project' or 'area_of_focus'.`);
+    throw new Error(`Unknown project type: ${projectType}. Must be 'project'.`);
   }
   if (!allowed.has(status)) {
     throw new Error(
@@ -175,7 +191,11 @@ export function validateStatus(projectType: string, status: string): void {
   }
 }
 
-/** Format a ProjectRecord at summary depth — omits empty fields */
+/** Format a ProjectRecord at summary depth — omits empty fields.
+ * spec 0.13 § S80: area/parent_project/children are always present
+ * (null/null/[]) even at summary depth — callers rely on the keys
+ * being there so they can distinguish "unassigned" from "not loaded".
+ */
 export function toSummary(record: ProjectRecord): Record<string, unknown> {
   const result: Record<string, unknown> = {
     name: record.name,
@@ -183,8 +203,12 @@ export function toSummary(record: ProjectRecord): Record<string, unknown> {
     type: record.type,
     status: record.status,
     updated_at: record.updated_at,
+    area: record.area,
+    parent_project: record.parent_project,
+    children: record.children,
   };
   if (record.description) result.description = record.description;
+  if (record.parent_project && record.parent_archived) result.parent_archived = true;
   return result;
 }
 
@@ -229,7 +253,11 @@ export function toFull(record: ProjectRecord): Record<string, unknown> {
     display_name: record.display_name,
     type: record.type,
     status: record.status,
+    area: record.area,
+    parent_project: record.parent_project,
+    children: record.children,
   };
+  if (record.parent_project && record.parent_archived) result.parent_archived = true;
   if (record.description) result.description = record.description;
   if (record.goals) result.goals = parseJsonArray(record.goals);
   if (record.paths.length > 0) result.paths = record.paths;
