@@ -1,5 +1,34 @@
 # Setlist — Changelog
 
+## 2026-04-15T18:00:00Z — /fctry:evolve (canonical areas + sub-projects, schema v11)
+- Frontmatter: [modified] spec-version 0.12 → 0.13; synopsis short/medium/readme updated; tech-stack and goals augmented
+- `#registration` (2.2): [modified] Core identity fields 6 → 7 (adds `area`); optional `parent_project` declared as a structural edge; registerProject signature gains area + parentProject
+- `#querying` (2.3): [modified] Filter set gains `area` (literal, no descendant inheritance); `__unassigned__` sentinel introduced; type filter notes `project`-only
+- `#project-profile` (2.4): [modified] "Profile is not area" clarification — area is a structural column, written via set_project_area, not enrich_project
+- `#error-handling` (2.5.1): [modified] Table adds INVALID_AREA, PARENT_CYCLE (with exact message), and parent-not-found rows
+- `#project-bootstrap` (2.13): [modified] bootstrap_project accepts area + parent_project; area_of_focus bootstrap variant retired
+- `#desktop-app` (2.14): [modified] Home view replaced with grouped lanes (7 canonical areas + Unassigned), collapsible; Unassigned lane visually distinct with inline "Assign an area" nudge; sub-project treatment (24px indent + 1px connector, cross-area `↳ parent-name` caption); multi-select filter chips per area
+- `#entities` (3.2): [modified] Areas added as first-class entity with seeded 7-row `areas` table; sub-project relationships added as structural edge; core identity field count 6 → 7 (+ optional parent edge); Areas of focus entry rewritten as retired; templates reduced from 3 to 2
+- `#rules` (3.3): [modified] Project type narrowed to `project` (area_of_focus retired); area must be one of 7 canonical values or null (nullable forever); cycle prevention rule with exact error message; parent-is-project-not-area rule; archive-parent-does-not-cascade rule; four-level memory scope rule updated to include area-based inheritance (area scope flows to all projects sharing an area_id); MemoryScope enum retires `area_of_focus` and gains `area`
+- `#hard-constraints` (4.3): [modified] Schema evolution entry extended through v11; tool count 34 → 36 (adds set_project_area, set_parent_project)
+- `#schema` (5.2): [modified] Schema bumped 10 → 11; 19 tables (adds `areas`); projects.area_id and projects.parent_project_id DDL documented; full v10→v11 migration plan added (8 steps: seed areas, add columns, reclassify msq-advisory-board → Work and fam-estate-planning → Family, narrow type CHECK, migrate knowmarks↔knowmarks-ios entity soft-link to parent_project_id, remap memories.scope, retire area_of_focus template, bump schema_meta)
+- `#ts-decisions` (5.3): [modified] Project interface gains area/parentProjectId/children; new `AreaName` union type; `MemoryScope` retires `area_of_focus`, gains `area`
+- Appendix B Glossary: [added] Area, Schema v11, Sub-project, Canonical area set, retired `area_of_focus` disambiguation entries
+- Appendix D MCP Tool Reference: [modified] Header updated to 36 tools; `register_project`/`update_project`/`bootstrap_project` gain area + parent_project params; `list_projects`/`search_projects`/`cross_query`/`batch_update` gain area filter; `get_project` returns area + parent_project + children; `get_registry_stats` surfaces per-area distribution + unassigned count; `archive_project` clarifies no-cascade behavior; `rename_project` notes parent_project_id back-references are updated; `enrich_project` explicitly does NOT accept area; [added] `set_project_area` and `set_parent_project` rows
+- Straggler tool-count references across §5.1, §3.1, §3.4, §5.4, §7.x, Appendix B normalized from 32/34 → 36
+- Non-goals (out of scope for this evolve): todoist sync; renaming the `area_of_focus` identifier anywhere it's historically referenced (schema migration, memory scope) beyond the v11 retirement; removing the free-form `entities` profile field
+(2 added, 14 modified, 0 removed)
+
+## 2026-04-15T12:00:00Z — /fctry:review (v0.12 hygiene reconciliation)
+- `#enrichment` (2.5) / `#error-handling`: [structural] Demoted duplicate §2.5 "What Happens When Things Go Wrong" to §2.5.1 as a subsection of Field Enrichment; TOC updated; alias `#error-handling` preserved
+- `#anti-patterns` (4.4): [modified] Tool count reference 32 → 34
+- `#monorepo` (5.1): [modified] `server.ts` comment 32 → 34 tool definitions; renderer tree updated from `pages/` (Home, ProjectDetail) to `views/` (HomeView, ProjectDetailView, SettingsView) with new `hooks/` and `lib/` entries
+- `#appendix-d` (D): [modified] `assess_health` row adds `fresh?` parameter with cache-bypass note; `configure_bootstrap` row renames `type_path_roots` → `path_roots` and adds `archive_path_root?`
+- `#health-assessment` (2.15): [modified] "How often it's computed" paragraph mentions `fresh=true` cache-bypass escape hatch
+- Code: [modified] `packages/mcp/src/server.ts` exposes `archive_path_root` in `configure_bootstrap` schema and forwards it to `bootstrapManager.configureBootstrap` (was dropped between IPC handler and MCP surface)
+- Hygiene drift fix only — no behavior change, no spec version bump beyond 0.12 already set by OpenKL ref
+(0 added, 6 modified, 0 removed)
+
 ## 2026-04-15T00:00:00Z — /fctry:ref (OpenKL pattern study)
 - `#inspirations` (6.1): [modified] Added nowledge-co/OpenKL reference (knowmark 14312, Tier 2 pattern study, not adopted). Catalogs four patterns relevant to setlist's memory layer: memory vs grounding-store separation, first-class memory-distillation prompts, citations with retention classes / verify+open ops, and multi-surface hybrid search. Framed as open questions only — no scope expansion.
 - Frontmatter: [modified] spec-version 0.11 → 0.12, date 2026-04-15

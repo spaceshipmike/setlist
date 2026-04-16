@@ -3,7 +3,7 @@
 ```yaml
 ---
 title: Setlist
-spec-version: "0.12"
+spec-version: "0.13"
 date: 2026-04-15
 status: active
 author: Mike (via fctry interview, experience-ported from project-registry-service)
@@ -11,16 +11,16 @@ spec-format: nlspec-v2
 experience-source: project-registry-service/.fctry/spec.md (v1.3)
 ---
 synopsis:
-  short: "TypeScript project registry — intelligence hub with desktop control panel, 34 MCP tools, unified memory, and direct library import"
-  medium: "TypeScript monorepo (@setlist/core, @setlist/mcp, @setlist/cli, @setlist/app) implementing the project registry as both invisible infrastructure and a directly operable desktop surface. Local SQLite (better-sqlite3) + MCP server + Electron control panel sharing Chorus's design system (Tailwind 4, Radix UI). Provides project identity, capability declarations, unified portfolio memory (10 types with hierarchical compaction, progressive retrieval, knowledge distillation, and graph gap detection), project bootstrap, port allocation, batch operations, cross-project intelligence, and composite project health assessment (activity + completeness + outcomes). Schema v10, 34 MCP tools, importable as @setlist/core by Chorus and Ensemble."
-  readme: "Setlist is the TypeScript implementation of the Project Registry — both invisible infrastructure at the center of the user's personal ecosystem and a directly operable desktop control panel. As infrastructure, it provides structured, queryable identity for every project and area of focus, with programmatic administration, capability declarations, unified portfolio memory (10 types with belief classification, temporal validity, entity extraction, and procedural versioning), budget-controlled hybrid retrieval, port allocation, project bootstrap, batch operations, and cross-project intelligence via 34 MCP tools and direct library import. As a desktop application, it presents a card-grid dashboard of all projects with multiselect status filtering (archived hidden by default), tabbed project detail views (overview, memory, capabilities, ports), and full project CRUD — register, edit, archive, rename — through a native macOS Electron app sharing Chorus's design language (Tailwind CSS 4, Radix UI, terracotta accent, warm charcoal surfaces). The main process imports @setlist/core directly; no API layer sits between the UI and the registry. Distributed as four npm packages (@setlist/core, @setlist/mcp, @setlist/cli, @setlist/app), Setlist is directly consumable by Chorus, Ensemble, and any Node.js tool in the ecosystem, while also standing alone as a full-featured project management surface."
+  short: "TypeScript project registry — intelligence hub with desktop control panel, 36 MCP tools, canonical areas, sub-projects, unified memory"
+  medium: "TypeScript monorepo (@setlist/core, @setlist/mcp, @setlist/cli, @setlist/app) implementing the project registry as both invisible infrastructure and a directly operable desktop surface. Local SQLite (better-sqlite3) + MCP server + Electron control panel sharing Chorus's design system (Tailwind 4, Radix UI). Provides project identity, capability declarations, unified portfolio memory (10 types with hierarchical compaction, progressive retrieval, knowledge distillation, and graph gap detection), project bootstrap, port allocation, batch operations, cross-project intelligence, and composite project health assessment (activity + completeness + outcomes). Schema v11 (canonical areas table + projects.area_id + projects.parent_project_id; area_of_focus type retired), 36 MCP tools, importable as @setlist/core by Chorus and Ensemble."
+  readme: "Setlist is the TypeScript implementation of the Project Registry — both invisible infrastructure at the center of the user's personal ecosystem and a directly operable desktop control panel. As infrastructure, it provides structured, queryable identity for every project (organized under a closed set of seven canonical areas — Work, Family, Home, Health, Finance, Personal, Infrastructure — with optional parent-child sub-project relationships), with programmatic administration, capability declarations, unified portfolio memory (10 types with belief classification, temporal validity, entity extraction, and procedural versioning, scoped hierarchically so area-scoped memories flow to every project in that area), budget-controlled hybrid retrieval, port allocation, project bootstrap, batch operations, and cross-project intelligence via 36 MCP tools and direct library import. As a desktop application, it presents a card-grid dashboard of all projects with multiselect status filtering (archived hidden by default), tabbed project detail views (overview, memory, capabilities, ports), and full project CRUD — register, edit, archive, rename — through a native macOS Electron app sharing Chorus's design language (Tailwind CSS 4, Radix UI, terracotta accent, warm charcoal surfaces). The main process imports @setlist/core directly; no API layer sits between the UI and the registry. Distributed as four npm packages (@setlist/core, @setlist/mcp, @setlist/cli, @setlist/app), Setlist is directly consumable by Chorus, Ensemble, and any Node.js tool in the ecosystem, while also standing alone as a full-featured project management surface."
   tech-stack: [typescript, better-sqlite3, "@modelcontextprotocol/sdk", node, npm-monorepo, electron, react, tailwindcss-v4, radix-ui]
-  patterns: [atomized-fields, progressive-disclosure, producer-consumer, registration-not-discovery, invisible-infrastructure, operable-surface, config-file-scanning, hub-and-spoke, capability-declaration, definition-is-truth, fuzzy-match-suggestions, archive-triggered-cleanup, producer-attribution, summary-compactness, freshness-importance-scoring, invocation-metadata, retain-recall-reflect, outcome-aware-reinforcement, content-hash-dedup, embedding-provider-abstraction, budget-controlled-recall, four-level-scoping, hybrid-retrieval, belief-classification, temporal-validity, entity-extraction, procedural-versioning, unified-memory-store, template-driven-bootstrap, configure-then-use, shared-design-system, ipc-bridge, native-vector-search, hierarchical-compaction, progressive-retrieval, knowledge-distillation, graph-gap-detection, mcp-startup-validation, progress-notification, worst-tier-wins, on-demand-assessment, qualitative-tiers]
-  goals: [unified-project-identity, capability-discovery, programmatic-project-administration, batch-operations, cross-project-task-dispatch, conflict-free-port-allocation, automatic-port-discovery, async-task-execution, cross-project-intelligence, crash-resilient-worker, ranked-cross-project-results, capability-invocation-awareness, portfolio-memory, outcome-reinforcement, hybrid-retrieval, npm-packageable-distribution, canonical-memory-store, chorus-memory-unification, project-bootstrap-and-scaffolding, desktop-control-panel, project-dashboard, project-crud-ui, implicit-connection-surfacing, fast-first-pass-recall, synthesized-knowledge-from-memory-clusters, memory-graph-blind-spot-detection, project-health-assessment, composite-tier-surfacing, glanceable-portfolio-health]
+  patterns: [canonical-closed-set-areas, structural-parent-child, area-scoped-memory-inheritance, atomized-fields, progressive-disclosure, producer-consumer, registration-not-discovery, invisible-infrastructure, operable-surface, config-file-scanning, hub-and-spoke, capability-declaration, definition-is-truth, fuzzy-match-suggestions, archive-triggered-cleanup, producer-attribution, summary-compactness, freshness-importance-scoring, invocation-metadata, retain-recall-reflect, outcome-aware-reinforcement, content-hash-dedup, embedding-provider-abstraction, budget-controlled-recall, four-level-scoping, hybrid-retrieval, belief-classification, temporal-validity, entity-extraction, procedural-versioning, unified-memory-store, template-driven-bootstrap, configure-then-use, shared-design-system, ipc-bridge, native-vector-search, hierarchical-compaction, progressive-retrieval, knowledge-distillation, graph-gap-detection, mcp-startup-validation, progress-notification, worst-tier-wins, on-demand-assessment, qualitative-tiers]
+  goals: [canonical-area-organization, sub-project-hierarchy, unified-project-identity, capability-discovery, programmatic-project-administration, batch-operations, cross-project-task-dispatch, conflict-free-port-allocation, automatic-port-discovery, async-task-execution, cross-project-intelligence, crash-resilient-worker, ranked-cross-project-results, capability-invocation-awareness, portfolio-memory, outcome-reinforcement, hybrid-retrieval, npm-packageable-distribution, canonical-memory-store, chorus-memory-unification, project-bootstrap-and-scaffolding, desktop-control-panel, project-dashboard, project-crud-ui, implicit-connection-surfacing, fast-first-pass-recall, synthesized-knowledge-from-memory-clusters, memory-graph-blind-spot-detection, project-health-assessment, composite-tier-surfacing, glanceable-portfolio-health]
 plugin-version: 0.77.3
 ```
 
-Setlist is the TypeScript implementation of the Project Registry — the active intelligence hub at the center of the user's personal ecosystem. Originally a direct port of the Python project-registry-service, it has since evolved beyond parity: schema v10 (unified memory types, belief classification, temporal validity, entity extraction, procedural versioning), 34 MCP tools (the original 29 plus `enrich_project`, `rename_project`, `bootstrap_project`, `configure_bootstrap`, and `assess_health`), an expanded portfolio memory subsystem, a composite project health assessment, and a native desktop control panel for direct human interaction. The .db file is the shared contract — both implementations read and write the same database, though the Python implementation remains at schema v8.
+Setlist is the TypeScript implementation of the Project Registry — the active intelligence hub at the center of the user's personal ecosystem. Originally a direct port of the Python project-registry-service, it has since evolved beyond parity: schema v11 (canonical areas table, first-class `area_id` and `parent_project_id` columns on projects, `area_of_focus` type retired; builds on v10's unified memory types, belief classification, temporal validity, entity extraction, and procedural versioning), 36 MCP tools (the original 29 plus `enrich_project`, `rename_project`, `bootstrap_project`, `configure_bootstrap`, `assess_health`, `set_project_area`, and `set_parent_project`), an expanded portfolio memory subsystem with area-scoped inheritance, a composite project health assessment, and a native desktop control panel for direct human interaction. The .db file is the shared contract — both implementations read and write the same database, though the Python implementation remains at schema v8.
 
 The rewrite exists because Chorus (Electron + React) and Ensemble need the registry as a direct npm dependency, not a subprocess or MCP-only integration. @setlist/core provides the library API importable from any Node.js process. @setlist/mcp wraps it as an MCP server. @setlist/cli exposes it from the terminal. @setlist/app provides a desktop control panel — an Electron app that imports @setlist/core directly, giving the user a visual surface for project management alongside the programmatic interfaces. The 786 Python tests define the behavioral contract to port against.
 
@@ -37,8 +37,8 @@ The rewrite exists because Chorus (Electron + React) and Ensemble need the regis
    - 2.1 [First Run: Migration](#21-first-run-migration) `#first-run`
    - 2.2 [Registration](#22-registration) `#registration`
    - 2.3 [Querying: Progressive Disclosure](#23-querying-progressive-disclosure) `#querying`
-   - 2.4 [Field Enrichment](#24-field-enrichment) `#enrichment`
-   - 2.5 [What Happens When Things Go Wrong](#25-what-happens-when-things-go-wrong) `#error-handling`
+   - 2.5 [Field Enrichment](#25-field-enrichment) `#enrichment`
+     - 2.5.1 [What Happens When Things Go Wrong](#251-what-happens-when-things-go-wrong) `#error-handling`
    - 2.6 [The Details That Matter](#26-the-details-that-matter) `#details`
    - 2.7 [Task Queue](#27-task-queue) `#task-queue`
    - 2.8 [Async Execution](#28-async-execution) `#async-worker`
@@ -98,7 +98,7 @@ Setlist is a TypeScript monorepo providing the Project Registry as four npm pack
 
 - **@setlist/core** -- The library. All registry logic: project identity, field model, variable-depth querying, filtering, migration, port management, capability declarations, portfolio memory (retain/recall/reflect), task queue, cross-project queries, batch operations. Importable from any Node.js process. This is what Chorus, Ensemble, and the desktop app consume directly.
 
-- **@setlist/mcp** -- The MCP server. A thin translation layer wrapping @setlist/core as 34 MCP tools via @modelcontextprotocol/sdk, using stdio transport managed by Claude Code's lifecycle. The original 29 tools match the Python server identically; `enrich_project`, `bootstrap_project`, `configure_bootstrap`, `rename_project`, and `assess_health` are Setlist-specific additions.
+- **@setlist/mcp** -- The MCP server. A thin translation layer wrapping @setlist/core as 36 MCP tools via @modelcontextprotocol/sdk, using stdio transport managed by Claude Code's lifecycle. The original 29 tools match the Python server identically; `enrich_project`, `bootstrap_project`, `configure_bootstrap`, `rename_project`, `assess_health`, `set_project_area`, and `set_parent_project` are Setlist-specific additions.
 
 - **@setlist/cli** -- The CLI. Terminal commands for project management, migration, worker installation, and diagnostics. Entry point: `setlist`.
 
@@ -182,7 +182,9 @@ Registration is the act of creating or updating a project entry in the registry.
 
 **Creating a new project entry:**
 
-A producer provides the six core identity fields: name, display_name, type (project or area of focus), status, description, and goals. Display_name, description, and goals may be empty strings for sparse entries but are always present in the record. If display_name is not provided, it defaults to name. The producer also typically provides at least one filesystem path where the project lives. Extended fields (tech stack, patterns, stakeholders, timeline, domain) are provided if the producer has them.
+A producer provides the seven core identity fields: name, display_name, type (always `project` as of schema v11), status, description, goals, and area (one of the seven canonical areas, or null). Display_name, description, and goals may be empty strings for sparse entries but are always present in the record. Area is nullable forever — a project may be registered without one and assigned later. If display_name is not provided, it defaults to name. The producer also typically provides at least one filesystem path where the project lives. Extended fields (tech stack, patterns, stakeholders, timeline, domain) are provided if the producer has them.
+
+A project may also optionally declare a **parent project** at registration time, making it a sub-project of another registered project. This is a structural relationship, not a field — the parent link is stored as a first-class foreign key. Cycles are rejected at write time (see §3.3). A sub-project inherits nothing automatically from its parent: area, goals, and memory scope are independent. The parent link exists to express "this project belongs to that one" for navigation and visual grouping, not to propagate state.
 
 The registration completes and the project is immediately queryable. No manual step, no approval, no configuration. A subsequent query for the project by name returns all fields that were provided.
 
@@ -191,12 +193,12 @@ In TypeScript, the library call is:
 ```typescript
 import { Registry } from '@setlist/core';
 const registry = new Registry();
-registry.registerProject({ name, displayName, type, status, description, goals, paths });
+registry.registerProject({ name, displayName, type, status, description, goals, paths, area, parentProject });
 ```
 
 **Registration from fctry:**
 
-When a user runs `fctry:init` for a new code project, fctry's interview process produces structured identity: descriptions, tech stack, patterns, goals. fctry registers the project in the registry, writing core identity fields (name, display_name, type=project, status=active, description, goals) and code-specific extended fields (tech stack, patterns). The display_name is typically derived from the spec's title field.
+When a user runs `fctry:init` for a new code project, fctry's interview process produces structured identity: descriptions, tech stack, patterns, goals. fctry registers the project in the registry, writing core identity fields (name, display_name, type=project, status=active, description, goals, optional area, optional parent_project) and code-specific extended fields (tech stack, patterns). The display_name is typically derived from the spec's title field.
 
 **Registration from Chorus:**
 
@@ -224,7 +226,7 @@ Returns everything the registry knows about a project: every field from every pr
 
 **Filtering:**
 
-Consumers can filter queries by type (project vs. area of focus) and by status (active, paused, archived, etc.). Filtering combines with depth levels -- a consumer can request "summary of all active projects" and receive a compact, filtered result.
+Consumers can filter queries by type (`project` is the only value in schema v11; the filter is preserved for backwards compatibility), by status (active, paused, archived, etc.), and by **area** (one of the seven canonical area names, or the literal sentinel `__unassigned__` to match projects with no area). Area filtering is literal: requesting `area=Work` returns only projects whose `area_id` resolves to `Work`. There is no descendant inheritance — sub-projects are not included implicitly by virtue of their parent's area. Filtering combines with depth levels -- a consumer can request "summary of all active projects under Work" and receive a compact, filtered result.
 
 **Pull model:**
 
@@ -233,6 +235,8 @@ The registry does not push data to consumers. Consumers read on demand at their 
 ### 2.4 Structured Project Profile {#project-profile}
 
 Every project carries a **structured profile** — a machine-readable fingerprint that agents and tools use for association, routing, and discovery. The profile sits alongside the human-readable description and replaces the old comma-separated goals string.
+
+**Profile is not area.** The seven canonical areas (Work, Family, Home, Health, Finance, Personal, Infrastructure) are structural — they live in a dedicated `areas` seed table and attach to projects via a first-class `area_id` column, not as a profile field. Area governs grouping, filtering, and memory scope inheritance. Goals, topics, entities, and concerns remain profile fields that agents freely enrich. An agent never writes area through `enrich_project`; it uses the dedicated `set_project_area` tool.
 
 **Profile fields:**
 
@@ -270,7 +274,7 @@ Consider a code project initially registered by fctry with core identity and tec
 
 A project registered during migration with only a name, type, path, and status can later be enriched by any producer. The original fields are preserved and the new fields are added alongside them. The entry transitions from sparse to rich without re-registration.
 
-### 2.5 What Happens When Things Go Wrong {#error-handling}
+#### 2.5.1 What Happens When Things Go Wrong {#error-handling}
 
 | What Went Wrong | What the Consumer/Producer Sees | What It Can Do |
 |----------------|-------------------------------|----------------|
@@ -280,6 +284,9 @@ A project registered during migration with only a name, type, path, and status c
 | Producer writes a field not in the default catalog | The field is accepted and stored | Query at full depth to see the custom field |
 | Duplicate registration (same name or same path) | The system handles this gracefully -- either rejects with a clear reason or recognizes it as the same project | Existing data is never silently overwritten or duplicated |
 | Registered path no longer exists on disk | The orphaned path remains in the registry (does not self-heal) | Manual cleanup; future versions will detect orphaned data |
+| Assigning an area that is not one of the seven canonical values | A structured `Error [INVALID_AREA]` naming the rejected value and listing the seven accepted names (Work, Family, Home, Health, Finance, Personal, Infrastructure) | Retry with a canonical area name, or pass null to leave unassigned |
+| Setting a parent that would create a cycle (the proposed parent is a descendant of the child) | A structured `Error [PARENT_CYCLE]` with the exact message: "Cannot set parent: {child-name} is a descendant of {project-name}. Moving it would create a cycle." | Pick a different parent, or restructure the chain manually |
+| Setting a parent that does not exist | A structured `Error [NOT_FOUND]` with a did-you-mean suggestion | Retry with the suggested name |
 
 ### 2.6 The Details That Matter {#details}
 
@@ -640,13 +647,13 @@ The registry can create a new project end-to-end: registering its identity, crea
 
 **Before bootstrap works: configuration.**
 
-Bootstrap requires knowing where projects live on disk. An agent or user calls `configure_bootstrap` to map project types to default path roots, set the template directory, and set the archive path root. For example: `project → ~/Code`, `area_of_focus → ~/Areas`, templates at `~/Resources/System/Templates/`, archive at `~/Archive/`. This configuration is stored in the registry database and persists across sessions. The desktop app provides a Settings view for configuring these paths visually.
+Bootstrap requires knowing where projects live on disk. An agent or user calls `configure_bootstrap` to map project types to default path roots, set the template directory, and set the archive path root. As of schema v11 the only project type is `project`; the legacy `area_of_focus` type has been retired. For example: `project → ~/Code`, templates at `~/Resources/System/Templates/`, archive at `~/Archive/`. This configuration is stored in the registry database and persists across sessions. The desktop app provides a Settings view for configuring these paths visually.
 
 If an agent calls `bootstrap_project` before any bootstrap configuration exists, the call fails with a clear error: "Bootstrap is not configured. Call configure_bootstrap first to set path roots for your project types and a template directory." The error includes the exact next step — no silent fallbacks, no guessing at paths.
 
 **Bootstrapping a code project:**
 
-An agent or user calls `bootstrap_project` with a project name, type (`project`), and optionally a path override. The registry:
+An agent or user calls `bootstrap_project` with a project name, type (`project`), optionally an area (one of the seven canonical areas), optionally a parent_project name (making the new entry a sub-project), and optionally a path override. The registry:
 
 1. Registers the project in the registry (internally calls the same registration logic as `register_project` — core identity fields are created).
 2. Creates the project folder at the configured path root for the `project` type (e.g., `~/Code/my-new-project`).
@@ -655,14 +662,16 @@ An agent or user calls `bootstrap_project` with a project name, type (`project`)
 
 The caller receives confirmation with the registered project name and the created path. The project is immediately queryable in the registry and ready for development.
 
-**Bootstrapping a non-code project or area of focus:**
+**Bootstrapping a non-code project:**
 
-An agent or user calls `bootstrap_project` with a name and type (`area_of_focus` or a non-code `project` variant). The registry:
+An agent or user calls `bootstrap_project` with a name and type (`project`) and a path override or configured path root that lives outside `~/Code/`. The registry:
 
 1. Registers the project in the registry.
-2. Creates the folder at the configured path root for that type (e.g., `~/Areas/my-area`).
+2. Creates the folder at the configured path root (e.g., `~/Projects/my-thing`).
 3. Copies template contents into the new folder — folder structure and template files only.
-4. Does NOT initialize git. Non-code projects and areas of focus typically live in iCloud-synced paths where git repositories are forbidden.
+4. Does NOT initialize git. Non-code projects typically live in iCloud-synced paths where git repositories are forbidden.
+
+(The legacy `area_of_focus` bootstrap type has been retired in schema v11. Organizational grouping is now expressed through the `area` assignment on a regular project, not a separate type.)
 
 **Path override:**
 
@@ -697,11 +706,17 @@ The desktop app gives the user a direct window into their project landscape — 
 
 The app has two entry points: a standalone macOS `.app` bundle (double-click to launch) and a CLI command (`setlist ui`). Both start the same Electron process. The app enforces single-instance behavior — if a window is already open, launching again brings the existing window to the foreground rather than creating a second instance.
 
-**Home view: the project dashboard.**
+**Home view: grouped project lanes.**
 
-On launch, the user sees a card grid of all registered projects. Each card shows the project name, a type badge (project or area of focus), a status indicator, a small colored health dot (green Healthy, amber At risk, red Stale, gray Unknown — see `#health-assessment` (2.15)), and a last-updated timestamp. The grid is the user's panoramic view of their ecosystem and its health at a glance.
+On launch, the user sees their projects organized into lanes — one lane per canonical area (Work, Family, Home, Health, Finance, Personal, Infrastructure), plus a final **Unassigned** lane for projects with no area. Each lane is a labelled section with a collapsible header showing the area name, its accent color, and a count. Inside each lane is a card grid of the projects belonging to that area. Each card shows the project name, a status indicator, a small colored health dot (green Healthy, amber At risk, red Stale, gray Unknown — see `#health-assessment` (2.15)), and a last-updated timestamp. The lanes give the user a panoramic but organized view of the ecosystem — work, life, and infrastructure are visually separated instead of blended into one wall of cards.
 
-Filter and sort controls sit at the top of the view. The user can filter by type (projects, areas of focus, or both), filter by status using a multiselect dropdown (multiple statuses can be active simultaneously — e.g., show only "active" and "paused" projects), and sort by name, status, or last updated. Archived projects are hidden by default; the user sees an "N archived projects" link below the grid that adds the archived filter with one click. Filtering and sorting are immediate — no loading states for a local database of this size.
+Lanes are collapsible: clicking a header folds the lane to a thin summary row. Collapsed state persists per lane across sessions. Empty lanes (no projects in that area) still render but show a muted "No projects yet" placeholder so the seven-slot structure is always visible.
+
+**Unassigned lane treatment.** The Unassigned lane is visually distinct from the seven canonical lanes: its header uses a muted text color (not an accent), and the lane background carries a subtle warning tint to communicate "these need attention." Each card in this lane shows a gentle inline nudge — "Assign an area" — that opens the area picker when clicked. The nudge is an invitation, not a block: the project works fine unassigned, forever.
+
+**Sub-project visual treatment.** A project that declares a parent is rendered inside its own area lane (not its parent's, unless they happen to share one), indented 24px from the left edge of the card grid with a 1px muted vertical connector running from the parent card down to the child. When parent and child live in different area lanes (cross-area children), the connector cannot be drawn, so the child instead shows a `↳ parent-name` caption under its title — a textual backlink to the parent. Clicking the caption navigates to the parent's detail view.
+
+**Filter chips.** A row of filter chips sits above the lanes — one chip per canonical area plus an Unassigned chip. Chips are multi-select with OR semantics: activating Work + Family hides every other lane. An "All" chip clears the selection. Type and status filters remain available as secondary dropdowns (status filter is still a multiselect). Archived projects are hidden by default; an "N archived projects" link below the last lane adds the archived filter with one click. Filtering, sorting, and lane collapse are immediate — no loading states for a local database of this size.
 
 **Project detail: the tabbed view.**
 
@@ -806,7 +821,7 @@ Health is both a human signal and an agent signal. It appears in three places:
 
 **How often it's computed.**
 
-Health is computed on demand. The MCP tool and the desktop app both request fresh assessments when the user or agent asks. Results are cached briefly (a few minutes) so that scrolling the home view or an agent making multiple calls in quick succession doesn't hammer the database. There is no background worker and no stored health field in the registry — the assessment is always derived from current data, not from a maybe-stale snapshot.
+Health is computed on demand. The MCP tool and the desktop app both request fresh assessments when the user or agent asks. Results are cached briefly (a few minutes) so that scrolling the home view or an agent making multiple calls in quick succession doesn't hammer the database. Callers that need to bypass the cache — for example, immediately after mutating a project — can pass `fresh=true` to force recomputation. There is no background worker and no stored health field in the registry — the assessment is always derived from current data, not from a maybe-stale snapshot.
 
 **What health does not do.**
 
@@ -882,7 +897,7 @@ The fctry-owned field domain includes: tech_stack, patterns, short_description, 
 
 **Desktop project CRUD.** Provides UI forms for registering new projects, editing project identity fields (display name, status, description, goals), archiving projects, and renaming projects. Each operation delegates to the corresponding @setlist/core method through the IPC bridge.
 
-**MCP server access.** @setlist/mcp wraps @setlist/core as 34 MCP tools via @modelcontextprotocol/sdk using stdio transport managed by Claude Code's lifecycle. The 29 original tools match the Python server; `enrich_project`, `bootstrap_project`, `configure_bootstrap`, `rename_project`, and `assess_health` are Setlist-specific additions. The server provides:
+**MCP server access.** @setlist/mcp wraps @setlist/core as 36 MCP tools via @modelcontextprotocol/sdk using stdio transport managed by Claude Code's lifecycle. The 29 original tools match the Python server; `enrich_project`, `bootstrap_project`, `configure_bootstrap`, `rename_project`, `assess_health`, `set_project_area`, and `set_parent_project` are Setlist-specific additions. The server provides:
 
 - `list_projects` -- List projects at a given depth with optional filters.
 - `get_project` -- Get a single project by name at a given depth.
@@ -928,19 +943,23 @@ See [Appendix D](#appendix-d-mcp-tool-reference) for the complete tool reference
 
 ### 3.2 Things the System Keeps Track Of {#entities}
 
-- **Projects** -- Initiatives with completion criteria. They progress through a lifecycle: idea, draft, active, paused, archived, complete. Each project has core identity fields, zero or more extended fields, and one or more filesystem paths.
+- **Projects** -- Initiatives tracked in the registry. They progress through a lifecycle: idea, draft, active, paused, archived, complete. Each project has core identity fields, zero or more extended fields, one or more filesystem paths, an optional area assignment, and an optional parent project. As of schema v11, `project` is the only project type; the legacy `area_of_focus` type has been retired.
 
-- **Areas of focus** -- Ongoing concerns with no end state. They have a status (active, paused) but no completion criteria. First-class citizens, queryable through the same interface.
+- **Areas** -- A closed canonical set of seven organizational buckets: **Work, Family, Home, Health, Finance, Personal, Infrastructure**. Areas are first-class entities stored in a dedicated `areas` seed table (name PK, display_name, description, color), system-owned and seeded at the v10→v11 migration. Projects reference an area via `area_id` (nullable). Areas have no status, no completion criteria, and cannot be created, renamed, or deleted by agents or users — the set is fixed by the schema.
 
-- **Fields** -- The atomic units of project identity. Each field is typed (string, list, enum, text), categorized (identity, technical, context, tooling, lifecycle), and self-describing.
+- **Sub-project relationships** -- A project may declare another project as its parent via `parent_project_id`. This is a structural edge, not a field: it lives as a first-class foreign key and participates in cycle checks. A parent's children are queryable (`get_project` returns the children list). Parent and child are independent in every other respect — area, status, memory scope, archival — except that archiving a parent does not cascade to children; children remain active with the link intact, and their detail view shows an "(archived)" tag next to the parent link.
 
-- **Core identity fields** -- The six fields every project and area of focus must have:
+- **Fields** -- The atomic units of project identity beyond the structural columns. Each field is typed (string, list, enum, text), categorized (identity, technical, context, tooling, lifecycle), and self-describing.
+
+- **Core identity fields** -- The seven fields every project must have, plus one optional structural relationship:
   - **Name** -- slug-style identifier for lookups (e.g., "project-registry-service")
   - **Display name** -- human-friendly label (e.g., "Project Registry Service"). Defaults to name. Does not need to be unique.
-  - **Type** -- project or area of focus
+  - **Type** -- always `project` in schema v11 (retained for backwards compatibility)
   - **Status** -- lifecycle position
   - **Description** -- natural-language description suitable for semantic reasoning
   - **Goals** -- what the initiative is trying to achieve
+  - **Area** -- one of the seven canonical areas, or null (unassigned)
+  - **Parent project** (optional structural edge) -- another project this one belongs to
 
 - **Extended fields** -- Fields beyond core identity: technical (tech stack, patterns, IDE, terminal profile), context (stakeholders, timeline, domain), tooling (MCP servers, URLs, workspace preferences).
 
@@ -948,9 +967,9 @@ See [Appendix D](#appendix-d-mcp-tool-reference) for the complete tool reference
 
 - **Field catalog** -- The registry's master list of known fields, each with a name, type (string, list, enum, text), category (identity, technical, context, tooling, lifecycle), and description. The catalog ships with a default set and is extensible -- fields not in the catalog are accepted and stored.
 
-- **Templates** -- Configurations governing which fields are relevant for a given project type. Three canonical templates: code_project (includes tech_stack, patterns, mcp_servers, urls, keywords), non_code_project (includes stakeholders, timeline, domain, keywords), area_of_focus (subset of fields, no project-specific fields). Templates govern which fields appear at standard depth.
+- **Templates** -- Configurations governing which fields are relevant for a given project kind. Two canonical templates as of schema v11: code_project (includes tech_stack, patterns, mcp_servers, urls, keywords) and non_code_project (includes stakeholders, timeline, domain, keywords). The legacy `area_of_focus` template has been retired. Templates govern which fields appear at standard depth.
 
-- **Schema meta** -- Version tracking for the database schema. Stores the current schema version (10) used by migration logic to determine whether upgrades are needed.
+- **Schema meta** -- Version tracking for the database schema. Stores the current schema version (11) used by migration logic to determine whether upgrades are needed.
 
 - **Ports** -- Port allocations claimed by projects for their services. Each entry has: port number (3000--9999, globally unique), project, service label, protocol (tcp/udp), claimed_at.
 
@@ -976,11 +995,17 @@ See [Appendix D](#appendix-d-mcp-tool-reference) for the complete tool reference
 
 ### 3.3 Rules and Logic {#rules}
 
-- Every project entry must have the six core identity fields populated. Display_name, description, and goals may be minimal for migration entries but must be present or explicitly empty.
+- Every project entry must have the seven core identity fields populated: name, display_name, type, status, description, goals, area. Display_name, description, and goals may be minimal for migration entries but must be present or explicitly empty. Area may be null.
 - Name must be unique within the registry. Duplicate name results in a clear error or recognized update, never a silent duplicate.
 - Display_name defaults to name if not provided. Does not need to be unique. Always present in query responses at all depth levels.
-- Type is either "project" or "area of focus." First-class attribute, not inferred.
-- Status values for projects: idea, draft, active, paused, archived, complete. For areas of focus: active, paused. An area of focus never has "complete" or "archived" status.
+- Type is always "project" as of schema v11. The legacy "area_of_focus" type was retired in the v10→v11 migration; existing area_of_focus entries were reclassified as projects and assigned to canonical areas during the migration. The CHECK constraint on `projects.type` narrows to `('project')`.
+- Status values for projects: idea, draft, active, paused, archived, complete.
+- Area must be one of the seven canonical values (Work, Family, Home, Health, Finance, Personal, Infrastructure) or null. Any other value is rejected at write time with `Error [INVALID_AREA]`. The canonical set is closed — agents cannot create, rename, or remove areas.
+- Area assignment is nullable forever. There is no deadline, no migration cutoff, and no status change forces assignment. Unassigned projects work identically to assigned projects for every operation except area-filtered queries and memory scope inheritance. `get_registry_stats` surfaces an unassigned count.
+- A project cannot be its own parent. Setting `parent_project_id` to a project's own id is rejected.
+- A project cannot be assigned a parent that is already a descendant of it. Cycle detection walks the parent chain at write time; on violation, `set_parent_project` and `register_project`/`update_project` fail with `Error [PARENT_CYCLE]` and the exact message: "Cannot set parent: {child-name} is a descendant of {project-name}. Moving it would create a cycle."
+- A project's parent is another project, never an area. Areas are not part of the parent-child graph.
+- Archiving a parent project does not cascade to children. Children remain active; their `parent_project_id` is preserved. In detail views, an archived parent is rendered with an "(archived)" tag alongside the link. Deleting a parent (via `ON DELETE SET NULL` on the foreign key) clears the link on children without affecting them otherwise.
 - Producers write to their own field domains. A field write from producer A does not alter fields from producer B. The registry tracks which producer last wrote each field.
 - Fields not in the default catalog are accepted and stored without error. The catalog is advisory.
 - Queries at summary depth return only: name, display_name, type, status, one-line description. Standard depth adds template-relevant extended fields. Full depth returns everything.
@@ -1022,7 +1047,7 @@ See [Appendix D](#appendix-d-mcp-tool-reference) for the complete tool reference
 - EMA outcome scoring: `outcome_score = outcome_score + alpha * (signal - outcome_score)`, alpha = 0.1, signal = 1.0 (success) or 0.0 (failure).
 - Budget-controlled recall: response never exceeds caller's token budget. Memories in score order, L0 first, expanding to L1/L2.
 - FTS5-first retrieval: FTS5 always available regardless of embedding provider. All other features work identically without embeddings.
-- Four-level scope isolation: recall for project returns project + area-of-focus + portfolio + global. Without project context, portfolio + global only. Project A memories never returned for project B recall (unless same area of focus and area-scoped).
+- Four-level scope isolation with area inheritance: recall for a project returns memories at project + area + portfolio + global scope. The area level resolves via the project's `area_id`: an area-scoped memory is visible to every project sharing that `area_id`. Without project context, portfolio + global only. Project A memories never leak to project B recall unless both projects share an area and the memory is area-scoped. A project with `area_id = NULL` sees only project + portfolio + global memories — it has no area tier. The `area_of_focus` memory scope value from schema v10 has been retired; existing area_of_focus-scoped memories are migrated to `area` scope in v11 and rekeyed to the relevant canonical area id.
 - Recall audit logging: every recall logged with query, scope, budget, results, scores. Append-only, pruned during reflection.
 - Corrections create type `correction` with importance >= 0.9, `contradicts` edge. Corrected memory archived immediately. Corrections never subject to triple-gate archival.
 - Reflection runs on internal schedule, separate from async task worker. Triggers: cumulative importance threshold, periodic schedule, or manual invocation.
@@ -1054,7 +1079,7 @@ See [Appendix D](#appendix-d-mcp-tool-reference) for the complete tool reference
 | Ensemble | Memory retain/recall, library import of @setlist/core | Ensemble reads/writes via direct import | Ensemble continues without memory |
 | Knowmarks | Project metadata (name, description, goals, keywords, tech stack) | Knowmarks reads from registry | Falls back to regex extraction |
 | ctx | Project context (description, goals, status, tech stack) | ctx reads from registry | Operates without project context |
-| Claude Code (via MCP) | All 32 tools | CC reads/writes via @setlist/mcp | CC has no project awareness; MCP server provides it |
+| Claude Code (via MCP) | All 36 tools | CC reads/writes via @setlist/mcp | CC has no project awareness; MCP server provides it |
 | Async worker (launchd) | Task execution | Worker reads tasks, spawns CC sessions, writes results | Tasks remain pending until worker runs |
 | CC auto-memory files | Per-project patterns and decisions (`MEMORY.md`) | cross_query reads from filesystem | Cross-project queries limited to registry fields + structured memories |
 | Embedding provider (OpenAI / Ollama) | Vector embeddings for memory content | Registry sends content, receives embeddings | FTS5-only fallback. All other features work identically. |
@@ -1143,9 +1168,9 @@ All Python spec hard constraints apply, plus:
 
 - **SQLite via better-sqlite3, synchronous API.** The database binding is better-sqlite3, which provides synchronous, native SQLite access. This is a deliberate choice: synchronous calls are simpler, faster, and avoid the callback/promise complexity that async SQLite wrappers introduce for a local database. The library API may expose async signatures for ergonomic consistency, but the underlying operations are synchronous.
 
-- **Schema evolution from v8.** The SQLite schema originated as v8, byte-compatible with the Python implementation. Setlist has since evolved the schema: v9 added the `observation` memory type, v10 adds unified memory types (learning, context, procedural), new fields (belief, extraction_confidence, valid_from, valid_until, entities, parent_version_id, is_current), and migrates `skill` → `procedural`. The Python implementation remains at v8; the shared .db file is forward-compatible (Python can read v10 databases but will not recognize new types or fields). Schema migrations are incremental and non-destructive.
+- **Schema evolution from v8 through v11.** The SQLite schema originated as v8, byte-compatible with the Python implementation. Setlist has since evolved the schema: v9 added the `observation` memory type, v10 added unified memory types (learning, context, procedural) plus new fields (belief, extraction_confidence, valid_from, valid_until, entities, parent_version_id, is_current) and migrated `skill` → `procedural`, and **v11 introduces the canonical areas table, first-class `projects.area_id` and `projects.parent_project_id` columns, retires the `area_of_focus` project type, narrows the `projects.type` CHECK constraint to `('project')`, and remaps the `area_of_focus` memory scope to `area`**. The Python implementation remains at v8; the shared .db file is forward-compatible (Python can read v11 databases but will not recognize newer types, fields, or structural columns). Schema migrations are incremental and non-destructive.
 
-- **34 MCP tools with Python-compatible core.** The original 29 tools are a drop-in replacement for the Python server — same names, parameters, and response shapes. Setlist adds `enrich_project`, `bootstrap_project`, `configure_bootstrap`, `rename_project`, and `assess_health` as Setlist-specific tools (#30--#34). An agent that works with the Python MCP server works identically with Setlist's for the original 29.
+- **36 MCP tools with Python-compatible core.** The original 29 tools are a drop-in replacement for the Python server — same names, parameters, and response shapes (with optional area and parent_project parameters added where applicable, which the Python server will ignore harmlessly). Setlist adds `enrich_project`, `bootstrap_project`, `configure_bootstrap`, `rename_project`, `assess_health`, `set_project_area`, and `set_parent_project` as Setlist-specific tools (#30--#36). An agent that works with the Python MCP server works identically with Setlist's for the original 29.
 
 - **ESM-only.** All packages produce ESM output. No CommonJS dual-publishing.
 
@@ -1163,7 +1188,7 @@ All Python spec anti-patterns apply, plus:
 
 - **Schema evolution must be incremental and non-destructive.** Each version upgrade (v8→v9→v10) must handle the full migration path. Existing data must never be lost during upgrades. New columns use nullable defaults or sensible initial values. The `skill` → `procedural` type migration in v10 is a data migration within the table-recreate pattern.
 
-- **Setlist must not re-invent MCP tool semantics.** The 32 tools have defined parameter names, types, and response shapes. Setlist implements them; it does not redesign them.
+- **Setlist must not re-invent MCP tool semantics.** The 36 tools have defined parameter names, types, and response shapes. Setlist implements them; it does not redesign them.
 
 ---
 
@@ -1197,7 +1222,7 @@ setlist/
 │   ├── mcp/                         # @setlist/mcp
 │   │   ├── src/
 │   │   │   ├── index.ts             # MCP server entry point
-│   │   │   └── server.ts            # 32 tool definitions
+│   │   │   └── server.ts            # 36 tool definitions
 │   │   ├── package.json
 │   │   └── tsconfig.json
 │   ├── cli/                         # @setlist/cli
@@ -1216,8 +1241,10 @@ setlist/
 │       │   │   └── index.ts         # contextBridge API exposure
 │       │   └── renderer/            # React application
 │       │       ├── App.tsx           # Root component, routing
-│       │       ├── pages/            # Home (dashboard), ProjectDetail
+│       │       ├── views/            # HomeView, ProjectDetailView, SettingsView
 │       │       ├── components/       # Cards, tabs, forms, shared UI
+│       │       ├── hooks/            # Custom React hooks
+│       │       ├── lib/              # Renderer utilities and helpers
 │       │       └── styles/           # Tailwind config, design tokens
 │       ├── package.json
 │       └── tsconfig.json
@@ -1229,16 +1256,17 @@ setlist/
 
 ### 5.2 Schema Compatibility {#schema}
 
-The SQLite schema v10 is the current schema. It extends the Python implementation's v8 through two evolution steps: v9 added the `observation` memory type, v10 adds unified memory types and chorus-compatible fields:
+The SQLite schema v11 is the current schema. It extends the Python implementation's v8 through three evolution steps: v9 added the `observation` memory type, v10 added unified memory types and chorus-compatible fields, and **v11 introduces canonical areas, first-class structural columns on `projects`, and retires the `area_of_focus` project type**.
 
-**Tables (18):**
-- `projects` — core identity columns (name PK, display_name, type, status, description, goals, created_at, updated_at)
+**Tables (19):**
+- `projects` — core identity columns (name PK, display_name, type CHECK(type = 'project'), status, description, goals, area_id INTEGER REFERENCES areas(id), parent_project_id INTEGER REFERENCES projects(id) ON DELETE SET NULL, created_at, updated_at). `area_id` and `parent_project_id` are nullable forever.
+- `areas` — canonical organizational buckets (id INTEGER PK, name TEXT UNIQUE NOT NULL, display_name TEXT NOT NULL, description TEXT, color TEXT). Seeded at v10→v11 migration with exactly seven rows: Work, Family, Home, Health, Finance, Personal, Infrastructure. System-owned: no INSERT/UPDATE/DELETE from tools; the set is fixed by the schema migration.
 - `project_paths` — filesystem paths (project_id FK, path, added_at, added_by)
 - `project_fields` — EAV table for extended fields (project_id FK, field_name, field_value, producer, updated_at)
 - `field_catalog` — master list of known fields (name PK, type, category, description). Advisory — fields not in the catalog are still accepted.
 - `templates` — project type templates (name PK, description). Three canonical templates: code_project, non_code_project, area_of_focus.
 - `template_fields` — maps templates to field names (template_name FK, field_name FK). Governs which fields appear at standard depth.
-- `schema_meta` — schema version tracking (key PK, value). Stores `schema_version = 10`.
+- `schema_meta` — schema version tracking (key PK, value). Stores `schema_version = 11`.
 - `project_ports` — port allocations (id PK, project_id FK, port UNIQUE, service_label, protocol, claimed_by, claimed_at)
 - `project_capabilities` — capability declarations (id PK, project_id FK, name, capability_type, description, inputs, outputs, producer, requires_auth, invocation_model, audience, UNIQUE(project_id, name))
 - `tasks` — async work queue (id PK, project_name TEXT, description, schedule, status, session_reference, error_message, created_at, started_at, completed_at)
@@ -1251,7 +1279,20 @@ The SQLite schema v10 is the current schema. It extends the Python implementatio
 - `recall_audit` — recall operation log (id PK, query, mode CHECK(search|bootstrap|profile), budget_tokens, scope, project_id, memory_ids_returned, scores, timestamp)
 - `memory_fts` — FTS5 virtual table for memory full-text search
 
-**Indexes, constraints, and triggers** must match the Python implementation exactly. The migration function in `db.ts` should be a faithful TypeScript translation of the Python `db.py` initialization.
+**Indexes, constraints, and triggers** from v8 must match the Python implementation exactly. v11 adds indexes on `projects(area_id)` and `projects(parent_project_id)` to support area-filtered and parent/child lookups; these are Setlist-specific.
+
+**v10 → v11 migration plan:**
+
+1. Create the `areas` table and seed seven rows (Work, Family, Home, Health, Finance, Personal, Infrastructure) with display names, one-sentence descriptions, and distinct accent colors.
+2. Add `area_id INTEGER REFERENCES areas(id)` and `parent_project_id INTEGER REFERENCES projects(id) ON DELETE SET NULL` columns to `projects` (both nullable, default NULL).
+3. Rewrite existing `area_of_focus`-typed rows as `project`-typed rows and assign them a canonical area: `msq-advisory-board` → area `Work`; `fam-estate-planning` → area `Family`. Any other surviving area_of_focus rows are reclassified as projects with `area_id = NULL` and surfaced in the unassigned nudge.
+4. Narrow the `projects.type` CHECK constraint to `('project')` via a table-rebuild step (copy-into-new-table pattern required for SQLite CHECK narrowing). Existing paths, fields, ports, capabilities, and memories follow the project rowids.
+5. Migrate the `knowmarks` ↔ `knowmarks-ios` soft entity link: if `knowmarks-ios` exists as a project and lists `knowmarks` in its `entities` array, set `parent_project_id` on `knowmarks-ios` to point at `knowmarks`. The `entities` field itself is left intact — removing the reference is out of scope.
+6. Remap the `memories.scope` value `area_of_focus` to `area`. For memories previously scoped to a specific area_of_focus project, rekey the scope association to the corresponding canonical area id. The `MemoryScope` enum drops `area_of_focus` and gains `area`. Existing memories with no resolvable area target are downgraded to `portfolio` scope with a `forget_reason` note.
+7. Retire the `area_of_focus` template row and its template_fields entries.
+8. Bump `schema_meta.schema_version` to 11.
+
+The migration is incremental and non-destructive: no project data is deleted; only classifications and scope labels change. The Python implementation at v8 continues to read its own columns and ignores the new ones.
 
 ### 5.3 TypeScript-Specific Decisions {#ts-decisions}
 
@@ -1273,21 +1314,25 @@ The async wrappers are trivial (they just return the sync result) but allow call
 interface Project {
   name: string;
   displayName: string;
-  type: 'project' | 'area_of_focus';
+  type: 'project';
   status: ProjectStatus;
   description: string;
   goals: string;
   paths: string[];
+  area: AreaName | null;              // v11 — nullable forever
+  parentProjectId: string | null;      // v11 — structural sub-project edge
+  children?: string[];                 // populated on get_project at standard+
   // Extended fields at standard/full depth
   fields?: Record<string, FieldValue>;
   ports?: PortClaim[];
   capabilities?: Capability[];
 }
 
+type AreaName = 'Work' | 'Family' | 'Home' | 'Health' | 'Finance' | 'Personal' | 'Infrastructure';
 type ProjectStatus = 'idea' | 'draft' | 'active' | 'paused' | 'archived' | 'complete';
 type MemoryType = 'decision' | 'outcome' | 'pattern' | 'preference' | 'dependency' | 'correction' | 'learning' | 'context' | 'procedural' | 'observation';
 type MemoryBelief = 'fact' | 'opinion' | 'hypothesis';
-type MemoryScope = 'project' | 'area_of_focus' | 'portfolio' | 'global';
+type MemoryScope = 'project' | 'area' | 'portfolio' | 'global';
 type QueryDepth = 'minimal' | 'summary' | 'standard' | 'full';
 ```
 
@@ -1298,7 +1343,7 @@ import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 
 const server = new Server({ name: 'setlist', version: '0.1.0' }, { capabilities: { tools: {} } });
-// Register 32 tools...
+// Register 36 tools...
 const transport = new StdioServerTransport();
 await server.connect(transport);
 ```
@@ -1335,7 +1380,7 @@ The port follows a strict behavioral contract: every Python test, translated to 
 | cross_query.py | cross-query.ts | 3 scopes, freshness+importance scoring |
 | tasks.py | registry.ts | Task CRUD consolidated into Registry |
 | scripts/migrate_memories.py | migrate-memories.ts | CC auto-memory + fctry memory migration |
-| server.py | server.ts | 34 MCP tools via @modelcontextprotocol/sdk |
+| server.py | server.ts | 36 MCP tools via @modelcontextprotocol/sdk |
 | cli.py | index.ts | CLI entry point |
 | worker.py | worker.ts | Launchd integration |
 
@@ -1396,7 +1441,7 @@ Same ecosystem as the Python spec (Archibald, ctx, Chorus, fctry, McPoyle, Knowm
 - **Ensemble** — Imports @setlist/core for memory retain/recall during agent orchestration.
 
 **MCP consumers (unchanged):**
-- **Claude Code** — Uses @setlist/mcp for all 32 tools.
+- **Claude Code** — Uses @setlist/mcp for all 36 tools.
 
 **Producers (unchanged):**
 - **fctry** — Writes project identity and capabilities via MCP or library import.
@@ -1434,7 +1479,7 @@ All satisfaction criteria from the Python spec (section 6.1) apply identically, 
 
 **Then layer in:** Migration, port management, port discovery. Port tests.
 
-**Then layer in:** @setlist/mcp — wrap the core library as 34 MCP tools. Verify tool-by-tool against the Python server's behavior.
+**Then layer in:** @setlist/mcp — wrap the core library as 36 MCP tools. Verify tool-by-tool against the Python server's behavior.
 
 **Then layer in:** Portfolio memory — retain, recall, reflect. Content-hash dedup. FTS5 retrieval. Port memory tests.
 
@@ -1482,7 +1527,7 @@ The agent has authority over implementation details within the constraints above
 
 The agent does NOT decide:
 - Schema shape (defined by v10, evolved from v8 compatibility)
-- MCP tool surface (defined by the 32-tool contract)
+- MCP tool surface (defined by the 36-tool contract)
 - Package boundaries (core/mcp/cli/app as specified)
 - SQLite binding (better-sqlite3)
 - MCP SDK (@modelcontextprotocol/sdk)
@@ -1518,10 +1563,15 @@ All terms from the Python spec glossary apply. Additional terms:
 |------|---------|
 | Setlist | The TypeScript implementation of the Project Registry |
 | @setlist/core | npm package providing the library API — all registry logic |
-| @setlist/mcp | npm package providing the MCP server — 32 tools via @modelcontextprotocol/sdk |
+| @setlist/mcp | npm package providing the MCP server — 36 tools via @modelcontextprotocol/sdk |
 | @setlist/cli | npm package providing the CLI — terminal commands and worker script |
 | better-sqlite3 | Synchronous native SQLite binding for Node.js |
-| Schema v10 | The current SQLite schema version. Evolved from Python's v8 through v9 (observation type) and v10 (unified memory types + chorus-compatible fields) |
+| Schema v10 | A historical SQLite schema version. Evolved from Python's v8 through v9 (observation type) and v10 (unified memory types + chorus-compatible fields) |
+| Schema v11 | The current SQLite schema version. Adds the canonical `areas` table, `projects.area_id` and `projects.parent_project_id` columns, retires the `area_of_focus` project type, and remaps the `area_of_focus` memory scope to `area` |
+| Area | One of the seven canonical organizational buckets — Work, Family, Home, Health, Finance, Personal, Infrastructure — stored in the `areas` seed table and attached to projects via a first-class nullable `area_id` foreign key. A structural column, not a profile field. Governs grouping, filtering, and memory scope inheritance. System-owned and closed — agents cannot create, rename, or delete areas |
+| `area_of_focus` (retired) | A legacy project *type* that represented an ongoing concern with no completion criteria. Retired in schema v11: former area_of_focus entries were reclassified as projects and assigned to canonical areas (`msq-advisory-board` → Work, `fam-estate-planning` → Family). Not to be confused with the current `Area` concept, which is structural rather than a type |
+| Sub-project | A project whose `parent_project_id` references another project. A structural parent-child edge only — area, status, goals, and memory scope do not inherit. Archiving a parent does not cascade to children |
+| Canonical area set | The closed set of seven area names. Fixed by the schema; any write attempting a value outside the set fails with `Error [INVALID_AREA]` |
 | @setlist/app | npm package providing the desktop control panel — Electron app with React renderer |
 | IPC bridge | The contextBridge-based communication layer between Electron's main process (@setlist/core) and the renderer (React UI) |
 | Experience-port | A spec derived from an existing implementation where the experience stays identical and only the implementation changes |
@@ -1548,24 +1598,26 @@ Additional TypeScript-specific deferred future:
 
 ## Appendix D: MCP Tool Reference {#appendix-d-mcp-tool-reference}
 
-Complete tool reference for the 34 MCP tools. The original 29 have identical names, parameters, and response shapes to the Python implementation; `enrich_project`, `bootstrap_project`, `configure_bootstrap`, `rename_project`, and `assess_health` are Setlist additions.
+Complete tool reference for the 36 MCP tools. The original 29 have identical names and response shapes to the Python implementation (with optional `area` and `parent_project` parameters added on registration/update/query tools, which the Python server ignores); `enrich_project`, `bootstrap_project`, `configure_bootstrap`, `rename_project`, `assess_health`, `set_project_area`, and `set_parent_project` are Setlist additions.
 
 **Project Identity:**
 
 | Tool | Parameters | Returns |
 |------|-----------|---------|
-| list_projects | detail?, type_filter?, status_filter? | Project[] at requested depth |
-| get_project | name, detail? | Project at requested depth |
+| list_projects | detail?, type_filter?, status_filter?, area? | Project[] at requested depth. `area` accepts a canonical area name or the sentinel `__unassigned__` |
+| get_project | name, detail? | Project at requested depth, including `area`, `parent_project`, and `children[]` |
 | switch_project | name | Paths, status, description, ports, workspace metadata |
-| search_projects | query, type_filter?, status_filter? | Matching projects with relevance |
-| get_registry_stats | (none) | Count, type distribution, status distribution |
-| register_project | name, display_name?, type, status, description, goals, paths? | Confirmation |
-| update_project | name, display_name?, status?, description?, goals? | Updated project summary |
-| archive_project | name | Confirmation (ports released, capabilities cleared) |
-| rename_project | name, new_name | Confirmation (all references updated) |
-| batch_update | type_filter?, status_filter?, fields, dry_run? | Count and names of affected projects |
+| search_projects | query, type_filter?, status_filter?, area? | Matching projects with relevance. Area filter is literal (no descendant inheritance) |
+| get_registry_stats | (none) | Count, type distribution, status distribution, per-area distribution, unassigned count |
+| register_project | name, display_name?, type, status, description, goals, paths?, area?, parent_project? | Confirmation. Invalid area rejected with `Error [INVALID_AREA]`; cycle-producing parent rejected with `Error [PARENT_CYCLE]` |
+| update_project | name, display_name?, status?, description?, goals?, area?, parent_project? | Updated project summary. Passing `area=null` clears the assignment; passing `parent_project=null` clears the parent link |
+| archive_project | name | Confirmation (ports released, capabilities cleared). Children of the archived project are NOT cascaded — they stay active with their parent link intact |
+| rename_project | name, new_name | Confirmation (all references updated, including parent_project_id references from children) |
+| batch_update | type_filter?, status_filter?, area?, fields, dry_run? | Count and names of affected projects |
 | write_fields | project_name, fields, producer? | Count of fields written |
-| enrich_project | name, goals?, topics?, entities?, concerns? | Updated profile (union merge) |
+| enrich_project | name, goals?, topics?, entities?, concerns? | Updated profile (union merge). Does NOT accept `area` — use `set_project_area` |
+| set_project_area | name, area | Confirmation. `area` must be one of the seven canonical names or null (to clear). Invalid value → `Error [INVALID_AREA]` |
+| set_parent_project | name, parent_name | Confirmation. `parent_name` may be null (to clear the link). Cycle detection runs at write time: rejecting with exact message "Cannot set parent: {child-name} is a descendant of {project-name}. Moving it would create a cycle." |
 
 **Capabilities:**
 
@@ -1609,17 +1661,17 @@ Complete tool reference for the 34 MCP tools. The original 29 have identical nam
 |------|-----------|---------|
 | queue_task | description, project_name?, schedule, type_filter?, status_filter? | Task ID (or count + names for dispatch) |
 | list_tasks | status_filter?, project_name? | Task entries with session references |
-| cross_query | query, scope? | Synthesized answer with sources |
+| cross_query | query, scope?, area? | Synthesized answer with sources. Area filter, when provided, restricts the project-field scan to projects whose area matches (literal, no descendant inheritance) |
 
 **Bootstrap:**
 
 | Tool | Parameters | Returns |
 |------|-----------|---------|
-| bootstrap_project | name, type, display_name?, status?, description?, goals?, path_override? | Registered project name + created folder path |
-| configure_bootstrap | type_path_roots, template_dir? | Updated bootstrap configuration |
+| bootstrap_project | name, type, display_name?, status?, description?, goals?, area?, parent_project?, path_override? | Registered project name + created folder path. `area` and `parent_project` are validated the same as in `register_project` |
+| configure_bootstrap | path_roots, template_dir?, archive_path_root? | Updated bootstrap configuration |
 
 **Health:**
 
 | Tool | Parameters | Returns |
 |------|-----------|---------|
-| assess_health | name? | Per-project (name given) or portfolio-wide (no arg) health assessment: overall tier, dimension tiers, reasons |
+| assess_health | name?, fresh? | Per-project (name given) or portfolio-wide (no arg) health assessment: overall tier, dimension tiers, reasons. `fresh=true` bypasses cache to force recomputation |

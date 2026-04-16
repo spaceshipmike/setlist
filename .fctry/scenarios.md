@@ -41,14 +41,17 @@ for memory search is created.
 ---
 
 ## S03: Project Registration {#s03}
-**Given** an initialized registry
-**When** a producer registers a project with name, display_name, type, status, description, goals, and paths
-**Then** the project is immediately queryable at all three depth levels with correct values.
+**Given** an initialized registry with the canonical area seed table populated
+**When** a producer registers a project with name, display_name, type, status, description, goals, paths, and optional `area` and `parent_project` parameters
+**Then** the project is immediately queryable at all three depth levels with correct values, including area and parent linkage when provided.
 
 **Satisfaction criteria:**
-- `getProject('my-project', 'summary')` returns name, displayName, type, status, one-line description
-- `getProject('my-project', 'standard')` additionally returns goals, paths, template-relevant extended fields
-- `getProject('my-project', 'full')` returns everything including all fields from all producers
+- `getProject('my-project', 'summary')` returns name, displayName, type, status, one-line description, and area (when assigned)
+- `getProject('my-project', 'standard')` additionally returns goals, paths, parent_project, template-relevant extended fields
+- `getProject('my-project', 'full')` returns everything including children list, all fields from all producers
+- `registerProject({ ..., area: 'Work' })` succeeds when 'Work' exists in the canonical areas seed table; invalid area name is rejected
+- `registerProject({ ..., parent_project: 'knowmarks' })` succeeds and establishes the parent link when the named project exists
+- Area and parent_project are both optional — a project may have neither, either, or both
 - Duplicate name registration fails with a clear error
 
 ---
@@ -62,9 +65,11 @@ for memory search is created.
 - Summary depth returns only: name, displayName, type, status, one-line description
 - Standard depth adds goals, paths, and template-relevant extended fields
 - Full depth omits nothing
-- `type_filter='project'` excludes areas of focus
+- `type_filter='project'` returns only projects (areas are no longer a peer project type — they live in a separate seed table)
 - `status_filter='active'` excludes paused/archived projects
-- Filters compose: `type_filter='project', status_filter='active'` returns only active projects
+- `area_filter='Work'` returns only projects literally assigned to the Work area — no descendant inheritance (sub-projects under a Work-scoped parent are NOT included unless they themselves carry `area='Work'`)
+- `area_filter='__unassigned__'` (or equivalent sentinel) returns projects with no area assigned
+- Filters compose: `type_filter='project', status_filter='active', area_filter='Work'` returns only active Work-scoped projects
 
 ---
 
@@ -177,7 +182,9 @@ and port discovery proposes port claims from config files.
 **Satisfaction criteria:**
 - Recall with a tight budget returns L0 summaries (one-sentence abstracts) for many memories
 - Recall with a generous budget returns L2 full content for top memories
-- Project-scoped recall returns project + portfolio + global memories (not other projects)
+- Project-scoped recall returns project + area + portfolio + global memories (not other projects), where "area" now means memories scoped to the canonical area the project is assigned to (from the seed area table), not a peer project
+- Area-scoped memories from sibling projects in the same area bubble up into a project's recall (e.g., a project in "Work" sees area-scoped memories retained by other Work-area projects)
+- A project with no area assignment does not see any area-scoped memories — only project + portfolio + global
 - Bootstrap recall (no query) returns the project's memory profile
 - Pinned memories appear at the top of bootstrap recall regardless of score
 - Score cliff stops retrieval when scores drop sharply
@@ -281,6 +288,7 @@ and port discovery proposes port claims from config files.
 - Results are ranked by relevance + freshness + importance
 - Core identity fields are evergreen (exempt from time decay)
 - Sources are cited (registry field vs. memory vs. auto-memory)
+- `crossQuery({ ..., area: 'Work' })` narrows matching to projects assigned to the Work area (literal match, no descendant inheritance)
 
 ---
 
@@ -304,7 +312,8 @@ and port discovery proposes port claims from config files.
 **Then** responses are identical in structure and semantics.
 
 **Satisfaction criteria:**
-- All 27 tool names are registered and callable
+- All 36 tool names are registered and callable (including the new `set_project_area` and `set_parent_project` tools added in this evolve)
+- Startup validation asserts the registered tool count matches 36 and fails fast if a tool is missing or unexpectedly added
 - Parameter names and types match the Python server exactly
 - Response shapes match (same field names, same nesting)
 - Error codes match (NOT_FOUND, EMPTY_REGISTRY, INVALID_INPUT, NO_RESULTS)
@@ -405,7 +414,8 @@ and port discovery proposes port claims from config files.
 **Satisfaction criteria:**
 - Searches across name, description, goals, and extended fields (tech stack, patterns)
 - Results ranked by match quality
-- Type and status filters compose with keyword search
+- Type, status, and area filters compose with keyword search
+- Unassigned-area filter (`area='__unassigned__'`) returns projects without an area
 - Empty results return an empty array, not an error
 
 ---
@@ -432,8 +442,10 @@ and port discovery proposes port claims from config files.
 
 **Satisfaction criteria:**
 - Total project count is accurate
-- Type distribution (projects vs. areas of focus) is accurate
+- Type distribution is accurate (areas are no longer a project type — they are tracked separately via the canonical area seed table)
 - Status distribution (active, paused, archived, etc.) is accurate
+- Response includes an `area_breakdown` map with a count per canonical area plus an explicit `unassigned` count reflecting projects with no area
+- The unassigned count is a first-class statistic — nullable area is a permanent, supported state, not a migration artifact
 
 ---
 
@@ -550,11 +562,11 @@ and port discovery proposes port claims from config files.
 
 ## S38: Bootstrap Configuration {#s38}
 **Given** a running registry with no bootstrap configuration
-**When** the user calls `configure_bootstrap` with type-to-path mappings (e.g., `project → ~/Code`, `area_of_focus → ~/Areas`) and a template directory path (e.g., `~/Resources/System/Templates/`)
+**When** the user calls `configure_bootstrap` with a default project path root (e.g., `project → ~/Code`) and a template directory path (e.g., `~/Resources/System/Templates/`)
 **Then** the configuration is stored persistently and the user can verify it was saved by calling the tool again to see current settings.
 
 **Satisfaction criteria:**
-- `configure_bootstrap` accepts a mapping of project types to default path roots
+- `configure_bootstrap` accepts a default path root for projects (areas are no longer bootstrapped — they are canonical seeds, not project-type bootstraps)
 - `configure_bootstrap` accepts a template directory path
 - Configuration persists across registry restarts (stored in the database, not in-memory)
 - Calling `configure_bootstrap` with no arguments returns the current configuration
@@ -565,15 +577,16 @@ and port discovery proposes port claims from config files.
 
 ## S39: Bootstrap a Code Project {#s39}
 **Given** bootstrap is configured with `project → ~/Code` and a template directory containing project scaffolding files
-**When** the user calls `bootstrap_project` with name "my-new-app", type "project"
-**Then** the project folder exists at `~/Code/my-new-app/` with template files populated, a git repository initialized with an initial commit, and the project is registered in the registry.
+**When** the user calls `bootstrap_project` with name "my-new-app", type "project", and optionally `area` and `parent_project`
+**Then** the project folder exists at `~/Code/my-new-app/` with template files populated, a git repository initialized with an initial commit, and the project is registered in the registry with the supplied area/parent linkage.
 
 **Satisfaction criteria:**
 - A folder is created at the configured path root for the type (`~/Code/my-new-app/`)
 - Template files from the configured template directory are copied into the new folder
 - `git init` is run inside the folder and an initial commit is created
-- The project appears in `list_projects` with the correct name, type, and path
-- `get_project('my-new-app')` returns the project with all registration fields populated
+- The project appears in `list_projects` with the correct name, type, path, and (when provided) area and parent_project
+- `get_project('my-new-app')` returns the project with all registration fields populated, including area and parent where set
+- `bootstrap_project({ ..., area: 'Work', parent_project: 'knowmarks' })` stores both linkages atomically; invalid area or missing parent aborts the bootstrap before any filesystem changes
 - The bootstrap is atomic from the user's perspective: if folder creation succeeds but registration fails, the folder is cleaned up (no orphaned directories)
 
 ---
@@ -592,17 +605,17 @@ and port discovery proposes port claims from config files.
 
 ---
 
-## S41: Bootstrap an Area of Focus {#s41}
-**Given** bootstrap is configured with `area_of_focus → ~/Areas` and a template directory
-**When** the user calls `bootstrap_project` with name "health", type "area_of_focus"
-**Then** the folder exists at `~/Areas/health/` with area-appropriate templates, no git, and the area is registered.
+## S41: Area Type Retired — Seed Table Only {#s41}
+**Given** a post-evolve registry where `area_of_focus` is no longer a valid project type
+**When** any producer attempts to register, bootstrap, or update a project with type `area_of_focus`
+**Then** the operation is rejected with a clear error, and the user is directed to the canonical area seed table for area assignment instead.
 
 **Satisfaction criteria:**
-- A folder is created at `~/Areas/health/`
-- Template files appropriate to the area type are populated
-- No `.git` directory exists (areas live in iCloud-synced paths where git is forbidden)
-- The area is registered and queryable with type `area_of_focus`
-- The area appears in `list_projects` alongside regular projects
+- `registerProject({ type: 'area_of_focus' })` is rejected with an error naming the retired type and pointing to `set_project_area` + the canonical seed table
+- `bootstrap_project({ type: 'area_of_focus' })` is rejected with the same error shape
+- `updateProject({ type: 'area_of_focus' })` is rejected (type is immutable anyway, but the specific retired-type error is preferred for clarity)
+- The canonical area seed table contains exactly the 7 canonical areas after initialization and cannot be mutated via project-creation tools
+- Existing projects that previously had type `area_of_focus` have been demoted via the v10→v11 migration (see S71) and no longer exist as project-typed areas
 
 ---
 
@@ -683,16 +696,18 @@ Difficulty: medium
 ---
 
 ## S47: Home View Card Grid [App] {#s47}
-**Given** the registry contains 8 projects of mixed types (code projects, non-code projects, areas of focus) with varying statuses
+**Given** the registry contains 12+ projects distributed across several canonical areas, some projects assigned to parents, and some with no area at all
 **When** the user is on the home view
-**Then** all projects appear as cards in a responsive grid, each card showing the project's essential identity at a glance.
+**Then** projects are grouped into area lanes (one lane per canonical area present) plus a dedicated "Unassigned" lane, with sub-projects visually nested under their parent when the parent shares the same area.
 
 **Satisfaction criteria:**
-- Every registered, non-archived project has a card in the grid
-- Each card displays: project name, type badge (visually distinguishing code project from area), status indicator, and last-updated timestamp
-- Cards are arranged in a grid that reflows as the window resizes
-- The visual hierarchy makes it easy to scan — project name is the most prominent element on each card
-- Type badges use distinct visual treatments (color, icon, or label) so the user can tell project types apart without reading text
+- Every registered, non-archived project appears as a card under the lane for its assigned area, or under the "Unassigned" lane when no area is set
+- The "Unassigned" lane is always visible when at least one unassigned project exists, with a clearly distinct visual treatment so it reads as a real group, not an error state
+- Sub-projects whose parent lives in the same area are indented under the parent with a connector glyph (e.g., "↳") indicating the parent relationship
+- Sub-projects whose parent lives in a DIFFERENT area appear as top-level cards in their own area lane, annotated with a small "↳ parent-name" caption that names the cross-area parent
+- Each card displays: project name, status indicator, health dot, and last-updated timestamp
+- Cards reflow responsively within each lane as the window resizes
+- Areas themselves are never rendered as cards — they are lane headers only (areas are no longer a project type)
 
 Difficulty: medium
 
@@ -708,6 +723,9 @@ Difficulty: medium
 - Typing filters cards by project name (substring match, case-insensitive)
 - The grid updates as the user types (no submit button required)
 - A sort control lets the user choose between at least: alphabetical, last updated, and project type
+- Area filter chips are visible on the home view — one chip per canonical area plus an "Unassigned" chip — and support multi-select with OR semantics (selecting Work + Family shows projects in either area)
+- When area chips are active, lanes for unselected areas are hidden; when no chip is selected, all lanes are visible
+- Area chip filtering composes with the text filter and sort control
 - Clearing the filter restores all cards
 - When no cards match the filter, a helpful empty state is shown (not a blank area)
 
@@ -760,6 +778,9 @@ Difficulty: easy
 - Extended fields from all producers are displayed with field names as labels
 - The layout uses clear visual grouping (sections or cards) rather than a flat list of key-value pairs
 - Fields with empty values are either omitted or shown as a gentle placeholder — not as "null" or "undefined"
+- The Overview tab surfaces the project's area assignment (or "Unassigned") as a distinct field near the top of the identity section
+- When the project has a parent, the parent is rendered as a clickable link showing the parent's display name (and "(archived)" if the parent has been archived — the child link remains intact regardless)
+- When the project has children, a "Sub-projects" section lists each child with a clickable link; an empty children list hides the section entirely
 
 Difficulty: easy
 
@@ -822,6 +843,9 @@ Difficulty: easy
 **Satisfaction criteria:**
 - A clear affordance to create a new project is visible on the home view (button, card, or similar)
 - The creation form collects at minimum: name, display_name, type (from valid types), and description
+- The creation form includes an optional Area picker populated from the canonical area seed table (plus an explicit "Unassigned" choice that maps to null)
+- The creation form includes an optional Parent project picker (searchable list of existing projects); leaving it blank creates a top-level project
+- Neither picker is required — a project may be created with no area and no parent
 - The name field validates in real-time (no spaces, no duplicates)
 - After submission, the new project card appears in the grid without a manual refresh
 - The new project is also visible to the MCP server and CLI (it's in the registry database, not just the UI state)
@@ -838,7 +862,11 @@ Difficulty: medium
 
 **Satisfaction criteria:**
 - An Edit action is accessible from the project header or Overview tab
-- Editable fields include at minimum: display_name, description, goals, and status
+- Editable fields include at minimum: display_name, description, goals, status, area, and parent_project
+- Changing area goes through `set_project_area` under the hood (invalid area name surfaces as an inline error)
+- Changing parent_project goes through `set_parent_project` under the hood (cycle attempts surface as an inline error, see S76)
+- The area field offers the same picker used in registration, including the "Unassigned" choice
+- Clearing the parent field detaches the project from its parent without affecting other fields
 - The edit state is clearly distinct from the view state (the user knows they're editing)
 - Saving returns to the view state with updated content visible
 - Canceling discards changes and returns to the view state with original content
@@ -1073,3 +1101,175 @@ Difficulty: hard
 - Health computation for the home view is batched so scrolling a large portfolio stays smooth
 
 Difficulty: medium
+
+---
+
+## S71: Area Seed Table Initialization {#s71}
+**Given** a fresh registry database (or a pre-v11 database being migrated upward)
+**When** @setlist/core opens the database and runs the v10→v11 migration
+**Then** the canonical area seed table exists and is populated with exactly 7 canonical areas, and the seed table is the sole source of truth for valid area names.
+
+**Satisfaction criteria:**
+- A dedicated `areas` (or equivalently named) table exists in schema v11 with a stable primary key
+- The seed table contains exactly 7 canonical areas after migration: Work, Family, Home, Health, Finance, Personal, Infrastructure
+- Schema version is 11 after migration; schema version is 10 before
+- The seed table is idempotent — running migration twice does not duplicate rows
+- Area names in the seed table are the ONLY valid values for `set_project_area` and for the `area` parameter on register/bootstrap/update
+- The seed table is not mutated by any user-facing tool in v11 (it is system-owned)
+
+Difficulty: medium
+
+---
+
+## S72: Retire area_of_focus Type in v10→v11 Migration {#s72}
+**Given** a pre-migration registry containing projects with `type = 'area_of_focus'`, including specifically `msq-advisory-board` and `fam-estate-planning`
+**When** the v10→v11 migration runs
+**Then** every `area_of_focus`-typed row is demoted to a regular `project`, reassigned to an appropriate canonical area, and remains queryable by its original name with all associated data intact.
+
+**Satisfaction criteria:**
+- `msq-advisory-board` becomes `type = 'project'`, `area = 'Work'` after migration
+- `fam-estate-planning` becomes `type = 'project'`, `area = 'Family'` after migration
+- Any other pre-existing `area_of_focus` rows are demoted to `project` with a best-effort area assignment or `area = null` when no clear canonical match exists
+- All memories, ports, capabilities, tasks, and extended fields attached to the demoted rows are preserved unchanged
+- Producer attributions on fields are preserved
+- The migration is atomic: a failure mid-migration rolls back to v10 with no partial demotion
+- After migration, `getProject('msq-advisory-board').type` returns `'project'`, not `'area_of_focus'`
+
+Difficulty: hard
+
+---
+
+## S73: knowmarks Entity Soft Link Migrated to parent_project_id {#s73}
+**Given** a pre-migration registry where `knowmarks` and `knowmarks-ios` are linked via an entity soft link (entities array reference) rather than a structured parent relationship
+**When** the v10→v11 migration runs
+**Then** the soft link is detected and promoted to a structured `parent_project_id` relationship, with `knowmarks` as the parent and `knowmarks-ios` as the child.
+
+**Satisfaction criteria:**
+- After migration, `getProject('knowmarks-ios')` returns `parent_project: 'knowmarks'`
+- After migration, `getProject('knowmarks')` includes `knowmarks-ios` in its children list
+- The original entity reference is either removed or preserved alongside the new structured link (whichever the spec prescribes — the structured link is authoritative)
+- The migration detects the link heuristically (entity name match + reciprocal reference) and only promotes when confidence is high
+- A migration report surfaces which soft links were promoted, for user audit
+- If the migration cannot determine a clear parent/child direction, it leaves the soft link in place and emits an observation memory flagging the ambiguity
+
+Difficulty: hard
+
+---
+
+## S74: Assign an Area via set_project_area {#s74}
+**Given** a registered project with no area assignment and the canonical area seed table populated
+**When** the producer calls `set_project_area('my-project', 'Work')`
+**Then** the project is immediately queryable with `area = 'Work'`, and subsequent recall/filter operations honor the new assignment.
+
+**Satisfaction criteria:**
+- `set_project_area('my-project', 'Work')` succeeds and returns the updated project
+- `getProject('my-project').area` returns `'Work'`
+- `listProjects({ area_filter: 'Work' })` now includes the project
+- `set_project_area('my-project', null)` clears the area and returns the project to the Unassigned state
+- Calling with an area name that does not exist in the seed table fails with a clear error (see S77)
+- The assignment is atomic and does not touch any other field
+- A memory retained against the project after reassignment is scoped to the new area for bubble-up purposes
+
+Difficulty: easy
+
+---
+
+## S75: Set Parent Project via set_parent_project {#s75}
+**Given** two registered projects with no parent/child relationship
+**When** the producer calls `set_parent_project('child-name', 'parent-name')`
+**Then** the child project is linked to the parent, the parent's children list includes the child, and the link is immediately visible in both directions.
+
+**Satisfaction criteria:**
+- `set_parent_project('knowmarks-ios', 'knowmarks')` succeeds and returns the updated child
+- `getProject('knowmarks-ios').parent_project` returns `'knowmarks'`
+- `getProject('knowmarks').children` includes `'knowmarks-ios'`
+- `set_parent_project('child', null)` detaches the child from its current parent
+- Setting a parent that does not exist fails with a NOT_FOUND error including a fuzzy-match suggestion
+- The child and parent may belong to different areas — cross-area parenting is explicitly allowed
+- The link is a single structured field, not an entity reference, and survives rename of either project
+
+Difficulty: easy
+
+---
+
+## S76: Cycle Prevention on set_parent_project {#s76}
+**Given** three projects A, B, and C with A as parent of B, and B as parent of C
+**When** the producer calls `set_parent_project('A', 'C')` — which would create a cycle A → B → C → A
+**Then** the operation is rejected with a clear error explaining the cycle, and no changes are committed.
+
+**Satisfaction criteria:**
+- `set_parent_project('A', 'C')` fails with an error containing the literal message "Setting parent would create a cycle" (or the specific cycle-prevention message defined by the spec) and naming the projects involved
+- The existing parent/child relationships for A, B, and C are unchanged after the failed call
+- Self-parenting (`set_parent_project('X', 'X')`) is rejected with the same cycle-prevention error
+- The cycle check walks the ancestor chain from the proposed parent upward and terminates in bounded time even on pathological input
+- A separate batch edit that would produce a cycle is also rejected atomically (no partial application)
+
+Difficulty: medium
+
+---
+
+## S77: Invalid Area Name Rejection {#s77}
+**Given** the canonical area seed table containing 7 canonical areas
+**When** a producer calls `set_project_area('my-project', 'NotARealArea')` or registers a project with an area name not in the seed table
+**Then** the call fails with a clear error naming the invalid input and listing the valid canonical areas.
+
+**Satisfaction criteria:**
+- The error code is `INVALID_INPUT` (or the spec's equivalent)
+- The error message names the rejected area string verbatim
+- The error message lists the valid canonical areas so the caller can correct their input without a second round trip
+- The project's existing area assignment is unchanged after the failed call
+- Case-insensitive matching to canonical names is NOT automatic — exact match is required (or the spec's chosen canonicalization, applied consistently)
+- Passing `null` is always valid and clears the area
+
+Difficulty: easy
+
+---
+
+## S78: Memory Scope Bubble-Up Through Area {#s78}
+**Given** three projects assigned to the Work area — `project-a`, `project-b`, `project-c` — each with area-scoped memories retained
+**When** an agent calls `recall({ query: '...', project: 'project-a' })`
+**Then** the recall results include area-scoped memories retained by `project-b` and `project-c` (the siblings in the same area), alongside `project-a`'s own project-scoped memories.
+
+**Satisfaction criteria:**
+- A memory retained by `project-b` with scope `area` and area `Work` appears in `project-a`'s recall results when `project-a` is also in Work
+- A memory retained by `project-b` with scope `project` (not area-scoped) does NOT appear in `project-a`'s recall results
+- A memory retained by a project in a DIFFERENT area does not bubble up into Work-area projects' recall
+- When a project is reassigned to a new area, its recall immediately sees the new area's pool of area-scoped memories and no longer sees the old area's pool
+- A project with no area assignment sees no area-scoped memories — only project + portfolio + global
+- The four-level scope hierarchy is: project (own) → area (sibling area-scoped) → portfolio → global
+
+Difficulty: hard
+
+---
+
+## S79: Parent Archive Does Not Cascade to Children {#s79}
+**Given** a parent project `knowmarks` with child `knowmarks-ios`
+**When** the user archives `knowmarks`
+**Then** `knowmarks-ios` remains active, the parent link is preserved, and the child's detail view displays the parent as "(archived)" while the link itself remains intact and navigable.
+
+**Satisfaction criteria:**
+- `archiveProject('knowmarks')` sets `knowmarks.status = 'archived'` but does not touch any child's status
+- `getProject('knowmarks-ios').status` remains `'active'` (or whatever it was before)
+- `getProject('knowmarks-ios').parent_project` still returns `'knowmarks'`
+- The child's detail view renders the parent link with the suffix "(archived)" so the user understands the parent's state without losing the connection
+- Clicking the parent link still navigates to the (archived) parent's detail view — it is not a dead link
+- Unarchiving the parent restores the normal link presentation in the child view
+
+Difficulty: medium
+
+---
+
+## S80: get_project Returns Area, Parent, and Children {#s80}
+**Given** a project `knowmarks` assigned to the Work area, with parent `portfolio-root` and children `knowmarks-ios` and `knowmarks-web`
+**When** a consumer calls `getProject('knowmarks', 'full')`
+**Then** the response includes the area name, the parent project name, and a complete list of child project names.
+
+**Satisfaction criteria:**
+- The response includes a top-level `area` field with the value `'Work'` (or `null` when unassigned)
+- The response includes a top-level `parent_project` field with the value `'portfolio-root'` (or `null` when unparented)
+- The response includes a top-level `children` array listing `['knowmarks-ios', 'knowmarks-web']` (or an empty array when childless)
+- The `children` array contains names only at summary depth; standard/full depth may include richer child summaries
+- Area, parent, and children are consistent in both directions: querying a child returns the same parent name that the parent's children array contains
+- A project with no area, no parent, and no children returns `area: null`, `parent_project: null`, `children: []` (empty array, not missing key)
+
+Difficulty: easy
