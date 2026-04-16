@@ -3,7 +3,20 @@ import { existsSync, mkdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { homedir } from 'node:os';
 
-export const SCHEMA_VERSION = 10;
+export const SCHEMA_VERSION = 11;
+
+/** Canonical seven areas (spec 0.13, schema v11). System-owned; no tool may mutate. */
+export const CANONICAL_AREAS: { name: string; display_name: string; description: string; color: string }[] = [
+  { name: 'Work',           display_name: 'Work',           description: 'Professional, client, and advisory projects.',          color: '#3b82f6' },
+  { name: 'Family',         display_name: 'Family',         description: 'Household family coordination and planning.',           color: '#ec4899' },
+  { name: 'Home',           display_name: 'Home',           description: 'Property, maintenance, and home operations.',           color: '#10b981' },
+  { name: 'Health',         display_name: 'Health',         description: 'Physical and mental health, fitness, medical.',          color: '#ef4444' },
+  { name: 'Finance',        display_name: 'Finance',        description: 'Money, banking, investment, tax, and accounting.',      color: '#f59e0b' },
+  { name: 'Personal',       display_name: 'Personal',       description: 'Personal development, hobbies, and creative work.',     color: '#a855f7' },
+  { name: 'Infrastructure', display_name: 'Infrastructure', description: 'Tooling, devops, and shared portfolio plumbing.',       color: '#6b7280' },
+];
+
+export type AreaName = 'Work' | 'Family' | 'Home' | 'Health' | 'Finance' | 'Personal' | 'Infrastructure';
 
 const DEFAULT_DB_DIR = join(homedir(), '.local', 'share', 'project-registry');
 const DEFAULT_DB_NAME = 'registry.db';
@@ -13,14 +26,24 @@ export function getDbPath(): string {
 }
 
 const SCHEMA_SQL = `
+CREATE TABLE IF NOT EXISTS areas (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL UNIQUE,
+    display_name TEXT NOT NULL,
+    description TEXT NOT NULL DEFAULT '',
+    color TEXT NOT NULL DEFAULT ''
+);
+
 CREATE TABLE IF NOT EXISTS projects (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL UNIQUE,
     display_name TEXT NOT NULL DEFAULT '',
-    type TEXT NOT NULL CHECK (type IN ('project', 'area_of_focus')),
+    type TEXT NOT NULL CHECK (type IN ('project')),
     status TEXT NOT NULL,
     description TEXT NOT NULL DEFAULT '',
     goals TEXT NOT NULL DEFAULT '',
+    area_id INTEGER REFERENCES areas(id),
+    parent_project_id INTEGER REFERENCES projects(id) ON DELETE SET NULL,
     created_at TEXT NOT NULL DEFAULT (datetime('now')),
     updated_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
@@ -118,7 +141,7 @@ CREATE TABLE IF NOT EXISTS memories (
     confidence REAL DEFAULT 0.5,
     status TEXT DEFAULT 'active' CHECK (status IN ('active', 'consolidating', 'archived', 'superseded')),
     project_id TEXT,
-    scope TEXT DEFAULT 'project' CHECK (scope IN ('project', 'area_of_focus', 'portfolio', 'global')),
+    scope TEXT DEFAULT 'project' CHECK (scope IN ('project', 'area', 'portfolio', 'global')),
     agent_role TEXT,
     session_id TEXT,
     tags TEXT,
@@ -219,6 +242,8 @@ CREATE VIRTUAL TABLE IF NOT EXISTS memory_fts USING fts5(
 CREATE INDEX IF NOT EXISTS idx_projects_type ON projects(type);
 CREATE INDEX IF NOT EXISTS idx_projects_status ON projects(status);
 CREATE INDEX IF NOT EXISTS idx_projects_type_status ON projects(type, status);
+CREATE INDEX IF NOT EXISTS idx_projects_area_id ON projects(area_id);
+CREATE INDEX IF NOT EXISTS idx_projects_parent_project_id ON projects(parent_project_id);
 CREATE INDEX IF NOT EXISTS idx_project_fields_project_id ON project_fields(project_id);
 CREATE INDEX IF NOT EXISTS idx_project_fields_field_name ON project_fields(field_name);
 CREATE INDEX IF NOT EXISTS idx_project_paths_project_id ON project_paths(project_id);
@@ -310,6 +335,15 @@ function createFtsTriggers(db: Database.Database): void {
   }
 }
 
+function seedAreas(db: Database.Database): void {
+  const stmt = db.prepare(
+    `INSERT OR IGNORE INTO areas (name, display_name, description, color) VALUES (?, ?, ?, ?)`
+  );
+  for (const area of CANONICAL_AREAS) {
+    stmt.run(area.name, area.display_name, area.description, area.color);
+  }
+}
+
 function seedFieldCatalog(db: Database.Database): void {
   const stmt = db.prepare(
     `INSERT OR IGNORE INTO field_catalog (name, field_type, category, description, is_list) VALUES (?, ?, ?, ?, ?)`
@@ -362,6 +396,13 @@ function ensureColumns(db: Database.Database): void {
   }
   if (!projColNames.has('concerns')) {
     db.exec(`ALTER TABLE projects ADD COLUMN concerns TEXT NOT NULL DEFAULT '[]'`);
+  }
+  // v11: structural area + parent columns
+  if (!projColNames.has('area_id')) {
+    db.exec(`ALTER TABLE projects ADD COLUMN area_id INTEGER REFERENCES areas(id)`);
+  }
+  if (!projColNames.has('parent_project_id')) {
+    db.exec(`ALTER TABLE projects ADD COLUMN parent_project_id INTEGER REFERENCES projects(id) ON DELETE SET NULL`);
   }
 }
 
@@ -547,7 +588,190 @@ function upgradeSchema(db: Database.Database): void {
     }
   }
 
+  if (currentVersion >= 10 && currentVersion < 11) {
+    // v10 → v11: canonical areas, structural area_id + parent_project_id,
+    // narrow projects.type CHECK to ('project'), retire area_of_focus.
+    // Memories.scope: area_of_focus → area. Atomic.
+    const runMigration = db.transaction(() => runV10ToV11Migration(db));
+    runMigration();
+  }
+
   db.prepare("INSERT OR REPLACE INTO schema_meta (key, value) VALUES ('schema_version', ?)").run(String(SCHEMA_VERSION));
+}
+
+/**
+ * v10 → v11 migration. Runs inside a transaction on the live database.
+ * Steps:
+ *   1. Ensure `areas` table exists and is seeded with the 7 canonical areas.
+ *   2. Ensure `area_id` + `parent_project_id` columns exist on projects.
+ *   3. Demote any area_of_focus-typed rows to project; assign canonical areas
+ *      for msq-advisory-board (Work) and fam-estate-planning (Family);
+ *      leave other demoted rows with area_id = NULL.
+ *   4. Promote knowmarks-ios ↔ knowmarks entity soft link to parent_project_id.
+ *   5. Narrow projects.type CHECK from ('project','area_of_focus') → ('project')
+ *      via table-rebuild (SQLite cannot alter CHECK in place).
+ *   6. Remap memories.scope value 'area_of_focus' → 'area' via table-rebuild.
+ */
+function runV10ToV11Migration(db: Database.Database): void {
+  // Step 1: areas table + seed (idempotent)
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS areas (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL UNIQUE,
+      display_name TEXT NOT NULL,
+      description TEXT NOT NULL DEFAULT '',
+      color TEXT NOT NULL DEFAULT ''
+    );
+  `);
+  seedAreas(db);
+
+  // Step 2: columns (idempotent via ensureColumns at the ALTER level)
+  const projCols = db.prepare("PRAGMA table_info(projects)").all() as { name: string }[];
+  const projColNames = new Set(projCols.map(c => c.name));
+  if (!projColNames.has('area_id')) {
+    db.exec(`ALTER TABLE projects ADD COLUMN area_id INTEGER REFERENCES areas(id)`);
+  }
+  if (!projColNames.has('parent_project_id')) {
+    db.exec(`ALTER TABLE projects ADD COLUMN parent_project_id INTEGER REFERENCES projects(id) ON DELETE SET NULL`);
+  }
+
+  const areaIdByName = new Map<string, number>();
+  for (const row of db.prepare('SELECT id, name FROM areas').all() as { id: number; name: string }[]) {
+    areaIdByName.set(row.name, row.id);
+  }
+
+  // Step 3: demote area_of_focus rows
+  const demotions: { name: string; area: string | null }[] = [
+    { name: 'msq-advisory-board', area: 'Work' },
+    { name: 'fam-estate-planning', area: 'Family' },
+  ];
+  for (const d of demotions) {
+    const row = db.prepare(`SELECT id FROM projects WHERE name = ? AND type = 'area_of_focus'`).get(d.name) as { id: number } | undefined;
+    if (row) {
+      const areaId = d.area ? areaIdByName.get(d.area) ?? null : null;
+      db.prepare(`UPDATE projects SET type = 'project', area_id = ?, updated_at = datetime('now') WHERE id = ?`).run(areaId, row.id);
+    }
+  }
+  // Any remaining area_of_focus rows: demote to project with area_id=NULL
+  db.prepare(`UPDATE projects SET type = 'project', updated_at = datetime('now') WHERE type = 'area_of_focus'`).run();
+
+  // Step 4: knowmarks-ios ↔ knowmarks soft-link promotion
+  const kIos = db.prepare(`SELECT id, entities FROM projects WHERE name = 'knowmarks-ios'`).get() as { id: number; entities: string } | undefined;
+  const kParent = db.prepare(`SELECT id FROM projects WHERE name = 'knowmarks'`).get() as { id: number } | undefined;
+  if (kIos && kParent) {
+    let refsKnowmarks = false;
+    try {
+      const parsed = JSON.parse(kIos.entities || '[]');
+      if (Array.isArray(parsed) && parsed.map(String).some(e => e.toLowerCase() === 'knowmarks')) {
+        refsKnowmarks = true;
+      }
+    } catch { /* ignore */ }
+    if (refsKnowmarks) {
+      db.prepare(`UPDATE projects SET parent_project_id = ?, updated_at = datetime('now') WHERE id = ?`).run(kParent.id, kIos.id);
+    }
+  }
+
+  // Step 5: narrow projects.type CHECK via table-rebuild
+  db.pragma('foreign_keys = OFF');
+  db.exec(`DROP TABLE IF EXISTS projects_v11`);
+  db.exec(`
+    CREATE TABLE projects_v11 (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL UNIQUE,
+      display_name TEXT NOT NULL DEFAULT '',
+      type TEXT NOT NULL CHECK (type IN ('project')),
+      status TEXT NOT NULL,
+      description TEXT NOT NULL DEFAULT '',
+      goals TEXT NOT NULL DEFAULT '',
+      topics TEXT NOT NULL DEFAULT '[]',
+      entities TEXT NOT NULL DEFAULT '[]',
+      concerns TEXT NOT NULL DEFAULT '[]',
+      area_id INTEGER REFERENCES areas(id),
+      parent_project_id INTEGER REFERENCES projects_v11(id) ON DELETE SET NULL,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+  `);
+  db.exec(`
+    INSERT INTO projects_v11 (id, name, display_name, type, status, description, goals, topics, entities, concerns, area_id, parent_project_id, created_at, updated_at)
+    SELECT id, name, display_name, type, status, description, goals, topics, entities, concerns, area_id, parent_project_id, created_at, updated_at FROM projects;
+  `);
+  db.exec(`DROP TABLE projects`);
+  db.exec(`ALTER TABLE projects_v11 RENAME TO projects`);
+  db.exec(`CREATE INDEX IF NOT EXISTS idx_projects_type ON projects(type)`);
+  db.exec(`CREATE INDEX IF NOT EXISTS idx_projects_status ON projects(status)`);
+  db.exec(`CREATE INDEX IF NOT EXISTS idx_projects_type_status ON projects(type, status)`);
+  db.exec(`CREATE INDEX IF NOT EXISTS idx_projects_area_id ON projects(area_id)`);
+  db.exec(`CREATE INDEX IF NOT EXISTS idx_projects_parent_project_id ON projects(parent_project_id)`);
+  db.pragma('foreign_keys = ON');
+
+  // Step 6: narrow memories.scope CHECK via table-rebuild and remap values
+  db.pragma('foreign_keys = OFF');
+  db.exec(`DROP TABLE IF EXISTS memories_v11`);
+  db.exec(`
+    CREATE TABLE memories_v11 (
+      id TEXT PRIMARY KEY,
+      content TEXT NOT NULL,
+      content_l0 TEXT,
+      content_l1 TEXT,
+      type TEXT NOT NULL CHECK (type IN ('decision', 'outcome', 'pattern', 'preference', 'dependency', 'correction', 'learning', 'context', 'procedural', 'observation')),
+      importance REAL DEFAULT 0.5,
+      confidence REAL DEFAULT 0.5,
+      status TEXT DEFAULT 'active' CHECK (status IN ('active', 'consolidating', 'archived', 'superseded')),
+      project_id TEXT,
+      scope TEXT DEFAULT 'project' CHECK (scope IN ('project', 'area', 'portfolio', 'global')),
+      agent_role TEXT,
+      session_id TEXT,
+      tags TEXT,
+      content_hash TEXT NOT NULL,
+      embedding BLOB,
+      embedding_model TEXT,
+      embedding_new BLOB,
+      embedding_model_new TEXT,
+      reinforcement_count INTEGER DEFAULT 1,
+      outcome_score REAL DEFAULT 0.0,
+      is_static INTEGER DEFAULT 0,
+      is_inference INTEGER DEFAULT 0,
+      is_pinned INTEGER DEFAULT 0,
+      belief TEXT CHECK (belief IN ('fact', 'opinion', 'hypothesis')),
+      extraction_confidence REAL,
+      valid_from TEXT,
+      valid_until TEXT,
+      entities TEXT,
+      parent_version_id TEXT REFERENCES memories_v11(id),
+      is_current INTEGER DEFAULT 1,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      last_accessed TEXT,
+      forget_after TEXT,
+      forget_reason TEXT,
+      UNIQUE(content_hash, project_id, scope)
+    );
+  `);
+  db.exec(`
+    INSERT INTO memories_v11 SELECT
+      id, content, content_l0, content_l1,
+      type, importance, confidence, status, project_id,
+      CASE WHEN scope = 'area_of_focus' THEN 'area' ELSE scope END AS scope,
+      agent_role, session_id, tags, content_hash,
+      embedding, embedding_model, embedding_new, embedding_model_new,
+      reinforcement_count, outcome_score, is_static, is_inference, is_pinned,
+      belief, extraction_confidence, valid_from, valid_until, entities, parent_version_id, is_current,
+      created_at, updated_at, last_accessed, forget_after, forget_reason
+    FROM memories;
+  `);
+  db.exec(`DROP TABLE memories`);
+  db.exec(`ALTER TABLE memories_v11 RENAME TO memories`);
+  db.exec(`CREATE INDEX IF NOT EXISTS idx_memories_project ON memories(project_id, status)`);
+  db.exec(`CREATE INDEX IF NOT EXISTS idx_memories_scope ON memories(scope, status)`);
+  db.exec(`CREATE INDEX IF NOT EXISTS idx_memories_type ON memories(type, status)`);
+  db.exec(`CREATE INDEX IF NOT EXISTS idx_memories_hash ON memories(content_hash)`);
+  db.exec(`CREATE INDEX IF NOT EXISTS idx_memories_pinned ON memories(is_pinned, status)`);
+  createFtsTriggers(db);
+  // Rebuild FTS content for memories rows
+  db.exec(`DELETE FROM memory_fts`);
+  db.exec(`INSERT INTO memory_fts(memory_id, content, content_l0, content_l1) SELECT id, content, content_l0, content_l1 FROM memories`);
+  db.pragma('foreign_keys = ON');
 }
 
 /**
@@ -577,6 +801,7 @@ export function initDb(dbPath?: string): string {
     db.exec(SCHEMA_SQL);
     createFtsTriggers(db);
     upgradeSchema(db);
+    seedAreas(db);
     seedFieldCatalog(db);
     seedTemplates(db);
   } finally {
