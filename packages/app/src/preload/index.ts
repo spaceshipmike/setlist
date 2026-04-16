@@ -3,11 +3,11 @@ import { contextBridge, ipcRenderer } from 'electron';
 
 const api = {
   // Project Identity
-  listProjects: (opts?: { depth?: string; type_filter?: string; status_filter?: string }) =>
+  listProjects: (opts?: { depth?: string; type_filter?: string; status_filter?: string; area_filter?: string }) =>
     ipcRenderer.invoke('listProjects', opts),
   getProject: (name: string, depth?: string) =>
     ipcRenderer.invoke('getProject', name, depth),
-  searchProjects: (opts: { query: string; type_filter?: string; status_filter?: string }) =>
+  searchProjects: (opts: { query: string; type_filter?: string; status_filter?: string; area_filter?: string }) =>
     ipcRenderer.invoke('searchProjects', opts),
   getRegistryStats: () =>
     ipcRenderer.invoke('getRegistryStats'),
@@ -19,12 +19,16 @@ const api = {
     goals?: string;
     display_name?: string;
     paths?: string[];
+    area?: string | null;
+    parent_project?: string | null;
   }) => ipcRenderer.invoke('register', opts),
   updateCore: (name: string, updates: {
     status?: string;
     description?: string;
     goals?: string;
     display_name?: string;
+    area?: string | null;
+    parent_project?: string | null;
   }) => ipcRenderer.invoke('updateCore', name, updates),
   updateFields: (name: string, fields: Record<string, unknown>, producer?: string) =>
     ipcRenderer.invoke('updateFields', name, fields, producer),
@@ -32,6 +36,12 @@ const api = {
     ipcRenderer.invoke('archiveProject', name),
   renameProject: (oldName: string, newName: string) =>
     ipcRenderer.invoke('renameProject', oldName, newName),
+
+  // spec 0.13: areas + sub-projects
+  setProjectArea: (name: string, area: string | null) =>
+    ipcRenderer.invoke('setProjectArea', name, area),
+  setParentProject: (childName: string, parentName: string | null) =>
+    ipcRenderer.invoke('setParentProject', childName, parentName),
 
   // Profile
   enrichProject: (name: string, profile: {
@@ -76,6 +86,8 @@ const api = {
     display_name?: string;
     path_override?: string;
     skip_git?: boolean;
+    area?: string | null;
+    parent_project?: string | null;
   }) => ipcRenderer.invoke('bootstrapProject', opts),
 } as const;
 

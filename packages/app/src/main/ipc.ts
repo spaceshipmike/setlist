@@ -66,6 +66,16 @@ export function registerIpcHandlers(ipcMain: IpcMain): void {
     reg.renameProject(oldName, newName);
   });
 
+  // ── Areas + Sub-Projects (spec 0.13) ─────────────────────────
+
+  ipcMain.handle('setProjectArea', (_e, name: string, area: string | null) => {
+    return reg.setProjectArea(name, area);
+  });
+
+  ipcMain.handle('setParentProject', (_e, childName: string, parentName: string | null) => {
+    return reg.setParentProject(childName, parentName);
+  });
+
   // ── Profile Enrichment ────────────────────────────────────────
 
   ipcMain.handle('enrichProject', (_e, name: string, profile: {
@@ -147,11 +157,15 @@ export function registerIpcHandlers(ipcMain: IpcMain): void {
     display_name?: string;
     path_override?: string;
     skip_git?: boolean;
+    area?: string | null;
+    parent_project?: string | null;
   }) => {
     const bootstrap = new Bootstrap(reg.dbPath);
     return bootstrap.bootstrapProject({
       ...opts,
-      type: opts.type as 'project' | 'area_of_focus',
+      // spec 0.13: retired 'area_of_focus' type — app only creates 'project'
+      // or 'non_code_project' (routed to a different pathRoot via bootstrap).
+      type: opts.type as 'project' | 'non_code_project',
       producer: 'setlist-app',
     });
   });

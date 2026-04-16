@@ -3,6 +3,20 @@
  * All calls are async (IPC invoke returns promises).
  */
 
+// spec 0.13: canonical areas
+export type AreaName =
+  | 'Work'
+  | 'Family'
+  | 'Home'
+  | 'Health'
+  | 'Finance'
+  | 'Personal'
+  | 'Infrastructure';
+export const AREA_NAMES: readonly AreaName[] = [
+  'Work', 'Family', 'Home', 'Health', 'Finance', 'Personal', 'Infrastructure',
+] as const;
+export const UNASSIGNED_AREA_SENTINEL = '__unassigned__';
+
 export interface ProjectSummary {
   name: string;
   display_name: string;
@@ -19,6 +33,11 @@ export interface ProjectSummary {
   entities?: string[];
   concerns?: string[];
   fields?: Record<string, unknown>;
+  // spec 0.13: structural area + parent/children
+  area: AreaName | null;
+  parent_project: string | null;
+  parent_archived?: boolean;
+  children: string[];
 }
 
 export interface ProjectFull extends ProjectSummary {
@@ -62,6 +81,9 @@ export interface RegistryStats {
   total: number;
   by_type: Record<string, number>;
   by_status: Record<string, number>;
+  // spec 0.13: per-area distribution + unassigned count
+  by_area: Record<AreaName, number>;
+  unassigned: number;
 }
 
 // ── Health ────────────────────────────────────────────────────
@@ -89,13 +111,13 @@ export interface PortfolioHealth {
 }
 
 const api = {
-  listProjects: (opts?: { depth?: string; type_filter?: string; status_filter?: string }) =>
+  listProjects: (opts?: { depth?: string; type_filter?: string; status_filter?: string; area_filter?: string }) =>
     window.setlist.listProjects(opts) as Promise<ProjectSummary[]>,
 
   getProject: (name: string, depth?: string) =>
     window.setlist.getProject(name, depth) as Promise<ProjectFull | null>,
 
-  searchProjects: (opts: { query: string; type_filter?: string; status_filter?: string }) =>
+  searchProjects: (opts: { query: string; type_filter?: string; status_filter?: string; area_filter?: string }) =>
     window.setlist.searchProjects(opts) as Promise<ProjectSummary[]>,
 
   getRegistryStats: () =>
@@ -109,6 +131,8 @@ const api = {
     goals?: string;
     display_name?: string;
     paths?: string[];
+    area?: AreaName | null;
+    parent_project?: string | null;
   }) => window.setlist.register(opts) as Promise<number>,
 
   updateCore: (name: string, updates: {
@@ -116,7 +140,15 @@ const api = {
     description?: string;
     goals?: string;
     display_name?: string;
+    area?: AreaName | null;
+    parent_project?: string | null;
   }) => window.setlist.updateCore(name, updates),
+
+  // spec 0.13: areas + sub-projects
+  setProjectArea: (name: string, area: AreaName | null) =>
+    window.setlist.setProjectArea(name, area) as Promise<ProjectFull>,
+  setParentProject: (childName: string, parentName: string | null) =>
+    window.setlist.setParentProject(childName, parentName) as Promise<ProjectFull>,
 
   updateFields: (name: string, fields: Record<string, unknown>, producer?: string) =>
     window.setlist.updateFields(name, fields, producer),
@@ -157,6 +189,8 @@ const api = {
     display_name?: string;
     path_override?: string;
     skip_git?: boolean;
+    area?: AreaName | null;
+    parent_project?: string | null;
   }) => window.setlist.bootstrapProject(opts) as Promise<BootstrapResult>,
 
   assessHealth: (name?: string, opts?: { fresh?: boolean }) =>
