@@ -67,6 +67,8 @@ export function ProjectDetailView({ projectName, onBack, onNavigate }: ProjectDe
               status: project.status,
               description: project.description ?? '',
               goals: Array.isArray(project.goals) ? project.goals.join(', ') : (project.goals ?? ''),
+              area: project.area ?? null,
+              parent_project: project.parent_project ?? null,
             }}
             projectType={project.type}
             onSave={() => { setEditing(false); refresh(); }}

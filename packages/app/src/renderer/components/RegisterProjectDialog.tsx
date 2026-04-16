@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import * as Dialog from '@radix-ui/react-dialog';
-import api, { type BootstrapConfig } from '../lib/api';
+import api, { type BootstrapConfig, type ProjectSummary, type AreaName, AREA_NAMES } from '../lib/api';
 import { friendlyError } from '../lib/errors';
 
 interface RegisterProjectDialogProps {
@@ -9,31 +9,31 @@ interface RegisterProjectDialogProps {
   onSuccess: () => void;
 }
 
+// spec 0.13: retired 'area_of_focus' — users choose code vs. non-code, and
+// assign an area + optional parent project separately.
 const PROJECT_TYPES = [
   { value: 'code_project', label: 'Code project' },
   { value: 'non_code_project', label: 'Non-code project' },
-  { value: 'area_of_focus', label: 'Area of focus' },
 ];
 
 // Map project type values to bootstrap path_roots keys
 const TYPE_TO_PATH_KEY: Record<string, string> = {
   code_project: 'project',
   non_code_project: 'non_code_project',
-  area_of_focus: 'area_of_focus',
 };
 
-// Map UI type values to the project type stored in the registry
-const TYPE_TO_DB_TYPE: Record<string, 'project' | 'area_of_focus'> = {
-  code_project: 'project',
-  non_code_project: 'project',
-  area_of_focus: 'area_of_focus',
-};
+const UNASSIGNED = '__unassigned__';
 
 export function RegisterProjectDialog({ open, onOpenChange, onSuccess }: RegisterProjectDialogProps) {
   const [name, setName] = useState('');
   const [displayName, setDisplayName] = useState('');
   const [type, setType] = useState('code_project');
   const [description, setDescription] = useState('');
+  // spec 0.13: area + parent fields
+  const [area, setArea] = useState<string>(UNASSIGNED);
+  const [parentProject, setParentProject] = useState<string>('');
+  const [parentQuery, setParentQuery] = useState<string>('');
+  const [parentOptions, setParentOptions] = useState<ProjectSummary[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [nameWarning, setNameWarning] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -48,6 +48,10 @@ export function RegisterProjectDialog({ open, onOpenChange, onSuccess }: Registe
   useEffect(() => {
     if (open) {
       api.getBootstrapConfig().then(setConfig).catch(() => setConfig(null));
+      // Load first page of existing projects for the parent picker
+      api.listProjects({ depth: 'summary' })
+        .then(projects => setParentOptions(projects as ProjectSummary[]))
+        .catch(() => setParentOptions([]));
     }
   }, [open]);
 
@@ -96,24 +100,32 @@ export function RegisterProjectDialog({ open, onOpenChange, onSuccess }: Registe
     try {
       setSaving(true);
 
+      // spec 0.13: resolve area + parent_project from local UI state
+      const resolvedArea: AreaName | null = area === UNASSIGNED ? null : (area as AreaName);
+      const resolvedParent: string | null = parentProject.trim() || null;
+
       if (createFolder) {
         // Bootstrap: register + create folder + templates + git init
         await api.bootstrapProject({
           name: name.trim(),
-          type,
+          type: type === 'code_project' ? 'project' : 'non_code_project',
           status: 'active',
           description: description.trim() || undefined,
           display_name: displayName.trim() || undefined,
           skip_git: skipGit || type !== 'code_project',
+          area: resolvedArea,
+          parent_project: resolvedParent,
         });
       } else {
-        // Register only (no filesystem changes)
+        // Register only (no filesystem changes). spec 0.13: db type is always 'project'.
         await api.register({
           name: name.trim(),
-          type: TYPE_TO_DB_TYPE[type],
+          type: 'project',
           status: 'active',
           description: description.trim() || undefined,
           display_name: displayName.trim() || undefined,
+          area: resolvedArea,
+          parent_project: resolvedParent,
         });
       }
 
@@ -122,6 +134,9 @@ export function RegisterProjectDialog({ open, onOpenChange, onSuccess }: Registe
       setDisplayName('');
       setType('code_project');
       setDescription('');
+      setArea(UNASSIGNED);
+      setParentProject('');
+      setParentQuery('');
       setCreateFolder(false);
       setSkipGit(false);
       onOpenChange(false);
@@ -189,6 +204,49 @@ export function RegisterProjectDialog({ open, onOpenChange, onSuccess }: Registe
                 rows={3}
                 className="input-field resize-none"
               />
+            </Field>
+
+            {/* spec 0.13: area picker */}
+            <Field label="Area">
+              <select
+                value={area}
+                onChange={(e) => setArea(e.target.value)}
+                className="input-field"
+              >
+                <option value={UNASSIGNED}>Unassigned</option>
+                {AREA_NAMES.map(a => (
+                  <option key={a} value={a}>{a}</option>
+                ))}
+              </select>
+            </Field>
+
+            {/* spec 0.13: parent project picker (searchable combobox) */}
+            <Field label="Parent project (optional)">
+              <input
+                type="text"
+                value={parentQuery}
+                onChange={(e) => {
+                  setParentQuery(e.target.value);
+                  setParentProject(e.target.value);
+                }}
+                placeholder="Type to search existing projects…"
+                list="register-parent-options"
+                className="input-field"
+              />
+              <datalist id="register-parent-options">
+                {parentOptions
+                  .filter(p => p.name !== name.trim())
+                  .filter(p => !parentQuery || p.name.toLowerCase().includes(parentQuery.toLowerCase()))
+                  .slice(0, 50)
+                  .map(p => (
+                    <option key={p.name} value={p.name}>{p.display_name}</option>
+                  ))}
+              </datalist>
+              {parentProject && !parentOptions.some(p => p.name === parentProject) && (
+                <div className="mt-1 text-xs text-[var(--color-warning)]">
+                  No project named &quot;{parentProject}&quot; — registration will fail unless it exists.
+                </div>
+              )}
             </Field>
 
             {/* Bootstrap toggle */}
