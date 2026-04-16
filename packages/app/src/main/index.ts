@@ -5,6 +5,7 @@ import { registerIpcHandlers } from './ipc.js';
 import { initAutoUpdater } from './auto-update.js';
 import { loadPrefs } from './prefs.js';
 import { installAppMenu, handleMenuCheckForUpdates } from './menu.js';
+import { registerQuitPrompt } from './quit-prompt.js';
 
 // Single-instance lock
 const gotLock = app.requestSingleInstanceLock();
@@ -83,6 +84,10 @@ app.whenReady().then(() => {
   // Auto-update (skip in dev — Chunk 2 reads the channel from prefs).
   if (!process.env.ELECTRON_RENDERER_URL) {
     initAutoUpdater();
+    // Intercept quit when an update is staged so the user gets the
+    // Install/Skip prompt (S89). Only in production — no staged
+    // updates are possible in dev.
+    registerQuitPrompt(app, () => mainWindow);
   }
 
   app.on('activate', () => {

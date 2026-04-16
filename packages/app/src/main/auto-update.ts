@@ -116,7 +116,10 @@ export function initAutoUpdater(options: { autoCheck?: boolean } = {}): void {
   initialized = true;
 
   autoUpdater.autoDownload = true;
-  autoUpdater.autoInstallOnAppQuit = true;
+  // S89 requires a user confirmation before install. Disable the
+  // automatic install-on-quit; our before-quit handler in index.ts
+  // prompts and calls quitAndInstall() explicitly on confirm.
+  autoUpdater.autoInstallOnAppQuit = false;
 
   autoUpdater.on('checking-for-update', () => {
     checkInFlight = true;
