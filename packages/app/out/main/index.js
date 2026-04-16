@@ -1,30 +1,49 @@
 import { app, BrowserWindow, ipcMain } from "electron";
 import { join, dirname, basename } from "node:path";
 import Database from "better-sqlite3";
-import { existsSync, mkdirSync, readFileSync, cpSync, rmSync, renameSync, statSync, readdirSync } from "node:fs";
+import { existsSync, mkdirSync, copyFileSync, readFileSync, cpSync, rmSync, renameSync, statSync, readdirSync } from "node:fs";
 import { homedir } from "node:os";
 import { createHash, randomUUID } from "node:crypto";
-import { execSync } from "node:child_process";
+import { execSync, execFileSync } from "node:child_process";
 import pkg from "electron-updater";
 import __cjs_mod__ from "node:module";
 const __filename = import.meta.filename;
 const __dirname = import.meta.dirname;
 const require2 = __cjs_mod__.createRequire(import.meta.url);
-const SCHEMA_VERSION = 10;
+const SCHEMA_VERSION = 11;
+const CANONICAL_AREAS = [
+  { name: "Work", display_name: "Work", description: "Professional, client, and advisory projects.", color: "#3b82f6" },
+  { name: "Family", display_name: "Family", description: "Household family coordination and planning.", color: "#ec4899" },
+  { name: "Home", display_name: "Home", description: "Property, maintenance, and home operations.", color: "#10b981" },
+  { name: "Health", display_name: "Health", description: "Physical and mental health, fitness, medical.", color: "#ef4444" },
+  { name: "Finance", display_name: "Finance", description: "Money, banking, investment, tax, and accounting.", color: "#f59e0b" },
+  { name: "Personal", display_name: "Personal", description: "Personal development, hobbies, and creative work.", color: "#a855f7" },
+  { name: "Infrastructure", display_name: "Infrastructure", description: "Tooling, devops, and shared portfolio plumbing.", color: "#6b7280" }
+];
 const DEFAULT_DB_DIR = join(homedir(), ".local", "share", "project-registry");
 const DEFAULT_DB_NAME = "registry.db";
 function getDbPath() {
   return join(DEFAULT_DB_DIR, DEFAULT_DB_NAME);
 }
 const SCHEMA_SQL = `
+CREATE TABLE IF NOT EXISTS areas (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL UNIQUE,
+    display_name TEXT NOT NULL,
+    description TEXT NOT NULL DEFAULT '',
+    color TEXT NOT NULL DEFAULT ''
+);
+
 CREATE TABLE IF NOT EXISTS projects (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL UNIQUE,
     display_name TEXT NOT NULL DEFAULT '',
-    type TEXT NOT NULL CHECK (type IN ('project', 'area_of_focus')),
+    type TEXT NOT NULL CHECK (type IN ('project')),
     status TEXT NOT NULL,
     description TEXT NOT NULL DEFAULT '',
     goals TEXT NOT NULL DEFAULT '',
+    area_id INTEGER REFERENCES areas(id),
+    parent_project_id INTEGER REFERENCES projects(id) ON DELETE SET NULL,
     created_at TEXT NOT NULL DEFAULT (datetime('now')),
     updated_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
@@ -122,7 +141,7 @@ CREATE TABLE IF NOT EXISTS memories (
     confidence REAL DEFAULT 0.5,
     status TEXT DEFAULT 'active' CHECK (status IN ('active', 'consolidating', 'archived', 'superseded')),
     project_id TEXT,
-    scope TEXT DEFAULT 'project' CHECK (scope IN ('project', 'area_of_focus', 'portfolio', 'global')),
+    scope TEXT DEFAULT 'project' CHECK (scope IN ('project', 'area', 'portfolio', 'global')),
     agent_role TEXT,
     session_id TEXT,
     tags TEXT,
@@ -223,6 +242,8 @@ CREATE VIRTUAL TABLE IF NOT EXISTS memory_fts USING fts5(
 CREATE INDEX IF NOT EXISTS idx_projects_type ON projects(type);
 CREATE INDEX IF NOT EXISTS idx_projects_status ON projects(status);
 CREATE INDEX IF NOT EXISTS idx_projects_type_status ON projects(type, status);
+-- v11 area_id + parent_project_id indexes are created after ensureColumns runs
+-- in case the projects table was created by an older schema (no area columns).
 CREATE INDEX IF NOT EXISTS idx_project_fields_project_id ON project_fields(project_id);
 CREATE INDEX IF NOT EXISTS idx_project_fields_field_name ON project_fields(field_name);
 CREATE INDEX IF NOT EXISTS idx_project_paths_project_id ON project_paths(project_id);
@@ -300,6 +321,12 @@ function createFtsTriggers(db) {
     }
   }
 }
+function seedAreas(db) {
+  const stmt = db.prepare(`INSERT OR IGNORE INTO areas (name, display_name, description, color) VALUES (?, ?, ?, ?)`);
+  for (const area of CANONICAL_AREAS) {
+    stmt.run(area.name, area.display_name, area.description, area.color);
+  }
+}
 function seedFieldCatalog(db) {
   const stmt = db.prepare(`INSERT OR IGNORE INTO field_catalog (name, field_type, category, description, is_list) VALUES (?, ?, ?, ?, ?)`);
   for (const entry of FIELD_CATALOG_SEED) {
@@ -345,10 +372,30 @@ function ensureColumns(db) {
   if (!projColNames.has("concerns")) {
     db.exec(`ALTER TABLE projects ADD COLUMN concerns TEXT NOT NULL DEFAULT '[]'`);
   }
+  if (!projColNames.has("area_id")) {
+    db.exec(`ALTER TABLE projects ADD COLUMN area_id INTEGER REFERENCES areas(id)`);
+  }
+  if (!projColNames.has("parent_project_id")) {
+    db.exec(`ALTER TABLE projects ADD COLUMN parent_project_id INTEGER REFERENCES projects(id) ON DELETE SET NULL`);
+  }
+  db.exec(`CREATE INDEX IF NOT EXISTS idx_projects_area_id ON projects(area_id)`);
+  db.exec(`CREATE INDEX IF NOT EXISTS idx_projects_parent_project_id ON projects(parent_project_id)`);
 }
 function upgradeSchema(db) {
   const meta = db.prepare("SELECT value FROM schema_meta WHERE key = 'schema_version'").get();
   const currentVersion = meta ? parseInt(meta.value, 10) : 0;
+  if (currentVersion < SCHEMA_VERSION && currentVersion > 0) {
+    const dbPath = db.name;
+    if (dbPath && dbPath !== ":memory:") {
+      const backupPath = `${dbPath}.v${currentVersion}.bak`;
+      if (!existsSync(backupPath)) {
+        try {
+          copyFileSync(dbPath, backupPath);
+        } catch {
+        }
+      }
+    }
+  }
   ensureColumns(db);
   if (currentVersion >= SCHEMA_VERSION)
     return;
@@ -497,7 +544,160 @@ function upgradeSchema(db) {
       db.pragma("foreign_keys = ON");
     }
   }
+  if (currentVersion >= 10 && currentVersion < 11) {
+    db.pragma("foreign_keys = OFF");
+    try {
+      const runMigration = db.transaction(() => runV10ToV11Migration(db));
+      runMigration();
+    } finally {
+      db.pragma("foreign_keys = ON");
+    }
+  }
   db.prepare("INSERT OR REPLACE INTO schema_meta (key, value) VALUES ('schema_version', ?)").run(String(SCHEMA_VERSION));
+}
+function runV10ToV11Migration(db) {
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS areas (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL UNIQUE,
+      display_name TEXT NOT NULL,
+      description TEXT NOT NULL DEFAULT '',
+      color TEXT NOT NULL DEFAULT ''
+    );
+  `);
+  seedAreas(db);
+  const projCols = db.prepare("PRAGMA table_info(projects)").all();
+  const projColNames = new Set(projCols.map((c) => c.name));
+  if (!projColNames.has("area_id")) {
+    db.exec(`ALTER TABLE projects ADD COLUMN area_id INTEGER REFERENCES areas(id)`);
+  }
+  if (!projColNames.has("parent_project_id")) {
+    db.exec(`ALTER TABLE projects ADD COLUMN parent_project_id INTEGER REFERENCES projects(id) ON DELETE SET NULL`);
+  }
+  const areaIdByName = /* @__PURE__ */ new Map();
+  for (const row of db.prepare("SELECT id, name FROM areas").all()) {
+    areaIdByName.set(row.name, row.id);
+  }
+  const demotions = [
+    { name: "msq-advisory-board", area: "Work" },
+    { name: "fam-estate-planning", area: "Family" }
+  ];
+  for (const d of demotions) {
+    const row = db.prepare(`SELECT id FROM projects WHERE name = ? AND type = 'area_of_focus'`).get(d.name);
+    if (row) {
+      const areaId = d.area ? areaIdByName.get(d.area) ?? null : null;
+      db.prepare(`UPDATE projects SET type = 'project', area_id = ?, updated_at = datetime('now') WHERE id = ?`).run(areaId, row.id);
+    }
+  }
+  db.prepare(`UPDATE projects SET type = 'project', updated_at = datetime('now') WHERE type = 'area_of_focus'`).run();
+  const kIos = db.prepare(`SELECT id, entities FROM projects WHERE name = 'knowmarks-ios'`).get();
+  const kParent = db.prepare(`SELECT id FROM projects WHERE name = 'knowmarks'`).get();
+  if (kIos && kParent) {
+    let refsKnowmarks = false;
+    try {
+      const parsed = JSON.parse(kIos.entities || "[]");
+      if (Array.isArray(parsed) && parsed.map(String).some((e) => e.toLowerCase() === "knowmarks")) {
+        refsKnowmarks = true;
+      }
+    } catch {
+    }
+    if (refsKnowmarks) {
+      db.prepare(`UPDATE projects SET parent_project_id = ?, updated_at = datetime('now') WHERE id = ?`).run(kParent.id, kIos.id);
+    }
+  }
+  db.exec(`DROP TABLE IF EXISTS projects_v11`);
+  db.exec(`
+    CREATE TABLE projects_v11 (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL UNIQUE,
+      display_name TEXT NOT NULL DEFAULT '',
+      type TEXT NOT NULL CHECK (type IN ('project')),
+      status TEXT NOT NULL,
+      description TEXT NOT NULL DEFAULT '',
+      goals TEXT NOT NULL DEFAULT '',
+      topics TEXT NOT NULL DEFAULT '[]',
+      entities TEXT NOT NULL DEFAULT '[]',
+      concerns TEXT NOT NULL DEFAULT '[]',
+      area_id INTEGER REFERENCES areas(id),
+      parent_project_id INTEGER REFERENCES projects_v11(id) ON DELETE SET NULL,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+  `);
+  db.exec(`
+    INSERT INTO projects_v11 (id, name, display_name, type, status, description, goals, topics, entities, concerns, area_id, parent_project_id, created_at, updated_at)
+    SELECT id, name, display_name, type, status, description, goals, topics, entities, concerns, area_id, parent_project_id, created_at, updated_at FROM projects;
+  `);
+  db.exec(`DROP TABLE projects`);
+  db.exec(`ALTER TABLE projects_v11 RENAME TO projects`);
+  db.exec(`CREATE INDEX IF NOT EXISTS idx_projects_type ON projects(type)`);
+  db.exec(`CREATE INDEX IF NOT EXISTS idx_projects_status ON projects(status)`);
+  db.exec(`CREATE INDEX IF NOT EXISTS idx_projects_type_status ON projects(type, status)`);
+  db.exec(`CREATE INDEX IF NOT EXISTS idx_projects_area_id ON projects(area_id)`);
+  db.exec(`CREATE INDEX IF NOT EXISTS idx_projects_parent_project_id ON projects(parent_project_id)`);
+  db.exec(`DROP TABLE IF EXISTS memories_v11`);
+  db.exec(`
+    CREATE TABLE memories_v11 (
+      id TEXT PRIMARY KEY,
+      content TEXT NOT NULL,
+      content_l0 TEXT,
+      content_l1 TEXT,
+      type TEXT NOT NULL CHECK (type IN ('decision', 'outcome', 'pattern', 'preference', 'dependency', 'correction', 'learning', 'context', 'procedural', 'observation')),
+      importance REAL DEFAULT 0.5,
+      confidence REAL DEFAULT 0.5,
+      status TEXT DEFAULT 'active' CHECK (status IN ('active', 'consolidating', 'archived', 'superseded')),
+      project_id TEXT,
+      scope TEXT DEFAULT 'project' CHECK (scope IN ('project', 'area', 'portfolio', 'global')),
+      agent_role TEXT,
+      session_id TEXT,
+      tags TEXT,
+      content_hash TEXT NOT NULL,
+      embedding BLOB,
+      embedding_model TEXT,
+      embedding_new BLOB,
+      embedding_model_new TEXT,
+      reinforcement_count INTEGER DEFAULT 1,
+      outcome_score REAL DEFAULT 0.0,
+      is_static INTEGER DEFAULT 0,
+      is_inference INTEGER DEFAULT 0,
+      is_pinned INTEGER DEFAULT 0,
+      belief TEXT CHECK (belief IN ('fact', 'opinion', 'hypothesis')),
+      extraction_confidence REAL,
+      valid_from TEXT,
+      valid_until TEXT,
+      entities TEXT,
+      parent_version_id TEXT REFERENCES memories_v11(id),
+      is_current INTEGER DEFAULT 1,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      last_accessed TEXT,
+      forget_after TEXT,
+      forget_reason TEXT,
+      UNIQUE(content_hash, project_id, scope)
+    );
+  `);
+  db.exec(`
+    INSERT INTO memories_v11 SELECT
+      id, content, content_l0, content_l1,
+      type, importance, confidence, status, project_id,
+      CASE WHEN scope = 'area_of_focus' THEN 'area' ELSE scope END AS scope,
+      agent_role, session_id, tags, content_hash,
+      embedding, embedding_model, embedding_new, embedding_model_new,
+      reinforcement_count, outcome_score, is_static, is_inference, is_pinned,
+      belief, extraction_confidence, valid_from, valid_until, entities, parent_version_id, is_current,
+      created_at, updated_at, last_accessed, forget_after, forget_reason
+    FROM memories;
+  `);
+  db.exec(`DROP TABLE memories`);
+  db.exec(`ALTER TABLE memories_v11 RENAME TO memories`);
+  db.exec(`CREATE INDEX IF NOT EXISTS idx_memories_project ON memories(project_id, status)`);
+  db.exec(`CREATE INDEX IF NOT EXISTS idx_memories_scope ON memories(scope, status)`);
+  db.exec(`CREATE INDEX IF NOT EXISTS idx_memories_type ON memories(type, status)`);
+  db.exec(`CREATE INDEX IF NOT EXISTS idx_memories_hash ON memories(content_hash)`);
+  db.exec(`CREATE INDEX IF NOT EXISTS idx_memories_pinned ON memories(is_pinned, status)`);
+  createFtsTriggers(db);
+  db.exec(`DELETE FROM memory_fts`);
+  db.exec(`INSERT INTO memory_fts(memory_id, content, content_l0, content_l1) SELECT id, content, content_l0, content_l1 FROM memories`);
 }
 function connect(dbPath) {
   const path = dbPath ?? getDbPath();
@@ -517,6 +717,7 @@ function initDb(dbPath) {
     db.exec(SCHEMA_SQL);
     createFtsTriggers(db);
     upgradeSchema(db);
+    seedAreas(db);
     seedFieldCatalog(db);
     seedTemplates(db);
   } finally {
@@ -524,13 +725,8 @@ function initDb(dbPath) {
   }
   return path;
 }
-function getTemplateFields(db, projectType) {
-  let templateName;
-  if (projectType === "area_of_focus") {
-    templateName = "area_of_focus";
-  } else {
-    templateName = "code_project";
-  }
+function getTemplateFields(db, _projectType) {
+  const templateName = "code_project";
   const rows = db.prepare(`
     SELECT tf.field_name
     FROM template_fields tf
@@ -547,14 +743,20 @@ const PROJECT_STATUSES = /* @__PURE__ */ new Set([
   "archived",
   "complete"
 ]);
-const AREA_STATUSES = /* @__PURE__ */ new Set([
-  "active",
-  "paused"
-]);
 const STATUS_BY_TYPE = {
-  project: PROJECT_STATUSES,
-  area_of_focus: AREA_STATUSES
+  project: PROJECT_STATUSES
 };
+const AREA_NAMES = [
+  "Work",
+  "Family",
+  "Home",
+  "Health",
+  "Finance",
+  "Personal",
+  "Infrastructure"
+];
+const AREA_NAME_SET = new Set(AREA_NAMES);
+const UNASSIGNED_AREA_SENTINEL = "__unassigned__";
 const MEMORY_TYPES = /* @__PURE__ */ new Set([
   "decision",
   "outcome",
@@ -570,14 +772,14 @@ const MEMORY_TYPES = /* @__PURE__ */ new Set([
 const MEMORY_BELIEFS = /* @__PURE__ */ new Set(["fact", "opinion", "hypothesis"]);
 const MEMORY_SCOPES = /* @__PURE__ */ new Set([
   "project",
-  "area_of_focus",
+  "area",
   "portfolio",
   "global"
 ]);
 function validateStatus(projectType, status) {
   const allowed = STATUS_BY_TYPE[projectType];
   if (!allowed) {
-    throw new Error(`Unknown project type: ${projectType}. Must be 'project' or 'area_of_focus'.`);
+    throw new Error(`Unknown project type: ${projectType}. Must be 'project'.`);
   }
   if (!allowed.has(status)) {
     throw new Error(`Invalid status '${status}' for type '${projectType}'. Allowed: ${[...allowed].join(", ")}`);
@@ -589,10 +791,15 @@ function toSummary(record) {
     display_name: record.display_name,
     type: record.type,
     status: record.status,
-    updated_at: record.updated_at
+    updated_at: record.updated_at,
+    area: record.area,
+    parent_project: record.parent_project,
+    children: record.children
   };
   if (record.description)
     result.description = record.description;
+  if (record.parent_project && record.parent_archived)
+    result.parent_archived = true;
   return result;
 }
 function toStandard(record, templateFields) {
@@ -637,8 +844,13 @@ function toFull(record) {
     name: record.name,
     display_name: record.display_name,
     type: record.type,
-    status: record.status
+    status: record.status,
+    area: record.area,
+    parent_project: record.parent_project,
+    children: record.children
   };
+  if (record.parent_project && record.parent_archived)
+    result.parent_archived = true;
   if (record.description)
     result.description = record.description;
   if (record.goals)
@@ -859,7 +1071,11 @@ class Registry {
   }
   // ── Registration ──────────────────────────────────────────────
   register(opts) {
-    validateStatus(opts.type, opts.status);
+    const type = "project";
+    if (opts.type && opts.type !== "project") {
+      throw new InvalidInputError(`Unknown project type: ${opts.type}. Must be 'project' (spec 0.13 retired 'area_of_focus' — use area assignment instead).`);
+    }
+    validateStatus(type, opts.status);
     const displayName = opts.display_name || opts.name;
     const producer = opts.producer ?? "system";
     const db = this.open();
@@ -867,7 +1083,23 @@ class Registry {
       const existing = db.prepare("SELECT id FROM projects WHERE name = ?").get(opts.name);
       if (existing)
         throw new DuplicateProjectError(opts.name);
-      const result = db.prepare(`INSERT INTO projects (name, display_name, type, status, description, goals) VALUES (?, ?, ?, ?, ?, ?)`).run(opts.name, displayName, opts.type, opts.status, opts.description ?? "", opts.goals ?? "");
+      let areaIdForInsert = null;
+      if (opts.area != null) {
+        areaIdForInsert = this.resolveAreaIdOrThrow(db, opts.area);
+      }
+      let parentIdForInsert = null;
+      if (opts.parent_project != null) {
+        if (opts.parent_project === opts.name) {
+          throw new InvalidInputError(`Cannot set parent: ${opts.name} is a descendant of ${opts.name}. Moving it would create a cycle.`);
+        }
+        const prow = db.prepare("SELECT id FROM projects WHERE name = ?").get(opts.parent_project);
+        if (!prow) {
+          const allNames = db.prepare("SELECT name FROM projects").all();
+          throw new NotFoundError(opts.parent_project, findClosestMatch(opts.parent_project, allNames.map((r) => r.name)));
+        }
+        parentIdForInsert = prow.id;
+      }
+      const result = db.prepare(`INSERT INTO projects (name, display_name, type, status, description, goals, area_id, parent_project_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`).run(opts.name, displayName, type, opts.status, opts.description ?? "", opts.goals ?? "", areaIdForInsert, parentIdForInsert);
       const projectId = Number(result.lastInsertRowid);
       if (opts.paths) {
         const insertPath = db.prepare(`INSERT INTO project_paths (project_id, path, added_by) VALUES (?, ?, ?)`);
@@ -916,21 +1148,30 @@ class Registry {
     const depth = opts?.depth ?? "summary";
     const db = this.open();
     try {
-      let sql = "SELECT * FROM projects";
+      let sql = "SELECT p.* FROM projects p";
       const conditions = [];
       const params = [];
       if (opts?.type_filter) {
-        conditions.push("type = ?");
+        conditions.push("p.type = ?");
         params.push(opts.type_filter);
       }
       if (opts?.status_filter) {
-        conditions.push("status = ?");
+        conditions.push("p.status = ?");
         params.push(opts.status_filter);
+      }
+      if (opts?.area_filter) {
+        if (opts.area_filter === UNASSIGNED_AREA_SENTINEL) {
+          conditions.push("p.area_id IS NULL");
+        } else {
+          const areaId = this.resolveAreaIdOrThrow(db, opts.area_filter);
+          conditions.push("p.area_id = ?");
+          params.push(areaId);
+        }
       }
       if (conditions.length > 0) {
         sql += " WHERE " + conditions.join(" AND ");
       }
-      sql += " ORDER BY name";
+      sql += " ORDER BY p.name";
       const rows = db.prepare(sql).all(...params);
       return rows.map((row) => {
         const record = this.rowToRecord(db, row);
@@ -962,6 +1203,15 @@ class Registry {
         sql += " AND p.status = ?";
         params.push(opts.status_filter);
       }
+      if (opts.area_filter) {
+        if (opts.area_filter === UNASSIGNED_AREA_SENTINEL) {
+          sql += " AND p.area_id IS NULL";
+        } else {
+          const areaId = this.resolveAreaIdOrThrow(db, opts.area_filter);
+          sql += " AND p.area_id = ?";
+          params.push(areaId);
+        }
+      }
       sql += " ORDER BY p.name";
       const rows = db.prepare(sql).all(...params);
       return rows.map((row) => {
@@ -984,7 +1234,20 @@ class Registry {
       const by_status = {};
       for (const r of statusRows)
         by_status[r.status] = r.count;
-      return { total, by_type, by_status };
+      const by_area = {};
+      for (const name of AREA_NAMES)
+        by_area[name] = 0;
+      const areaRows = db.prepare(`
+        SELECT a.name as name, COUNT(p.id) as count
+        FROM areas a LEFT JOIN projects p ON p.area_id = a.id
+        GROUP BY a.id, a.name
+      `).all();
+      for (const r of areaRows) {
+        if (AREA_NAME_SET.has(r.name))
+          by_area[r.name] = r.count;
+      }
+      const unassigned = db.prepare("SELECT COUNT(*) as c FROM projects WHERE area_id IS NULL").get().c;
+      return { total, by_type, by_status, by_area, unassigned };
     } finally {
       db.close();
     }
@@ -1038,11 +1301,95 @@ class Registry {
         sets.push("goals = ?");
         params.push(updates.goals);
       }
-      if (sets.length === 0)
-        return;
-      sets.push("updated_at = datetime('now')");
-      params.push(row.id);
-      db.prepare(`UPDATE projects SET ${sets.join(", ")} WHERE id = ?`).run(...params);
+      const touchedCore = sets.length > 0;
+      if (touchedCore) {
+        sets.push("updated_at = datetime('now')");
+        params.push(row.id);
+        db.prepare(`UPDATE projects SET ${sets.join(", ")} WHERE id = ?`).run(...params);
+      }
+    } finally {
+      db.close();
+    }
+    if (updates.area !== void 0) {
+      this.setProjectArea(name, updates.area);
+    }
+    if (updates.parent_project !== void 0) {
+      this.setParentProject(name, updates.parent_project);
+    }
+  }
+  // ── Area / Parent structural operations (spec 0.13) ──────────
+  /** Resolve an area name (case-sensitive) to an area_id, throwing InvalidInputError if unknown. */
+  resolveAreaIdOrThrow(db, areaName) {
+    if (!AREA_NAME_SET.has(areaName)) {
+      throw new InvalidInputError(`Invalid area '${areaName}'. Valid canonical areas: ${AREA_NAMES.join(", ")}.`);
+    }
+    const row = db.prepare("SELECT id FROM areas WHERE name = ?").get(areaName);
+    if (!row) {
+      throw new InvalidInputError(`Area '${areaName}' is canonical but missing from seed table. Run initDb.`);
+    }
+    return row.id;
+  }
+  /** S74: Assign or clear a project's area. Null clears to Unassigned. */
+  setProjectArea(name, area) {
+    const db = this.open();
+    try {
+      const row = db.prepare("SELECT id FROM projects WHERE name = ?").get(name);
+      if (!row) {
+        const allNames = db.prepare("SELECT name FROM projects").all();
+        throw new NotFoundError(name, findClosestMatch(name, allNames.map((r) => r.name)));
+      }
+      let areaId = null;
+      if (area != null)
+        areaId = this.resolveAreaIdOrThrow(db, area);
+      db.prepare("UPDATE projects SET area_id = ?, updated_at = datetime('now') WHERE id = ?").run(areaId, row.id);
+      const record = this.loadRecord(db, { projectId: row.id });
+      return this.formatRecord(db, record, "standard");
+    } finally {
+      db.close();
+    }
+  }
+  /**
+   * S75/S76: Set or clear a project's parent. Rejects self-parenting and
+   * cycles by walking the ancestor chain of the proposed parent upward.
+   * Error message format: "Cannot set parent: {child-name} is a descendant of {proposed-parent-name}. Moving it would create a cycle."
+   */
+  setParentProject(childName, parentName) {
+    const db = this.open();
+    try {
+      const child = db.prepare("SELECT id FROM projects WHERE name = ?").get(childName);
+      if (!child) {
+        const allNames = db.prepare("SELECT name FROM projects").all();
+        throw new NotFoundError(childName, findClosestMatch(childName, allNames.map((r) => r.name)));
+      }
+      if (parentName === null) {
+        db.prepare("UPDATE projects SET parent_project_id = NULL, updated_at = datetime('now') WHERE id = ?").run(child.id);
+        const record2 = this.loadRecord(db, { projectId: child.id });
+        return this.formatRecord(db, record2, "standard");
+      }
+      if (parentName === childName) {
+        throw new InvalidInputError(`Cannot set parent: ${childName} is a descendant of ${parentName}. Moving it would create a cycle.`);
+      }
+      const parent = db.prepare("SELECT id FROM projects WHERE name = ?").get(parentName);
+      if (!parent) {
+        const allNames = db.prepare("SELECT name FROM projects").all();
+        throw new NotFoundError(parentName, findClosestMatch(parentName, allNames.map((r) => r.name)));
+      }
+      const maxHops = db.prepare("SELECT COUNT(*) as c FROM projects").get().c + 1;
+      let cursor = parent.id;
+      let hops = 0;
+      while (cursor != null) {
+        if (hops++ > maxHops) {
+          throw new InvalidInputError(`Cannot set parent: ${childName} is a descendant of ${parentName}. Moving it would create a cycle.`);
+        }
+        if (cursor === child.id) {
+          throw new InvalidInputError(`Cannot set parent: ${childName} is a descendant of ${parentName}. Moving it would create a cycle.`);
+        }
+        const next = db.prepare("SELECT parent_project_id FROM projects WHERE id = ?").get(cursor);
+        cursor = next?.parent_project_id ?? null;
+      }
+      db.prepare("UPDATE projects SET parent_project_id = ?, updated_at = datetime('now') WHERE id = ?").run(parent.id, child.id);
+      const record = this.loadRecord(db, { projectId: child.id });
+      return this.formatRecord(db, record, "standard");
     } finally {
       db.close();
     }
@@ -1151,8 +1498,8 @@ class Registry {
   }
   // ── Batch ─────────────────────────────────────────────────────
   batchUpdate(opts) {
-    if (!opts.type_filter && !opts.status_filter) {
-      throw new InvalidInputError("batch_update requires at least one filter (type_filter or status_filter).");
+    if (!opts.type_filter && !opts.status_filter && !opts.area_filter) {
+      throw new InvalidInputError("batch_update requires at least one filter (type_filter, status_filter, or area_filter).");
     }
     const hasUpdates = opts.status !== void 0 || opts.description !== void 0 || opts.goals !== void 0 || opts.display_name !== void 0;
     if (!hasUpdates) {
@@ -1170,6 +1517,15 @@ class Registry {
       if (opts.status_filter) {
         conditions.push("status = ?");
         params.push(opts.status_filter);
+      }
+      if (opts.area_filter) {
+        if (opts.area_filter === UNASSIGNED_AREA_SENTINEL) {
+          conditions.push("area_id IS NULL");
+        } else {
+          const areaId = this.resolveAreaIdOrThrow(db, opts.area_filter);
+          conditions.push("area_id = ?");
+          params.push(areaId);
+        }
       }
       sql += " WHERE " + conditions.join(" AND ");
       const matched = db.prepare(sql).all(...params);
@@ -1392,11 +1748,8 @@ class Registry {
   }
   // ── Tasks ─────────────────────────────────────────────────────
   queueTask(opts) {
-    const isFanOut = opts.type_filter || opts.status_filter;
+    const isFanOut = opts.type_filter || opts.status_filter || opts.area_filter;
     if (isFanOut) {
-      if (!opts.type_filter && !opts.status_filter) {
-        throw new InvalidInputError("Cross-project dispatch requires at least one filter.");
-      }
       return this.dispatchTasks(opts);
     }
     const db = this.open();
@@ -1420,6 +1773,15 @@ class Registry {
       if (opts.status_filter) {
         conditions.push("status = ?");
         params.push(opts.status_filter);
+      }
+      if (opts.area_filter) {
+        if (opts.area_filter === UNASSIGNED_AREA_SENTINEL) {
+          conditions.push("area_id IS NULL");
+        } else {
+          const areaId = this.resolveAreaIdOrThrow(db, opts.area_filter);
+          conditions.push("area_id = ?");
+          params.push(areaId);
+        }
       }
       sql += " WHERE " + conditions.join(" AND ");
       const projects = db.prepare(sql).all(...params);
@@ -1472,6 +1834,25 @@ class Registry {
   }
   rowToRecord(db, row) {
     const id = row.id;
+    const areaId = row.area_id ?? null;
+    const parentId = row.parent_project_id ?? null;
+    let areaName = null;
+    if (areaId != null) {
+      const arow = db.prepare("SELECT name FROM areas WHERE id = ?").get(areaId);
+      if (arow && AREA_NAME_SET.has(arow.name))
+        areaName = arow.name;
+    }
+    let parentName = null;
+    let parentArchived = false;
+    if (parentId != null) {
+      const prow = db.prepare("SELECT name, status FROM projects WHERE id = ?").get(parentId);
+      if (prow) {
+        parentName = prow.name;
+        parentArchived = prow.status === "archived";
+      }
+    }
+    const childRows = db.prepare("SELECT name FROM projects WHERE parent_project_id = ? ORDER BY name").all(id);
+    const children = childRows.map((r) => r.name);
     const pathRows = db.prepare("SELECT path FROM project_paths WHERE project_id = ? ORDER BY path").all(id);
     const paths = pathRows.map((r) => r.path);
     const fieldRows = db.prepare("SELECT field_name, field_value, producer FROM project_fields WHERE project_id = ?").all(id);
@@ -1507,6 +1888,12 @@ class Registry {
       extended_fields,
       field_producers,
       capabilities,
+      area: areaName,
+      area_id: areaId,
+      parent_project: parentName,
+      parent_project_id: parentId,
+      parent_archived: parentArchived,
+      children,
       created_at: row.created_at,
       updated_at: row.updated_at
     };
@@ -1514,7 +1901,14 @@ class Registry {
   formatRecord(db, record, depth) {
     switch (depth) {
       case "minimal":
-        return { name: record.name, type: record.type, status: record.status };
+        return {
+          name: record.name,
+          type: record.type,
+          status: record.status,
+          area: record.area,
+          parent_project: record.parent_project,
+          children: record.children
+        };
       case "summary":
         return toSummary(record);
       case "standard": {
@@ -1976,6 +2370,39 @@ class MemoryRetrieval {
       db.close();
     }
   }
+  /**
+   * spec 0.13 § S78: build the visibility filter for a project recall.
+   * Returns a SQL fragment (column-qualified via `alias`) and params array.
+   *
+   * Four-level hierarchy: project (own) → area (siblings in same area) →
+   * portfolio → global. A project with no area_id sees only its own
+   * project-scoped memories + portfolio + global (no area bubble-up).
+   */
+  buildProjectVisibilityFilter(db, projectId, alias = "") {
+    const col = alias ? `${alias}.` : "";
+    const params = [projectId];
+    const row = db.prepare("SELECT area_id FROM projects WHERE name = ?").get(projectId);
+    const areaId = row?.area_id ?? null;
+    if (areaId == null) {
+      return {
+        sql: `(${col}project_id = ? OR ${col}scope IN ('portfolio', 'global'))`,
+        params
+      };
+    }
+    const siblingRows = db.prepare("SELECT name FROM projects WHERE area_id = ? AND name != ?").all(areaId, projectId);
+    const siblings = siblingRows.map((r) => r.name);
+    if (siblings.length === 0) {
+      return {
+        sql: `(${col}project_id = ? OR ${col}scope IN ('portfolio', 'global'))`,
+        params
+      };
+    }
+    const placeholders = siblings.map(() => "?").join(", ");
+    return {
+      sql: `(${col}project_id = ? OR (${col}scope = 'area' AND ${col}project_id IN (${placeholders})) OR ${col}scope IN ('portfolio', 'global'))`,
+      params: [...params, ...siblings]
+    };
+  }
   bootstrapRecall(db, projectId) {
     let sql = `
       SELECT * FROM memories WHERE status = 'active'
@@ -1983,8 +2410,9 @@ class MemoryRetrieval {
     `;
     const params = [];
     if (projectId) {
-      sql += ` AND (project_id = ? OR scope IN ('portfolio', 'global'))`;
-      params.push(projectId);
+      const { sql: vis, params: visParams } = this.buildProjectVisibilityFilter(db, projectId);
+      sql += ` AND ${vis}`;
+      params.push(...visParams);
     }
     sql += ` ORDER BY is_pinned DESC, importance DESC, reinforcement_count DESC, updated_at DESC LIMIT 50`;
     const rows = db.prepare(sql).all(...params);
@@ -2003,6 +2431,7 @@ class MemoryRetrieval {
       let sql;
       const params = [];
       if (projectId) {
+        const { sql: vis, params: visParams } = this.buildProjectVisibilityFilter(db, projectId, "m");
         sql = `
           SELECT m.*, fts.rank
           FROM memory_fts fts
@@ -2010,11 +2439,11 @@ class MemoryRetrieval {
           WHERE memory_fts MATCH ?
             AND m.status = 'active'
             AND (m.type != 'procedural' OR m.is_current = 1)
-            AND (m.project_id = ? OR m.scope IN ('portfolio', 'global'))
+            AND ${vis}
           ORDER BY fts.rank
           LIMIT 50
         `;
-        params.push(ftsQuery, projectId);
+        params.push(ftsQuery, ...visParams);
       } else {
         sql = `
           SELECT m.*, fts.rank
@@ -2044,8 +2473,9 @@ class MemoryRetrieval {
     `;
     const params = [likeQ, likeQ];
     if (projectId) {
-      sql += ` AND (project_id = ? OR scope IN ('portfolio', 'global'))`;
-      params.push(projectId);
+      const { sql: vis, params: visParams } = this.buildProjectVisibilityFilter(db, projectId);
+      sql += ` AND ${vis}`;
+      params.push(...visParams);
     }
     sql += " ORDER BY importance DESC LIMIT 50";
     const rows = db.prepare(sql).all(...params);
@@ -2140,6 +2570,12 @@ class MemoryRetrieval {
 }
 join(homedir(), ".claude", "projects");
 join(homedir(), ".fctry", "memory.md");
+function resolveBootstrapType(type) {
+  if (type === "non_code_project") {
+    return { pathRootKey: "non_code_project", dbType: "project", isCodeProject: false };
+  }
+  return { pathRootKey: "project", dbType: "project", isCodeProject: true };
+}
 class BootstrapNotConfiguredError extends RegistryError {
   constructor() {
     super("BOOTSTRAP_NOT_CONFIGURED", "Bootstrap is not configured.", "Call configure_bootstrap first to set path roots for your project types and a template directory.");
@@ -2168,7 +2604,7 @@ class Bootstrap {
       if (opts.path_roots !== void 0) {
         for (const [type, path] of Object.entries(opts.path_roots)) {
           if (type !== "project" && type !== "non_code_project" && type !== "area_of_focus") {
-            throw new RegistryError("INVALID_INPUT", `Invalid project type '${type}' in path_roots. Must be 'project', 'non_code_project', or 'area_of_focus'.`);
+            throw new RegistryError("INVALID_INPUT", `Invalid project type '${type}' in path_roots. Must be 'project' or 'non_code_project'.`);
           }
           upsert.run(`bootstrap_path_root_${type}`, path);
         }
@@ -2217,13 +2653,14 @@ class Bootstrap {
       if (Object.keys(config.path_roots).length === 0) {
         throw new BootstrapNotConfiguredError();
       }
+      const { pathRootKey, dbType, isCodeProject } = resolveBootstrapType(opts.type);
       let targetPath;
       if (opts.path_override) {
         targetPath = opts.path_override;
       } else {
-        const root = config.path_roots[opts.type];
+        const root = config.path_roots[pathRootKey];
         if (!root) {
-          throw new RegistryError("BOOTSTRAP_NOT_CONFIGURED", `No path root configured for type '${opts.type}'.`, `Call configure_bootstrap to set a path root for '${opts.type}'.`);
+          throw new RegistryError("BOOTSTRAP_NOT_CONFIGURED", `No path root configured for type '${pathRootKey}'.`, `Call configure_bootstrap to set a path root for '${pathRootKey}'.`);
         }
         targetPath = join(root, opts.name);
       }
@@ -2240,13 +2677,13 @@ class Bootstrap {
       let gitInitialized = false;
       try {
         if (config.template_dir && existsSync(config.template_dir)) {
-          const templateSubdir = this._resolveTemplateSubdir(config.template_dir, opts.type);
+          const templateSubdir = this._resolveTemplateSubdir(config.template_dir, pathRootKey);
           if (templateSubdir && existsSync(templateSubdir)) {
             cpSync(templateSubdir, targetPath, { recursive: true });
             templatesApplied = true;
           }
         }
-        if (opts.type === "project" && !opts.skip_git) {
+        if (isCodeProject && !opts.skip_git) {
           execSync("git init -q", { cwd: targetPath, stdio: "pipe" });
           execSync("git add .", { cwd: targetPath, stdio: "pipe" });
           execSync('git commit -q -m "Initial project scaffold from bootstrap_project" --allow-empty', {
@@ -2257,13 +2694,15 @@ class Bootstrap {
         }
         registry2.register({
           name: opts.name,
-          type: opts.type,
+          type: dbType,
           status: opts.status ?? "active",
           description: opts.description ?? "",
           goals: opts.goals ?? "",
           display_name: opts.display_name,
           paths: [targetPath],
-          producer: opts.producer ?? "bootstrap"
+          producer: opts.producer ?? "bootstrap",
+          area: opts.area ?? void 0,
+          parent_project: opts.parent_project ?? void 0
         });
       } catch (err) {
         try {
@@ -2275,7 +2714,7 @@ class Bootstrap {
       return {
         name: opts.name,
         path: targetPath,
-        type: opts.type,
+        type: dbType,
         git_initialized: gitInitialized,
         templates_applied: templatesApplied
       };
@@ -2339,6 +2778,7 @@ class Bootstrap {
   _resolveTemplateSubdir(templateDir, type) {
     const typeMap = {
       project: ["code-repo", "project", "code_project"],
+      non_code_project: ["non_code_project", "non-code", "project"],
       area_of_focus: ["area-of-focus", "area_of_focus", "area"]
     };
     const candidates = typeMap[type] ?? [];
@@ -2355,10 +2795,323 @@ class Bootstrap {
     return null;
   }
 }
+const HEALTH_CACHE_TTL_MS = 12e4;
+const TIER_RANK = {
+  healthy: 0,
+  at_risk: 1,
+  stale: 2,
+  unknown: 3
+  // treated as worst when unknown
+};
+function worstTier(tiers) {
+  let worst = "healthy";
+  for (const t of tiers) {
+    if (TIER_RANK[t] > TIER_RANK[worst])
+      worst = t;
+  }
+  return worst;
+}
+class HealthAssessor {
+  _dbPath;
+  cache = /* @__PURE__ */ new Map();
+  constructor(dbPath) {
+    this._dbPath = dbPath ?? getDbPath();
+  }
+  get dbPath() {
+    return this._dbPath;
+  }
+  /** Clear cached assessments. Primarily for tests. */
+  clearCache() {
+    this.cache.clear();
+  }
+  getCached(key) {
+    const entry = this.cache.get(key);
+    if (!entry)
+      return null;
+    if (Date.now() > entry.expiresAt) {
+      this.cache.delete(key);
+      return null;
+    }
+    return entry.result;
+  }
+  putCached(key, result) {
+    this.cache.set(key, { result, expiresAt: Date.now() + HEALTH_CACHE_TTL_MS });
+  }
+  /**
+   * Assess a single project by name. Archived projects return Unknown.
+   */
+  assessProject(name, opts) {
+    if (!opts?.noCache) {
+      const cached = this.getCached(`p:${name}`);
+      if (cached)
+        return cached;
+    }
+    const db = connect(this._dbPath);
+    try {
+      const row = db.prepare("SELECT * FROM projects WHERE name = ?").get(name);
+      if (!row) {
+        const allNames = db.prepare("SELECT name FROM projects").all();
+        const closest = findClosestMatch(name, allNames.map((r) => r.name));
+        throw new NotFoundError(name, closest);
+      }
+      const result = this.buildAssessment(db, row);
+      this.putCached(`p:${name}`, result);
+      return result;
+    } finally {
+      db.close();
+    }
+  }
+  /**
+   * Portfolio-wide assessment: every active (non-archived) project, ordered worst-to-best.
+   */
+  assessPortfolio(opts) {
+    if (!opts?.noCache) {
+      const cached = this.getCached("portfolio");
+      if (cached)
+        return cached;
+    }
+    const db = connect(this._dbPath);
+    try {
+      const rows = db.prepare("SELECT * FROM projects WHERE status != 'archived' ORDER BY name").all();
+      const projects = rows.map((r) => this.buildAssessment(db, r));
+      projects.sort((a, b) => TIER_RANK[b.overall] - TIER_RANK[a.overall]);
+      const summary = {
+        healthy: 0,
+        at_risk: 0,
+        stale: 0,
+        unknown: 0
+      };
+      for (const p of projects)
+        summary[p.overall]++;
+      const result = {
+        projects,
+        summary,
+        computed_at: (/* @__PURE__ */ new Date()).toISOString()
+      };
+      this.putCached("portfolio", result);
+      return result;
+    } finally {
+      db.close();
+    }
+  }
+  // ── Core assessment builder ────────────────────────────────────
+  buildAssessment(db, row) {
+    const name = row.name;
+    const status = row.status;
+    const type = row.type;
+    const projectId = row.id;
+    const computed_at = (/* @__PURE__ */ new Date()).toISOString();
+    if (status === "archived") {
+      const reason = "archived project — not evaluated";
+      return {
+        name,
+        overall: "unknown",
+        reasons: [reason],
+        dimensions: {
+          activity: { tier: "unknown", reasons: [reason] },
+          completeness: { tier: "unknown", reasons: [reason] },
+          outcomes: { tier: "unknown", reasons: [reason] }
+        },
+        computed_at
+      };
+    }
+    const activity = this.assessActivity(db, projectId, row);
+    const completeness = this.assessCompleteness(db, projectId, row, type);
+    const outcomes = this.assessOutcomes(db, name);
+    const allUnknown = activity.tier === "unknown" && completeness.tier === "unknown" && outcomes.tier === "unknown";
+    const overall = allUnknown ? "unknown" : worstTier([
+      activity.tier === "unknown" ? "healthy" : activity.tier,
+      completeness.tier === "unknown" ? "healthy" : completeness.tier,
+      outcomes.tier === "unknown" ? "healthy" : outcomes.tier
+    ]);
+    const reasons = [
+      ...activity.reasons,
+      ...completeness.reasons,
+      ...outcomes.reasons
+    ];
+    return {
+      name,
+      overall,
+      reasons,
+      dimensions: { activity, completeness, outcomes },
+      computed_at
+    };
+  }
+  // ── Activity dimension ────────────────────────────────────────
+  //
+  // Healthy ≤ 7 days, At risk 8–30, Stale > 30. Touch = most recent of:
+  //   - projects.updated_at
+  //   - latest memory retain for this project
+  //   - latest git commit in any declared path (best-effort)
+  assessActivity(db, projectId, row) {
+    const projectUpdated = row.updated_at;
+    const name = row.name;
+    let latestMemory = null;
+    try {
+      const m = db.prepare(`SELECT MAX(created_at) as t FROM memories WHERE project_id = ? AND status = 'active'`).get(name);
+      latestMemory = m?.t ?? null;
+    } catch {
+      latestMemory = null;
+    }
+    const pathRows = db.prepare("SELECT path FROM project_paths WHERE project_id = ?").all(projectId);
+    let latestCommit = null;
+    for (const { path } of pathRows) {
+      const t = latestCommitInPath(path);
+      if (t && (!latestCommit || t > latestCommit))
+        latestCommit = t;
+    }
+    const candidates = [projectUpdated, latestMemory, latestCommit].filter((v) => Boolean(v));
+    if (candidates.length === 0) {
+      return { tier: "unknown", reasons: ["no activity signals available"] };
+    }
+    const mostRecent = candidates.reduce((a, b) => a > b ? a : b);
+    const ageMs = Date.now() - new Date(mostRecent).getTime();
+    const ageDays = Math.max(0, Math.floor(ageMs / (1e3 * 60 * 60 * 24)));
+    if (ageDays <= 7) {
+      return { tier: "healthy", reasons: [`active within the last ${ageDays} day${ageDays === 1 ? "" : "s"}`] };
+    }
+    if (ageDays <= 30) {
+      return { tier: "at_risk", reasons: [`no activity in ${ageDays} days`] };
+    }
+    return { tier: "stale", reasons: [`no activity in ${ageDays} days`] };
+  }
+  // ── Completeness dimension ────────────────────────────────────
+  assessCompleteness(db, projectId, row, type) {
+    const description = String(row.description ?? "").trim();
+    const goals = String(row.goals ?? "").trim();
+    const pathCount = db.prepare("SELECT COUNT(*) as c FROM project_paths WHERE project_id = ?").get(projectId).c;
+    const fieldRows = db.prepare("SELECT field_name, field_value FROM project_fields WHERE project_id = ?").all(projectId);
+    const fieldMap = {};
+    for (const f of fieldRows)
+      fieldMap[f.field_name] = f.field_value;
+    const topics = String(row.topics ?? fieldMap.topics ?? "").trim();
+    const entities = String(row.entities ?? fieldMap.entities ?? "").trim();
+    const techStack = (fieldMap.tech_stack ?? "").trim();
+    const patterns = (fieldMap.patterns ?? "").trim();
+    const isCodeProject = type === "project" && // treat as code if any path contains /Code/ or tech_stack is declared
+    (db.prepare("SELECT 1 FROM project_paths WHERE project_id = ? AND path LIKE '%/Code/%'").get(projectId) != null || Boolean(techStack));
+    const staleReasons = [];
+    const atRiskReasons = [];
+    if (!description)
+      staleReasons.push("description missing");
+    if (!goals || goals === "[]")
+      staleReasons.push("no goals");
+    if (pathCount === 0)
+      atRiskReasons.push("no paths declared");
+    if (isCodeProject) {
+      if (!techStack)
+        atRiskReasons.push("tech_stack missing");
+      if (!patterns)
+        atRiskReasons.push("patterns missing");
+    }
+    const topicsEmpty = !topics || topics === "[]";
+    const entitiesEmpty = !entities || entities === "[]";
+    if (topicsEmpty)
+      atRiskReasons.push("topics empty");
+    if (entitiesEmpty)
+      atRiskReasons.push("entities empty");
+    if (staleReasons.length > 0) {
+      return { tier: "stale", reasons: staleReasons.concat(atRiskReasons) };
+    }
+    if (atRiskReasons.length > 0) {
+      return { tier: "at_risk", reasons: atRiskReasons };
+    }
+    return { tier: "healthy", reasons: ["profile complete"] };
+  }
+  // ── Outcomes dimension ────────────────────────────────────────
+  //
+  // No memories: Healthy (absence is not a negative signal).
+  // Recent (<=14d) outcome memory with outcome_score < 0: At risk.
+  // Active unresolved contradicts edges: At risk.
+  // High corrections ratio (>0.5, min 3 relevant memories): Stale.
+  assessOutcomes(db, projectName) {
+    let memCount = 0;
+    let recentNegative = 0;
+    let contradictions = 0;
+    let decisionsPlusOutcomes = 0;
+    let corrections = 0;
+    try {
+      const countRow = db.prepare(`SELECT COUNT(*) as c FROM memories WHERE project_id = ? AND status = 'active'`).get(projectName);
+      memCount = countRow?.c ?? 0;
+      if (memCount === 0) {
+        return { tier: "healthy", reasons: ["no feedback history (neutral)"] };
+      }
+      const cutoff = new Date(Date.now() - 14 * 24 * 60 * 60 * 1e3).toISOString();
+      const negRow = db.prepare(`SELECT COUNT(*) as c FROM memories
+         WHERE project_id = ? AND status = 'active'
+           AND type = 'outcome' AND outcome_score < 0
+           AND created_at >= ?`).get(projectName, cutoff);
+      recentNegative = negRow?.c ?? 0;
+      try {
+        const cRow = db.prepare(`SELECT COUNT(*) as c
+             FROM memory_edges e
+             JOIN memories ms ON ms.id = e.source_id
+             JOIN memories mt ON mt.id = e.target_id
+            WHERE e.relationship_type = 'contradicts'
+              AND ms.status = 'active' AND mt.status = 'active'
+              AND (ms.project_id = ? OR mt.project_id = ?)`).get(projectName, projectName);
+        contradictions = cRow?.c ?? 0;
+      } catch {
+        contradictions = 0;
+      }
+      const dRow = db.prepare(`SELECT COUNT(*) as c FROM memories
+         WHERE project_id = ? AND status = 'active'
+           AND type IN ('decision', 'outcome')`).get(projectName);
+      decisionsPlusOutcomes = dRow?.c ?? 0;
+      const corrRow = db.prepare(`SELECT COUNT(*) as c FROM memories
+         WHERE project_id = ? AND status = 'active' AND type = 'correction'`).get(projectName);
+      corrections = corrRow?.c ?? 0;
+    } catch {
+      return { tier: "unknown", reasons: ["memory signals unavailable"] };
+    }
+    const relevant = decisionsPlusOutcomes + corrections;
+    if (relevant >= 3 && corrections / Math.max(1, relevant) > 0.5) {
+      return {
+        tier: "stale",
+        reasons: [`${corrections} corrections vs ${decisionsPlusOutcomes} decisions/outcomes`]
+      };
+    }
+    const reasons = [];
+    let tier = "healthy";
+    if (recentNegative > 0) {
+      tier = "at_risk";
+      reasons.push(`${recentNegative} recent negative outcome${recentNegative === 1 ? "" : "s"}`);
+    }
+    if (contradictions > 0) {
+      tier = "at_risk";
+      reasons.push(`${contradictions} unresolved contradiction${contradictions === 1 ? "" : "s"} in project memories`);
+    }
+    if (reasons.length === 0) {
+      reasons.push("recent signals look healthy");
+    }
+    return { tier, reasons };
+  }
+}
+function latestCommitInPath(path) {
+  try {
+    if (!path || !existsSync(path))
+      return null;
+    if (!existsSync(join(path, ".git")))
+      return null;
+    const out = execFileSync("git", ["-C", path, "log", "-1", "--format=%cI"], {
+      encoding: "utf8",
+      timeout: 1500,
+      stdio: ["ignore", "pipe", "ignore"]
+    }).trim();
+    return out || null;
+  } catch {
+    return null;
+  }
+}
 let registry = null;
+let healthAssessor = null;
 function getRegistry() {
   if (!registry) registry = new Registry();
   return registry;
+}
+function getHealth() {
+  if (!healthAssessor) healthAssessor = new HealthAssessor(getRegistry().dbPath);
+  return healthAssessor;
 }
 function registerIpcHandlers(ipcMain2) {
   const reg = getRegistry();
@@ -2391,6 +3144,12 @@ function registerIpcHandlers(ipcMain2) {
   ipcMain2.handle("renameProject", (_e, oldName, newName) => {
     reg.renameProject(oldName, newName);
   });
+  ipcMain2.handle("setProjectArea", (_e, name, area) => {
+    return reg.setProjectArea(name, area);
+  });
+  ipcMain2.handle("setParentProject", (_e, childName, parentName) => {
+    return reg.setParentProject(childName, parentName);
+  });
   ipcMain2.handle("enrichProject", (_e, name, profile) => {
     return reg.enrichProject(name, profile);
   });
@@ -2420,10 +3179,18 @@ function registerIpcHandlers(ipcMain2) {
     const bootstrap = new Bootstrap(reg.dbPath);
     return bootstrap.configureBootstrap(opts);
   });
+  ipcMain2.handle("assessHealth", (_e, name, opts) => {
+    const health = getHealth();
+    const noCache = Boolean(opts?.fresh);
+    if (name) return health.assessProject(name, { noCache });
+    return health.assessPortfolio({ noCache });
+  });
   ipcMain2.handle("bootstrapProject", (_e, opts) => {
     const bootstrap = new Bootstrap(reg.dbPath);
     return bootstrap.bootstrapProject({
       ...opts,
+      // spec 0.13: retired 'area_of_focus' type — app only creates 'project'
+      // or 'non_code_project' (routed to a different pathRoot via bootstrap).
       type: opts.type,
       producer: "setlist-app"
     });

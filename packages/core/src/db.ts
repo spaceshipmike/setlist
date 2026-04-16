@@ -1,5 +1,5 @@
 import Database from 'better-sqlite3';
-import { existsSync, mkdirSync } from 'node:fs';
+import { existsSync, mkdirSync, copyFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { homedir } from 'node:os';
 
@@ -414,6 +414,19 @@ function upgradeSchema(db: Database.Database): void {
   const meta = db.prepare("SELECT value FROM schema_meta WHERE key = 'schema_version'").get() as { value: string } | undefined;
   const currentVersion = meta ? parseInt(meta.value, 10) : 0;
 
+  // Back up the database before any schema upgrade so a failed migration is
+  // recoverable. The backup is named with the current (pre-upgrade) schema
+  // version so each upgrade produces a distinct snapshot.
+  if (currentVersion < SCHEMA_VERSION && currentVersion > 0) {
+    const dbPath = db.name;
+    if (dbPath && dbPath !== ':memory:') {
+      const backupPath = `${dbPath}.v${currentVersion}.bak`;
+      if (!existsSync(backupPath)) {
+        try { copyFileSync(dbPath, backupPath); } catch { /* best-effort */ }
+      }
+    }
+  }
+
   // Always ensure columns exist, even if schema version matches.
   // CREATE TABLE IF NOT EXISTS is a no-op on existing tables, so columns
   // added after the table was first created may be missing.
@@ -596,8 +609,18 @@ function upgradeSchema(db: Database.Database): void {
     // v10 → v11: canonical areas, structural area_id + parent_project_id,
     // narrow projects.type CHECK to ('project'), retire area_of_focus.
     // Memories.scope: area_of_focus → area. Atomic.
-    const runMigration = db.transaction(() => runV10ToV11Migration(db));
-    runMigration();
+    //
+    // NOTE: PRAGMA foreign_keys is a no-op inside a transaction, and the
+    // table-rebuild pattern inside the migration drops and recreates tables
+    // that child rows reference. Toggle FKs OFF *before* opening the
+    // transaction, then restore on the way out.
+    db.pragma('foreign_keys = OFF');
+    try {
+      const runMigration = db.transaction(() => runV10ToV11Migration(db));
+      runMigration();
+    } finally {
+      db.pragma('foreign_keys = ON');
+    }
   }
 
   db.prepare("INSERT OR REPLACE INTO schema_meta (key, value) VALUES ('schema_version', ?)").run(String(SCHEMA_VERSION));
@@ -675,8 +698,8 @@ function runV10ToV11Migration(db: Database.Database): void {
     }
   }
 
-  // Step 5: narrow projects.type CHECK via table-rebuild
-  db.pragma('foreign_keys = OFF');
+  // Step 5: narrow projects.type CHECK via table-rebuild.
+  // Caller has already disabled foreign_keys outside the transaction.
   db.exec(`DROP TABLE IF EXISTS projects_v11`);
   db.exec(`
     CREATE TABLE projects_v11 (
@@ -707,10 +730,8 @@ function runV10ToV11Migration(db: Database.Database): void {
   db.exec(`CREATE INDEX IF NOT EXISTS idx_projects_type_status ON projects(type, status)`);
   db.exec(`CREATE INDEX IF NOT EXISTS idx_projects_area_id ON projects(area_id)`);
   db.exec(`CREATE INDEX IF NOT EXISTS idx_projects_parent_project_id ON projects(parent_project_id)`);
-  db.pragma('foreign_keys = ON');
 
   // Step 6: narrow memories.scope CHECK via table-rebuild and remap values
-  db.pragma('foreign_keys = OFF');
   db.exec(`DROP TABLE IF EXISTS memories_v11`);
   db.exec(`
     CREATE TABLE memories_v11 (
@@ -775,7 +796,6 @@ function runV10ToV11Migration(db: Database.Database): void {
   // Rebuild FTS content for memories rows
   db.exec(`DELETE FROM memory_fts`);
   db.exec(`INSERT INTO memory_fts(memory_id, content, content_l0, content_l1) SELECT id, content, content_l0, content_l1 FROM memories`);
-  db.pragma('foreign_keys = ON');
 }
 
 /**

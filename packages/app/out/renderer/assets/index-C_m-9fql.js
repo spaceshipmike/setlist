@@ -17708,6 +17708,15 @@ var Content2 = DropdownMenuContent;
 var Item2 = DropdownMenuItem;
 var CheckboxItem2 = DropdownMenuCheckboxItem;
 var Separator2 = DropdownMenuSeparator;
+const AREA_NAMES = [
+  "Work",
+  "Family",
+  "Home",
+  "Health",
+  "Finance",
+  "Personal",
+  "Infrastructure"
+];
 const api = {
   listProjects: (opts) => window.setlist.listProjects(opts),
   getProject: (name, depth) => window.setlist.getProject(name, depth),
@@ -17715,6 +17724,9 @@ const api = {
   getRegistryStats: () => window.setlist.getRegistryStats(),
   register: (opts) => window.setlist.register(opts),
   updateCore: (name, updates) => window.setlist.updateCore(name, updates),
+  // spec 0.13: areas + sub-projects
+  setProjectArea: (name, area) => window.setlist.setProjectArea(name, area),
+  setParentProject: (childName, parentName) => window.setlist.setParentProject(childName, parentName),
   updateFields: (name, fields, producer) => window.setlist.updateFields(name, fields, producer),
   archiveProject: (name) => window.setlist.archiveProject(name),
   renameProject: (oldName, newName) => window.setlist.renameProject(oldName, newName),
@@ -17724,22 +17736,44 @@ const api = {
   memoryStatus: (projectId) => window.setlist.memoryStatus(projectId),
   getBootstrapConfig: () => window.setlist.getBootstrapConfig(),
   configureBootstrap: (opts) => window.setlist.configureBootstrap(opts),
-  bootstrapProject: (opts) => window.setlist.bootstrapProject(opts)
+  bootstrapProject: (opts) => window.setlist.bootstrapProject(opts),
+  assessHealth: (name, opts) => window.setlist.assessHealth(name, opts),
+  assessProjectHealth: (name, opts) => window.setlist.assessHealth(name, opts),
+  assessPortfolioHealth: (opts) => window.setlist.assessHealth(void 0, opts)
 };
-function useProjects({ filter, statusFilters, sort }) {
+const HEALTH_RANK = {
+  stale: 0,
+  at_risk: 1,
+  healthy: 2,
+  unknown: 3
+};
+function displayType(p) {
+  const paths = Array.isArray(p.paths) ? p.paths : [];
+  if (paths.some((path) => path.includes("/Code/"))) return "Code";
+  return "Project";
+}
+function useProjects({ filter, statusFilters, sort, sortDir = "asc", healthMap }) {
   const [allProjects, setAllProjects] = reactExports.useState([]);
   const [loading, setLoading] = reactExports.useState(true);
+  const [refreshing, setRefreshing] = reactExports.useState(false);
   const [error, setError] = reactExports.useState(null);
+  const hasLoaded = reactExports.useRef(false);
   const refresh = reactExports.useCallback(async () => {
     try {
-      setLoading(true);
+      if (hasLoaded.current) {
+        setRefreshing(true);
+      } else {
+        setLoading(true);
+      }
       setError(null);
       const result = await api.listProjects({ depth: "standard" });
       setAllProjects(result);
+      hasLoaded.current = true;
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load projects");
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   }, []);
   reactExports.useEffect(() => {
@@ -17755,51 +17789,93 @@ function useProjects({ filter, statusFilters, sort }) {
     if (statusFilters.length > 0 && !statusFilters.includes(p.status)) return false;
     if (filter) {
       const q = filter.toLowerCase();
-      return p.name.toLowerCase().includes(q) || p.display_name.toLowerCase().includes(q) || p.description.toLowerCase().includes(q) || p.type.toLowerCase().includes(q) || p.status.toLowerCase().includes(q);
+      return (p.name ?? "").toLowerCase().includes(q) || (p.display_name ?? "").toLowerCase().includes(q) || (p.description ?? "").toLowerCase().includes(q) || (p.type ?? "").toLowerCase().includes(q) || (p.status ?? "").toLowerCase().includes(q);
     }
     return true;
   });
-  const projects = [...filtered].sort((a, b) => {
+  const compare = (a, b) => {
     switch (sort) {
-      case "name":
-        return a.name.localeCompare(b.name);
+      case "name": {
+        const an = (a.display_name ?? a.name ?? "").toLowerCase();
+        const bn = (b.display_name ?? b.name ?? "").toLowerCase();
+        return an.localeCompare(bn);
+      }
       case "updated_at":
-        return b.updated_at.localeCompare(a.updated_at);
+        return (a.updated_at ?? "").localeCompare(b.updated_at ?? "");
       case "type":
-        return a.type.localeCompare(b.type) || a.name.localeCompare(b.name);
+        return displayType(a).localeCompare(displayType(b)) || (a.name ?? "").localeCompare(b.name ?? "");
       case "status":
-        return a.status.localeCompare(b.status) || a.name.localeCompare(b.name);
+        return (a.status ?? "").localeCompare(b.status ?? "") || (a.name ?? "").localeCompare(b.name ?? "");
+      case "health": {
+        const ra = HEALTH_RANK[healthMap?.[a.name ?? ""] ?? "unknown"];
+        const rb = HEALTH_RANK[healthMap?.[b.name ?? ""] ?? "unknown"];
+        return ra - rb || (a.name ?? "").localeCompare(b.name ?? "");
+      }
       default:
         return 0;
     }
-  });
+  };
+  const projects = [...filtered].sort((a, b) => sortDir === "desc" ? -compare(a, b) : compare(a, b));
   const statuses = [...new Set(allProjects.map((p) => p.status))].sort();
   const archivedCount = allProjects.filter((p) => p.status === "archived").length;
-  return { projects, loading, error, statuses, archivedCount, refresh };
+  return { projects, loading, refreshing, error, statuses, archivedCount, refresh };
 }
 function EmptyState({ onRegister }) {
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col items-center justify-center py-20 text-center", children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-4xl mb-4 opacity-40", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-16 h-16 mx-auto rounded-lg border-2 border-dashed border-[var(--color-border-strong)]" }) }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-lg font-medium text-[var(--color-text-primary)] mb-2", children: "No projects yet" }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-[var(--color-text-secondary)] mb-6 max-w-sm", children: "Register your first project to start managing your portfolio." }),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-6 relative", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-20 h-14 rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-elevated)] opacity-30 absolute -top-2 left-1/2 -translate-x-1/2 rotate-2" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-20 h-14 rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-elevated)] opacity-50 absolute -top-1 left-1/2 -translate-x-1/2 -rotate-1" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-20 h-14 rounded-lg border-2 border-dashed border-[var(--color-accent)] bg-[var(--color-bg-card)] relative flex items-center justify-center", children: /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { width: "24", height: "24", viewBox: "0 0 24 24", fill: "none", stroke: "var(--color-accent)", strokeWidth: "1.5", strokeLinecap: "round", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { d: "M12 5v14M5 12h14" }) }) })
+    ] }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-lg font-medium text-[var(--color-text-primary)] mb-2", children: "Your project registry is empty" }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-[var(--color-text-secondary)] mb-6 max-w-xs leading-relaxed", children: "Register your first project to start managing your portfolio. Projects registered here are visible to all your tools and agents." }),
     /* @__PURE__ */ jsxRuntimeExports.jsx(
       "button",
       {
         onClick: onRegister,
-        className: "px-4 py-2 rounded-md text-sm font-medium\n          bg-[var(--color-accent)] text-white\n          hover:bg-[var(--color-accent-hover)]\n          transition-colors",
-        children: "Register a project"
+        className: "px-5 py-2.5 rounded-lg text-sm font-medium\n          bg-[var(--color-accent)] text-white\n          hover:bg-[var(--color-accent-hover)]\n          transition-colors shadow-sm",
+        children: "Register your first project"
       }
     )
   ] });
 }
-const STATUS_DOT = {
-  active: "bg-[var(--color-success)]",
-  paused: "bg-[var(--color-warning)]",
-  draft: "bg-[var(--color-text-tertiary)]",
-  idea: "bg-[var(--color-info)]",
-  complete: "bg-[var(--color-accent)]",
-  archived: "bg-[var(--color-text-tertiary)]"
+const UNASSIGNED_LANE = "__unassigned__";
+const LANE_ORDER = [...AREA_NAMES, UNASSIGNED_LANE];
+const LANE_COLLAPSE_KEY = "setlist:home:lane-collapsed";
+const AREA_FILTER_KEY = "setlist:home:area-chips";
+const DEFAULT_DESC_FIELDS = ["updated_at", "health"];
+const HEALTH_DOT = {
+  healthy: "bg-[var(--color-success)]",
+  at_risk: "bg-[var(--color-warning)]",
+  stale: "bg-[var(--color-error)]",
+  unknown: "bg-[var(--color-text-tertiary)]"
 };
+const HEALTH_LABEL = {
+  healthy: "Healthy",
+  at_risk: "At risk",
+  stale: "Stale",
+  unknown: "Unknown"
+};
+function useHealthMap() {
+  const [map, setMap] = reactExports.useState({});
+  const [loaded, setLoaded] = reactExports.useState(false);
+  reactExports.useEffect(() => {
+    let cancelled = false;
+    api.assessPortfolioHealth().then((result) => {
+      if (cancelled) return;
+      const next = {};
+      for (const p of result.projects) next[p.name] = p.overall;
+      setMap(next);
+      setLoaded(true);
+    }).catch(() => {
+      if (!cancelled) setLoaded(true);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+  return { map, loaded };
+}
 function timeAgo(dateStr) {
   const date = new Date(dateStr);
   if (isNaN(date.getTime())) return "";
@@ -17820,16 +17896,21 @@ function SortHeader({
   label,
   field,
   current,
-  onChange
+  dir,
+  onClick
 }) {
-  return /* @__PURE__ */ jsxRuntimeExports.jsx(
+  const isActive = current === field;
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs(
     "button",
     {
-      onClick: () => onChange(field),
-      className: `text-left text-xs uppercase tracking-wider font-medium
-        ${current === field ? "text-[var(--color-accent)]" : "text-[var(--color-text-tertiary)]"}
+      onClick: () => onClick(field),
+      className: `text-left text-xs uppercase tracking-wider font-medium flex items-center gap-1
+        ${isActive ? "text-[var(--color-accent)]" : "text-[var(--color-text-tertiary)]"}
         hover:text-[var(--color-text-secondary)] transition-colors`,
-      children: label
+      children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: label }),
+        isActive && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { "aria-hidden": true, children: dir === "asc" ? "↑" : "↓" })
+      ]
     }
   );
 }
@@ -17877,7 +17958,6 @@ function StatusFilterMenu({
                     children: selected.includes(status) && /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { width: "8", height: "8", viewBox: "0 0 8 8", fill: "none", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { d: "M1.5 4L3 5.5L6.5 2", stroke: "white", strokeWidth: "1.5", strokeLinecap: "round", strokeLinejoin: "round" }) })
                   }
                 ),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `w-1.5 h-1.5 rounded-full shrink-0 ${STATUS_DOT[status] || STATUS_DOT.draft}` }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: status })
               ]
             },
@@ -17908,14 +17988,104 @@ function HomeView({
   statusFilters,
   onStatusFiltersChange,
   sort,
+  sortDir,
   onSortChange,
+  onSortDirChange,
   onRefreshRef
 }) {
-  const { projects, loading, error, statuses, archivedCount, refresh } = useProjects({
+  const { map: healthMap } = useHealthMap();
+  const { projects, loading, refreshing, error, statuses, archivedCount, refresh } = useProjects({
     filter,
     statusFilters,
-    sort
+    sort,
+    sortDir,
+    healthMap
   });
+  const [areaChips, setAreaChips] = reactExports.useState(() => {
+    try {
+      const raw = localStorage.getItem(AREA_FILTER_KEY);
+      return raw ? JSON.parse(raw) : [];
+    } catch {
+      return [];
+    }
+  });
+  reactExports.useEffect(() => {
+    try {
+      localStorage.setItem(AREA_FILTER_KEY, JSON.stringify(areaChips));
+    } catch {
+    }
+  }, [areaChips]);
+  const [collapsed, setCollapsed] = reactExports.useState(() => {
+    try {
+      const raw = localStorage.getItem(LANE_COLLAPSE_KEY);
+      return raw ? JSON.parse(raw) : {};
+    } catch {
+      return {};
+    }
+  });
+  reactExports.useEffect(() => {
+    try {
+      localStorage.setItem(LANE_COLLAPSE_KEY, JSON.stringify(collapsed));
+    } catch {
+    }
+  }, [collapsed]);
+  const toggleLane = (laneKey) => {
+    setCollapsed((prev) => ({ ...prev, [laneKey]: !prev[laneKey] }));
+  };
+  const toggleAreaChip = (area) => {
+    setAreaChips(
+      (prev) => prev.includes(area) ? prev.filter((a) => a !== area) : [...prev, area]
+    );
+  };
+  const areaFiltered = reactExports.useMemo(() => {
+    if (areaChips.length === 0) return projects;
+    const chipSet = new Set(areaChips);
+    return projects.filter((p) => {
+      const key = p.area ?? UNASSIGNED_LANE;
+      return chipSet.has(key);
+    });
+  }, [projects, areaChips]);
+  const lanes = reactExports.useMemo(() => {
+    const buckets = {};
+    for (const key of LANE_ORDER) buckets[key] = [];
+    for (const p of areaFiltered) {
+      const key = p.area ?? UNASSIGNED_LANE;
+      if (buckets[key]) buckets[key].push(p);
+      else buckets[UNASSIGNED_LANE].push(p);
+    }
+    for (const key of LANE_ORDER) {
+      const lane = buckets[key];
+      if (!lane || lane.length === 0) continue;
+      const byName = new Map(lane.map((p) => [p.name, p]));
+      const placed = /* @__PURE__ */ new Set();
+      const out = [];
+      const appendWithChildren = (p) => {
+        if (placed.has(p.name)) return;
+        out.push(p);
+        placed.add(p.name);
+        for (const q of lane) {
+          if (q.parent_project === p.name && byName.has(q.name)) {
+            appendWithChildren(q);
+          }
+        }
+      };
+      for (const p of lane) {
+        const parent = p.parent_project;
+        if (!parent || !byName.has(parent)) appendWithChildren(p);
+      }
+      for (const p of lane) if (!placed.has(p.name)) out.push(p);
+      buckets[key] = out;
+    }
+    return buckets;
+  }, [areaFiltered]);
+  const handleSortClick = (field) => {
+    if (field === sort) {
+      onSortDirChange(sortDir === "asc" ? "desc" : "asc");
+    } else {
+      onSortChange(field);
+      onSortDirChange(DEFAULT_DESC_FIELDS.includes(field) ? "desc" : "asc");
+    }
+  };
   reactExports.useEffect(() => {
     onRefreshRef(refresh);
   }, [refresh, onRefreshRef]);
@@ -17970,36 +18140,125 @@ function HomeView({
         }
       ),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-xs text-[var(--color-text-tertiary)]", children: [
-        projects.length,
+        areaFiltered.length,
         " project",
-        projects.length !== 1 ? "s" : ""
+        areaFiltered.length !== 1 ? "s" : "",
+        refreshing && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "ml-1.5 text-[var(--color-text-tertiary)] opacity-60", children: "updating..." })
       ] })
     ] }),
-    projects.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-center py-12 text-[var(--color-text-tertiary)]", children: "No projects match the current filters" }) : /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border border-[var(--color-border)] rounded-lg overflow-hidden", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-[1fr_100px_80px_100px] gap-4 px-4 py-2\n            bg-[var(--color-bg-elevated)] border-b border-[var(--color-border)]", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx(SortHeader, { label: "Name", field: "name", current: sort, onChange: onSortChange }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(SortHeader, { label: "Status", field: "status", current: sort, onChange: onSortChange }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(SortHeader, { label: "Type", field: "type", current: sort, onChange: onSortChange }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(SortHeader, { label: "Updated", field: "updated_at", current: sort, onChange: onSortChange })
-      ] }),
-      projects.map((p) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-center gap-1.5 mb-3", role: "group", "aria-label": "Filter by area", children: [
+      LANE_ORDER.map((laneKey) => {
+        const active = areaChips.includes(laneKey);
+        const label = laneKey === UNASSIGNED_LANE ? "Unassigned" : laneKey;
+        const count2 = lanes[laneKey]?.length ?? 0;
+        return /* @__PURE__ */ jsxRuntimeExports.jsxs(
+          "button",
+          {
+            onClick: () => toggleAreaChip(laneKey),
+            className: `px-2.5 py-1 rounded-full text-xs font-medium border transition-colors ${active ? "bg-[var(--color-accent)] text-white border-[var(--color-accent)]" : "bg-[var(--color-bg-elevated)] text-[var(--color-text-secondary)] border-[var(--color-border)] hover:border-[var(--color-border-strong)]"}`,
+            title: active ? `Remove ${label} filter` : `Show only ${label}`,
+            children: [
+              label,
+              count2 > 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "ml-1 opacity-60", children: count2 })
+            ]
+          },
+          laneKey
+        );
+      }),
+      areaChips.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsx(
         "button",
         {
-          onClick: () => onProjectClick(p.name),
-          className: "w-full grid grid-cols-[1fr_100px_80px_100px] gap-4 px-4 py-2.5\n                text-left border-b border-[var(--color-border)] last:border-b-0\n                hover:bg-[var(--color-bg-elevated)] transition-colors\n                focus:outline-none focus:bg-[var(--color-bg-elevated)]",
+          onClick: () => setAreaChips([]),
+          className: "px-2 py-1 text-xs text-[var(--color-text-tertiary)]\n              hover:text-[var(--color-text-secondary)] transition-colors",
+          children: "Clear"
+        }
+      )
+    ] }),
+    areaFiltered.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-center py-12 text-[var(--color-text-tertiary)]", children: "No projects match the current filters" }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-3", children: LANE_ORDER.map((laneKey) => {
+      const laneProjects = lanes[laneKey] ?? [];
+      if (laneProjects.length === 0) return null;
+      const isCollapsed = collapsed[laneKey] === true;
+      const isUnassigned = laneKey === UNASSIGNED_LANE;
+      const laneLabel = isUnassigned ? "Unassigned" : laneKey;
+      return /* @__PURE__ */ jsxRuntimeExports.jsxs(
+        "section",
+        {
+          className: `border rounded-lg overflow-hidden ${isUnassigned ? "border-dashed border-[var(--color-border-strong)] bg-[var(--color-bg-card)]/40" : "border-[var(--color-border)]"}`,
           children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sm text-[var(--color-text-primary)] truncate", children: p.display_name }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-1.5", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `w-1.5 h-1.5 rounded-full shrink-0 ${STATUS_DOT[p.status] || STATUS_DOT.draft}` }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs text-[var(--color-text-secondary)]", children: p.status })
-            ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs text-[var(--color-text-tertiary)]", children: p.type === "area_of_focus" ? "Area" : p.paths?.some((path) => path.includes("/Code/")) ? "Code" : "Project" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs text-[var(--color-text-tertiary)]", children: timeAgo(p.updated_at) })
+            /* @__PURE__ */ jsxRuntimeExports.jsxs(
+              "button",
+              {
+                onClick: () => toggleLane(laneKey),
+                className: "w-full flex items-center justify-between px-4 py-2\n                    bg-[var(--color-bg-elevated)] border-b border-[var(--color-border)]\n                    hover:bg-[var(--color-bg-surface)] transition-colors\n                    focus:outline-none",
+                "aria-expanded": !isCollapsed,
+                children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { "aria-hidden": true, className: "text-xs text-[var(--color-text-tertiary)]", children: isCollapsed ? "▶" : "▼" }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `text-sm font-semibold ${isUnassigned ? "text-[var(--color-text-tertiary)]" : "text-[var(--color-text-primary)]"}`, children: laneLabel }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs text-[var(--color-text-tertiary)]", children: laneProjects.length })
+                  ] }),
+                  isUnassigned && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs text-[var(--color-text-tertiary)] italic", children: "Assign an area to group these" })
+                ]
+              }
+            ),
+            !isCollapsed && /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-[1fr_90px_100px_80px_100px] gap-4 px-4 py-1.5\n                      bg-[var(--color-bg-elevated)]/40 border-b border-[var(--color-border)]", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx(SortHeader, { label: "Name", field: "name", current: sort, dir: sortDir, onClick: handleSortClick }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(SortHeader, { label: "Health", field: "health", current: sort, dir: sortDir, onClick: handleSortClick }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(SortHeader, { label: "Status", field: "status", current: sort, dir: sortDir, onClick: handleSortClick }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(SortHeader, { label: "Type", field: "type", current: sort, dir: sortDir, onClick: handleSortClick }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(SortHeader, { label: "Updated", field: "updated_at", current: sort, dir: sortDir, onClick: handleSortClick })
+              ] }),
+              laneProjects.map((p) => {
+                const tier = p.status !== "archived" ? healthMap[p.name] : void 0;
+                const parent = p.parent_project ?? null;
+                const sameAreaParent = parent && laneProjects.some((q) => q.name === parent);
+                const crossAreaParent = parent && !sameAreaParent;
+                return /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                  "button",
+                  {
+                    onClick: () => onProjectClick(p.name),
+                    className: "w-full grid grid-cols-[1fr_90px_100px_80px_100px] gap-4 px-4 py-2.5\n                            items-center text-left border-b border-[var(--color-border)] last:border-b-0\n                            hover:bg-[var(--color-bg-elevated)] transition-colors\n                            focus:outline-none focus:bg-[var(--color-bg-elevated)]",
+                    children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `min-w-0 ${sameAreaParent ? "pl-6 relative" : ""}`, children: [
+                        sameAreaParent && /* @__PURE__ */ jsxRuntimeExports.jsx(
+                          "span",
+                          {
+                            "aria-hidden": true,
+                            className: "absolute left-2 top-0 bottom-0 w-px bg-[var(--color-border)]"
+                          }
+                        ),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-sm text-[var(--color-text-primary)] truncate", children: p.display_name || p.name }),
+                        crossAreaParent && /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "block text-[11px] text-[var(--color-text-tertiary)] truncate", children: [
+                          "↳ ",
+                          parent
+                        ] })
+                      ] }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx(
+                        "div",
+                        {
+                          className: "flex items-center gap-1.5",
+                          title: tier ? HEALTH_LABEL[tier] : p.status === "archived" ? "" : "Assessing...",
+                          children: p.status === "archived" ? /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs text-[var(--color-text-tertiary)]", children: "—" }) : /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+                            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `w-1.5 h-1.5 rounded-full shrink-0 ${tier ? HEALTH_DOT[tier] : "bg-[var(--color-text-tertiary)]/40"}` }),
+                            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs text-[var(--color-text-secondary)]", children: tier ? HEALTH_LABEL[tier] : "…" })
+                          ] })
+                        }
+                      ),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs text-[var(--color-text-secondary)]", children: p.status }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs text-[var(--color-text-tertiary)]", children: Array.isArray(p.paths) && p.paths.some((path) => path.includes("/Code/")) ? "Code" : "Project" }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs text-[var(--color-text-tertiary)]", children: timeAgo(p.updated_at) })
+                    ]
+                  },
+                  p.name
+                );
+              })
+            ] })
           ]
         },
-        p.name
-      ))
-    ] }),
+        laneKey
+      );
+    }) }),
     archivedCount > 0 && !statusFilters.includes("archived") && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-3 text-center", children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
       "button",
       {
@@ -18309,13 +18568,52 @@ function parseArray(value) {
   }
   return [];
 }
-function OverviewTab({ project }) {
+function OverviewTab({ project, onNavigate }) {
+  const health = useProjectHealth(project.name, project.updated_at);
   const goals = parseArray(project.goals);
   const topics = parseArray(project.topics);
   const entities = parseArray(project.entities);
   const concerns = parseArray(project.concerns);
   const fields = project.extended_fields || {};
+  const area = project.area ?? null;
+  const parent = project.parent_project ?? null;
+  const parentArchived = Boolean(project.parent_archived);
+  const children = Array.isArray(project.children) ? project.children : [];
+  const hasStructural = area || parent || children.length > 0;
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-6", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsx(HealthSection, { health }),
+    hasStructural && /* @__PURE__ */ jsxRuntimeExports.jsx(Section, { title: "Structure", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-2 text-sm", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex gap-3", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-[var(--color-text-tertiary)] min-w-[80px] shrink-0", children: "Area" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-[var(--color-text-secondary)]", children: area ?? /* @__PURE__ */ jsxRuntimeExports.jsx("em", { className: "text-[var(--color-text-tertiary)]", children: "Unassigned" }) })
+      ] }),
+      parent && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex gap-3", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-[var(--color-text-tertiary)] min-w-[80px] shrink-0", children: "Parent" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs(
+          "button",
+          {
+            onClick: () => onNavigate?.(parent),
+            className: "text-[var(--color-accent)] hover:underline text-left",
+            children: [
+              parent,
+              parentArchived && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "ml-1.5 text-xs text-[var(--color-text-tertiary)] italic", children: "(archived)" })
+            ]
+          }
+        )
+      ] }),
+      children.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex gap-3", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-[var(--color-text-tertiary)] min-w-[80px] shrink-0", children: "Sub-projects" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex flex-col gap-0.5", children: children.map((c) => /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "button",
+          {
+            onClick: () => onNavigate?.(c),
+            className: "text-[var(--color-accent)] hover:underline text-left",
+            children: c
+          },
+          c
+        )) })
+      ] })
+    ] }) }),
     goals.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsx(Section, { title: "Goals", children: /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { className: "space-y-1", children: goals.map((g) => /* @__PURE__ */ jsxRuntimeExports.jsxs("li", { className: "text-sm text-[var(--color-text-secondary)] flex gap-2", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-[var(--color-text-tertiary)] shrink-0", children: "•" }),
       g
@@ -18334,6 +18632,79 @@ function Section({ title, children }) {
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
     /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-xs font-medium uppercase tracking-wider text-[var(--color-text-tertiary)] mb-2", children: title }),
     children
+  ] });
+}
+function useProjectHealth(name, updatedAt) {
+  const [state, setState] = reactExports.useState({ loading: true, error: null, data: null });
+  reactExports.useEffect(() => {
+    let cancelled = false;
+    setState((s) => ({ ...s, loading: true }));
+    api.assessProjectHealth(name, { fresh: true }).then((data) => {
+      if (!cancelled) setState({ loading: false, error: null, data });
+    }).catch((err) => {
+      if (!cancelled) setState({ loading: false, error: String(err?.message ?? err), data: null });
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [name, updatedAt]);
+  return state;
+}
+const TIER_LABEL = {
+  healthy: "Healthy",
+  at_risk: "At risk",
+  stale: "Stale",
+  unknown: "Unknown"
+};
+const TIER_DOT = {
+  healthy: "bg-[var(--color-success)]",
+  at_risk: "bg-[var(--color-warning)]",
+  stale: "bg-[var(--color-error)]",
+  unknown: "bg-[var(--color-text-tertiary)]"
+};
+function HealthSection({ health }) {
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-xs font-medium uppercase tracking-wider text-[var(--color-text-tertiary)] mb-2", children: "Health" }),
+    health.loading && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-sm text-[var(--color-text-tertiary)]", children: "Assessing..." }),
+    health.error && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-sm text-[var(--color-error)]", children: health.error }),
+    health.data && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "span",
+          {
+            "aria-label": `Overall health: ${TIER_LABEL[health.data.overall]}`,
+            title: TIER_LABEL[health.data.overall],
+            className: `w-2.5 h-2.5 rounded-full shrink-0 ${TIER_DOT[health.data.overall]}`
+          }
+        ),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sm font-medium text-[var(--color-text-primary)]", children: TIER_LABEL[health.data.overall] })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-3 gap-2", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx(DimensionCell, { label: "Activity", dim: health.data.dimensions.activity }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(DimensionCell, { label: "Completeness", dim: health.data.dimensions.completeness }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(DimensionCell, { label: "Outcomes", dim: health.data.dimensions.outcomes })
+      ] }),
+      health.data.reasons.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { className: "space-y-1", children: health.data.reasons.map((r, i) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
+        "li",
+        {
+          className: "text-xs text-[var(--color-text-secondary)] flex gap-2",
+          children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-[var(--color-text-tertiary)] shrink-0", children: "•" }),
+            r
+          ]
+        },
+        `${i}-${r}`
+      )) })
+    ] })
+  ] });
+}
+function DimensionCell({ label, dim }) {
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded border border-[var(--color-border)] bg-[var(--color-bg-elevated)] p-2", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-1.5 mb-0.5", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `w-1.5 h-1.5 rounded-full shrink-0 ${TIER_DOT[dim.tier]}` }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-[10px] uppercase tracking-wider text-[var(--color-text-tertiary)]", children: label })
+    ] }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs text-[var(--color-text-secondary)]", children: TIER_LABEL[dim.tier] })
   ] });
 }
 function Tag({ label, accent, warning }) {
@@ -18431,31 +18802,76 @@ function PortsTab({ ports }) {
     ] }, p.port)) })
   ] });
 }
-const STATUS_OPTIONS = {
-  project: ["idea", "draft", "active", "paused", "complete", "archived"],
-  area_of_focus: ["active", "paused"]
-};
-function EditProjectForm({ name, currentValues: currentValues2, projectType, onSave, onCancel }) {
+const ERROR_PATTERNS = [
+  {
+    pattern: /Error \[DUPLICATE\]: A project named '(.+)' already exists/,
+    message: (m) => `A project named "${m[1]}" already exists. Choose a different name.`
+  },
+  {
+    pattern: /Error \[NOT_FOUND\]: No project named '(.+)' found.*Did you mean '(.+)'\?/,
+    message: (m) => `Project "${m[1]}" not found. Did you mean "${m[2]}"?`
+  },
+  {
+    pattern: /Error \[NOT_FOUND\]: No project named '(.+)' found/,
+    message: (m) => `Project "${m[1]}" not found.`
+  },
+  {
+    pattern: /Error \[INVALID_INPUT\]: (.+)/,
+    message: (m) => m[1]
+  },
+  {
+    pattern: /SQLITE_CONSTRAINT/,
+    message: () => "A database constraint was violated. The operation could not be completed."
+  },
+  {
+    pattern: /SQLITE_BUSY|database is locked/,
+    message: () => "The database is temporarily busy. Try again in a moment."
+  }
+];
+function friendlyError(err) {
+  const raw = err instanceof Error ? err.message : String(err);
+  for (const { pattern, message } of ERROR_PATTERNS) {
+    const match = raw.match(pattern);
+    if (match) return message(match);
+  }
+  const stripped = raw.replace(/^Error \[\w+\]: /, "");
+  return stripped || "An unexpected error occurred. Please try again.";
+}
+const STATUS_OPTIONS = ["idea", "draft", "active", "paused", "complete", "archived"];
+const UNASSIGNED$1 = "__unassigned__";
+function EditProjectForm({ name, currentValues: currentValues2, onSave, onCancel }) {
   const [displayName, setDisplayName] = reactExports.useState(currentValues2.display_name);
   const [status, setStatus] = reactExports.useState(currentValues2.status);
   const [description, setDescription] = reactExports.useState(currentValues2.description);
   const [goals, setGoals] = reactExports.useState(currentValues2.goals);
+  const [area, setArea] = reactExports.useState(currentValues2.area ?? UNASSIGNED$1);
+  const [parentProject, setParentProject] = reactExports.useState(currentValues2.parent_project ?? "");
+  const [parentOptions, setParentOptions] = reactExports.useState([]);
   const [error, setError] = reactExports.useState(null);
   const [saving, setSaving] = reactExports.useState(false);
-  const statuses = STATUS_OPTIONS[projectType] || ["active", "paused", "archived"];
+  reactExports.useEffect(() => {
+    api.listProjects({ depth: "summary" }).then((ps) => setParentOptions(ps)).catch(() => setParentOptions([]));
+  }, []);
+  const statuses = STATUS_OPTIONS;
   const handleSave = async () => {
     setError(null);
     try {
       setSaving(true);
+      const currentArea = currentValues2.area ?? null;
+      const currentParent = currentValues2.parent_project ?? null;
+      const newArea = area === UNASSIGNED$1 ? null : area;
+      const newParent = parentProject.trim() || null;
       await api.updateCore(name, {
         display_name: displayName !== currentValues2.display_name ? displayName : void 0,
         status: status !== currentValues2.status ? status : void 0,
         description: description !== currentValues2.description ? description : void 0,
-        goals: goals !== currentValues2.goals ? goals : void 0
+        goals: goals !== currentValues2.goals ? goals : void 0,
+        area: newArea !== currentArea ? newArea : void 0,
+        parent_project: newParent !== currentParent ? newParent : void 0
       });
       onSave();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to save changes");
+      setError(friendlyError(e));
     } finally {
       setSaving(false);
     }
@@ -18535,6 +18951,38 @@ function EditProjectForm({ name, currentValues: currentValues2, projectType, onS
           className: "input-field"
         }
       )
+    ] }),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 gap-4", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "block", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs text-[var(--color-text-tertiary)] mb-1 block", children: "Area" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs(
+          "select",
+          {
+            value: area,
+            onChange: (e) => setArea(e.target.value),
+            className: "input-field",
+            children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: UNASSIGNED$1, children: "Unassigned" }),
+              AREA_NAMES.map((a) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: a, children: a }, a))
+            ]
+          }
+        )
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "block", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs text-[var(--color-text-tertiary)] mb-1 block", children: "Parent project" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "input",
+          {
+            type: "text",
+            value: parentProject,
+            onChange: (e) => setParentProject(e.target.value),
+            placeholder: "None",
+            list: `edit-parent-${name}`,
+            className: "input-field"
+          }
+        ),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("datalist", { id: `edit-parent-${name}`, children: parentOptions.filter((p) => p.name !== name).slice(0, 50).map((p) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: p.name, children: p.display_name }, p.name)) })
+      ] })
     ] }),
     error && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-sm text-[var(--color-error)] bg-[var(--color-bg-elevated)] rounded-md p-2", children: error })
   ] });
@@ -18851,7 +19299,7 @@ function ArchiveConfirmDialog({ open, onOpenChange, projectName, onSuccess }) {
       onOpenChange(false);
       onSuccess();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to archive project");
+      setError(friendlyError(e));
     } finally {
       setArchiving(false);
     }
@@ -18884,23 +19332,53 @@ function ArchiveConfirmDialog({ open, onOpenChange, projectName, onSuccess }) {
 function RenameDialog({ open, onOpenChange, currentName, onSuccess }) {
   const [newName, setNewName] = reactExports.useState(currentName);
   const [error, setError] = reactExports.useState(null);
+  const [duplicateWarning, setDuplicateWarning] = reactExports.useState(null);
   const [saving, setSaving] = reactExports.useState(false);
+  const checkTimer = reactExports.useRef();
+  reactExports.useEffect(() => {
+    if (open) {
+      setNewName(currentName);
+      setError(null);
+      setDuplicateWarning(null);
+    }
+  }, [open, currentName]);
+  reactExports.useEffect(() => {
+    const trimmed = newName.trim();
+    setDuplicateWarning(null);
+    if (!trimmed || trimmed === currentName || !/^[a-z0-9][a-z0-9_-]*$/.test(trimmed)) return;
+    clearTimeout(checkTimer.current);
+    checkTimer.current = setTimeout(async () => {
+      try {
+        const existing = await api.getProject(trimmed, "minimal");
+        if (existing) {
+          setDuplicateWarning(`A project named "${trimmed}" already exists. Choose a different name.`);
+        }
+      } catch {
+      }
+    }, 300);
+    return () => clearTimeout(checkTimer.current);
+  }, [newName, currentName]);
+  const formatError = () => {
+    const trimmed = newName.trim();
+    if (!trimmed || trimmed === currentName) return null;
+    if (!/^[a-z0-9][a-z0-9_-]*$/.test(trimmed)) {
+      return "Name must be lowercase, start with a letter or number, and contain only letters, numbers, hyphens, and underscores.";
+    }
+    return null;
+  };
+  const validationError = formatError();
   const handleRename = async (e) => {
     e.preventDefault();
     setError(null);
     const trimmed = newName.trim();
-    if (!trimmed || trimmed === currentName) return;
-    if (!/^[a-z0-9][a-z0-9_-]*$/.test(trimmed)) {
-      setError("Name must be lowercase, start with a letter or number, and contain only letters, numbers, hyphens, and underscores");
-      return;
-    }
+    if (!trimmed || trimmed === currentName || validationError || duplicateWarning) return;
     try {
       setSaving(true);
       await api.renameProject(currentName, trimmed);
       onOpenChange(false);
       onSuccess(trimmed);
     } catch (e2) {
-      setError(e2 instanceof Error ? e2.message : "Failed to rename project");
+      setError(friendlyError(e2));
     } finally {
       setSaving(false);
     }
@@ -18923,6 +19401,7 @@ function RenameDialog({ open, onOpenChange, currentName, onSuccess }) {
             }
           )
         ] }),
+        (validationError || duplicateWarning) && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-sm text-[var(--color-warning)] bg-[var(--color-bg-card)] rounded-md p-2", children: validationError || duplicateWarning }),
         error && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-sm text-[var(--color-error)] bg-[var(--color-bg-card)] rounded-md p-2", children: error }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-end gap-2", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx(Close, { asChild: true, children: /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -18937,7 +19416,7 @@ function RenameDialog({ open, onOpenChange, currentName, onSuccess }) {
             "button",
             {
               type: "submit",
-              disabled: saving || !newName.trim() || newName.trim() === currentName,
+              disabled: saving || !newName.trim() || newName.trim() === currentName || !!validationError || !!duplicateWarning,
               className: "px-4 py-2 rounded-md text-sm font-medium\n                  bg-[var(--color-accent)] text-white\n                  hover:bg-[var(--color-accent-hover)]\n                  disabled:opacity-50 transition-colors",
               children: saving ? "Renaming..." : "Rename"
             }
@@ -18976,7 +19455,7 @@ function ProjectDetailView({ projectName, onBack, onNavigate }) {
         displayName: project.display_name,
         type: project.type,
         status: project.status,
-        description: project.description,
+        description: project.description ?? "",
         onBack,
         onEdit: () => setEditing(true),
         onArchive: () => setShowArchive(true),
@@ -18990,8 +19469,10 @@ function ProjectDetailView({ projectName, onBack, onNavigate }) {
         currentValues: {
           display_name: project.display_name,
           status: project.status,
-          description: project.description,
-          goals: project.goals
+          description: project.description ?? "",
+          goals: Array.isArray(project.goals) ? project.goals.join(", ") : project.goals ?? "",
+          area: project.area ?? null,
+          parent_project: project.parent_project ?? null
         },
         projectType: project.type,
         onSave: () => {
@@ -19017,7 +19498,7 @@ function ProjectDetailView({ projectName, onBack, onNavigate }) {
           ports.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsx(Count, { n: ports.length })
         ] })
       ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx(Content$1, { value: "overview", children: /* @__PURE__ */ jsxRuntimeExports.jsx(OverviewTab, { project }) }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx(Content$1, { value: "overview", children: /* @__PURE__ */ jsxRuntimeExports.jsx(OverviewTab, { project, onNavigate }) }),
       /* @__PURE__ */ jsxRuntimeExports.jsx(Content$1, { value: "memory", children: /* @__PURE__ */ jsxRuntimeExports.jsx(MemoryTab, { memories }) }),
       /* @__PURE__ */ jsxRuntimeExports.jsx(Content$1, { value: "capabilities", children: /* @__PURE__ */ jsxRuntimeExports.jsx(CapabilitiesTab, { capabilities }) }),
       /* @__PURE__ */ jsxRuntimeExports.jsx(Content$1, { value: "ports", children: /* @__PURE__ */ jsxRuntimeExports.jsx(PortsTab, { ports }) })
@@ -19227,29 +19708,51 @@ function SettingsView({ onBack }) {
 }
 const PROJECT_TYPES = [
   { value: "code_project", label: "Code project" },
-  { value: "non_code_project", label: "Non-code project" },
-  { value: "area_of_focus", label: "Area of focus" }
+  { value: "non_code_project", label: "Non-code project" }
 ];
 const TYPE_TO_PATH_KEY = {
   code_project: "project",
-  non_code_project: "non_code_project",
-  area_of_focus: "area_of_focus"
+  non_code_project: "non_code_project"
 };
+const UNASSIGNED = "__unassigned__";
 function RegisterProjectDialog({ open, onOpenChange, onSuccess }) {
   const [name, setName] = reactExports.useState("");
   const [displayName, setDisplayName] = reactExports.useState("");
   const [type, setType] = reactExports.useState("code_project");
   const [description, setDescription] = reactExports.useState("");
+  const [area, setArea] = reactExports.useState(UNASSIGNED);
+  const [parentProject, setParentProject] = reactExports.useState("");
+  const [parentQuery, setParentQuery] = reactExports.useState("");
+  const [parentOptions, setParentOptions] = reactExports.useState([]);
   const [error, setError] = reactExports.useState(null);
+  const [nameWarning, setNameWarning] = reactExports.useState(null);
   const [saving, setSaving] = reactExports.useState(false);
+  const checkTimer = reactExports.useRef();
   const [createFolder, setCreateFolder] = reactExports.useState(false);
   const [skipGit, setSkipGit] = reactExports.useState(false);
   const [config, setConfig] = reactExports.useState(null);
   reactExports.useEffect(() => {
     if (open) {
       api.getBootstrapConfig().then(setConfig).catch(() => setConfig(null));
+      api.listProjects({ depth: "summary" }).then((projects) => setParentOptions(projects)).catch(() => setParentOptions([]));
     }
   }, [open]);
+  reactExports.useEffect(() => {
+    const trimmed = name.trim();
+    setNameWarning(null);
+    if (!trimmed || !/^[a-z0-9][a-z0-9_-]*$/.test(trimmed)) return;
+    clearTimeout(checkTimer.current);
+    checkTimer.current = setTimeout(async () => {
+      try {
+        const existing = await api.getProject(trimmed, "minimal");
+        if (existing) {
+          setNameWarning(`A project named "${trimmed}" already exists. Choose a different name.`);
+        }
+      } catch {
+      }
+    }, 300);
+    return () => clearTimeout(checkTimer.current);
+  }, [name]);
   const pathKey = TYPE_TO_PATH_KEY[type];
   const pathRoot = config?.path_roots?.[pathKey];
   const hasBootstrapConfig = config && Object.keys(config.path_roots).length > 0;
@@ -19267,34 +19770,43 @@ function RegisterProjectDialog({ open, onOpenChange, onSuccess }) {
     }
     try {
       setSaving(true);
+      const resolvedArea = area === UNASSIGNED ? null : area;
+      const resolvedParent = parentProject.trim() || null;
       if (createFolder) {
         await api.bootstrapProject({
           name: name.trim(),
-          type,
+          type: type === "code_project" ? "project" : "non_code_project",
           status: "active",
           description: description.trim() || void 0,
           display_name: displayName.trim() || void 0,
-          skip_git: skipGit || type !== "code_project"
+          skip_git: skipGit || type !== "code_project",
+          area: resolvedArea,
+          parent_project: resolvedParent
         });
       } else {
         await api.register({
           name: name.trim(),
-          type,
+          type: "project",
           status: "active",
           description: description.trim() || void 0,
-          display_name: displayName.trim() || void 0
+          display_name: displayName.trim() || void 0,
+          area: resolvedArea,
+          parent_project: resolvedParent
         });
       }
       setName("");
       setDisplayName("");
       setType("code_project");
       setDescription("");
+      setArea(UNASSIGNED);
+      setParentProject("");
+      setParentQuery("");
       setCreateFolder(false);
       setSkipGit(false);
       onOpenChange(false);
       onSuccess();
     } catch (e2) {
-      setError(e2 instanceof Error ? e2.message : "Failed to create project");
+      setError(friendlyError(e2));
     } finally {
       setSaving(false);
     }
@@ -19304,17 +19816,20 @@ function RegisterProjectDialog({ open, onOpenChange, onSuccess }) {
     /* @__PURE__ */ jsxRuntimeExports.jsxs(Content, { className: "fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2\n          w-full max-w-md p-6 rounded-xl\n          bg-[var(--color-bg-elevated)] border border-[var(--color-border)]\n          shadow-xl", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx(Title, { className: "text-lg font-semibold text-[var(--color-text-primary)] mb-4", children: createFolder ? "Create project" : "Register project" }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("form", { onSubmit: handleSubmit, className: "space-y-4", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Name (slug)", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
-          "input",
-          {
-            type: "text",
-            value: name,
-            onChange: (e) => setName(e.target.value.toLowerCase().replace(/\s+/g, "-")),
-            placeholder: "my-project",
-            className: "input-field font-mono",
-            autoFocus: true
-          }
-        ) }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs(Field, { label: "Name (slug)", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "input",
+            {
+              type: "text",
+              value: name,
+              onChange: (e) => setName(e.target.value.toLowerCase().replace(/\s+/g, "-")),
+              placeholder: "my-project",
+              className: "input-field font-mono",
+              autoFocus: true
+            }
+          ),
+          nameWarning && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 text-xs text-[var(--color-warning)]", children: nameWarning })
+        ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Display name (optional)", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
           "input",
           {
@@ -19343,6 +19858,40 @@ function RegisterProjectDialog({ open, onOpenChange, onSuccess }) {
             className: "input-field resize-none"
           }
         ) }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Area", children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
+          "select",
+          {
+            value: area,
+            onChange: (e) => setArea(e.target.value),
+            className: "input-field",
+            children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: UNASSIGNED, children: "Unassigned" }),
+              AREA_NAMES.map((a) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: a, children: a }, a))
+            ]
+          }
+        ) }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs(Field, { label: "Parent project (optional)", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "input",
+            {
+              type: "text",
+              value: parentQuery,
+              onChange: (e) => {
+                setParentQuery(e.target.value);
+                setParentProject(e.target.value);
+              },
+              placeholder: "Type to search existing projects…",
+              list: "register-parent-options",
+              className: "input-field"
+            }
+          ),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("datalist", { id: "register-parent-options", children: parentOptions.filter((p) => p.name !== name.trim()).filter((p) => !parentQuery || p.name.toLowerCase().includes(parentQuery.toLowerCase())).slice(0, 50).map((p) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: p.name, children: p.display_name }, p.name)) }),
+          parentProject && !parentOptions.some((p) => p.name === parentProject) && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-1 text-xs text-[var(--color-warning)]", children: [
+            'No project named "',
+            parentProject,
+            '" — registration will fail unless it exists.'
+          ] })
+        ] }),
         hasBootstrapConfig && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-t border-[var(--color-border)] pt-4 space-y-3", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-center gap-2 cursor-pointer", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -19413,6 +19962,7 @@ function App() {
   const [filter, setFilter] = reactExports.useState("");
   const [statusFilters, setStatusFilters] = reactExports.useState([]);
   const [sort, setSort] = reactExports.useState("name");
+  const [sortDir, setSortDir] = reactExports.useState("asc");
   const navigateToProject = (name) => setView({ kind: "detail", projectName: name });
   const navigateHome = reactExports.useCallback(() => {
     setView({ kind: "home" });
@@ -19431,7 +19981,9 @@ function App() {
         statusFilters,
         onStatusFiltersChange: setStatusFilters,
         sort,
+        sortDir,
         onSortChange: setSort,
+        onSortDirChange: setSortDir,
         onRefreshRef: (fn) => {
           refreshRef.current = fn;
         }

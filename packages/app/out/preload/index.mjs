@@ -10,6 +10,9 @@ const api = {
   updateFields: (name, fields, producer) => ipcRenderer.invoke("updateFields", name, fields, producer),
   archiveProject: (name) => ipcRenderer.invoke("archiveProject", name),
   renameProject: (oldName, newName) => ipcRenderer.invoke("renameProject", oldName, newName),
+  // spec 0.13: areas + sub-projects
+  setProjectArea: (name, area) => ipcRenderer.invoke("setProjectArea", name, area),
+  setParentProject: (childName, parentName) => ipcRenderer.invoke("setParentProject", childName, parentName),
   // Profile
   enrichProject: (name, profile) => ipcRenderer.invoke("enrichProject", name, profile),
   // Ports
@@ -22,6 +25,8 @@ const api = {
   // Bootstrap
   getBootstrapConfig: () => ipcRenderer.invoke("getBootstrapConfig"),
   configureBootstrap: (opts) => ipcRenderer.invoke("configureBootstrap", opts),
+  // Health
+  assessHealth: (name, opts) => ipcRenderer.invoke("assessHealth", name, opts),
   bootstrapProject: (opts) => ipcRenderer.invoke("bootstrapProject", opts)
 };
 contextBridge.exposeInMainWorld("setlist", api);
