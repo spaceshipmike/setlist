@@ -39,9 +39,10 @@ describe('MCP Server (S21)', () => {
 
   // ── Tool Registration ──────────────────────────────────────
 
-  it('registers exactly 34 tools', async () => {
+  // spec 0.13: +2 tools (set_project_area, set_parent_project) = 36 total
+  it('registers exactly 36 tools', async () => {
     const tools = await listTools(server);
-    expect(tools).toHaveLength(34);
+    expect(tools).toHaveLength(36);
   });
 
   it('registers all expected tool names', async () => {
@@ -54,8 +55,8 @@ describe('MCP Server (S21)', () => {
       'inspect_memory', 'list_projects', 'list_tasks', 'memory_status',
       'portfolio_brief', 'queue_task', 'recall', 'reflect', 'register_capabilities',
       'register_project', 'release_port', 'rename_project', 'retain',
-      'search_projects', 'switch_project', 'update_project', 'query_capabilities',
-      'write_fields',
+      'search_projects', 'set_parent_project', 'set_project_area', 'switch_project',
+      'update_project', 'query_capabilities', 'write_fields',
     ].sort());
   });
 
@@ -114,14 +115,77 @@ describe('MCP Server (S21)', () => {
     expect(results[0].name).toBe('auth-service');
   });
 
-  it('get_registry_stats returns correct counts', async () => {
-    await callTool(server, 'register_project', { name: 'p1' });
-    await callTool(server, 'register_project', { name: 'p2', project_type: 'area_of_focus' });
+  it('get_registry_stats returns counts including per-area distribution and unassigned', async () => {
+    await callTool(server, 'register_project', { name: 'p1', area: 'Work' });
+    await callTool(server, 'register_project', { name: 'p2', area: 'Home' });
+    await callTool(server, 'register_project', { name: 'p3' }); // unassigned
 
     const stats = await callTool(server, 'get_registry_stats') as Record<string, unknown>;
-    expect(stats.total).toBe(2);
+    expect(stats.total).toBe(3);
+    expect((stats.by_type as Record<string, number>).project).toBe(3);
+    expect((stats.by_area as Record<string, number>).Work).toBe(1);
+    expect((stats.by_area as Record<string, number>).Home).toBe(1);
+    expect((stats.by_area as Record<string, number>).Health).toBe(0);
+    expect(stats.unassigned).toBe(1);
+  });
+
+  // spec 0.13: register_project always writes type='project' — legacy
+  // project_type='area_of_focus' input is silently coerced (the enum in the
+  // tool schema only lists 'project', but the server handler hardcodes it).
+  it('register_project always writes db type=project (spec 0.13 retires area_of_focus)', async () => {
+    const reg = await callTool(server, 'register_project', { name: 'coerced', project_type: 'area_of_focus' }) as Record<string, unknown>;
+    expect(JSON.stringify(reg)).toContain('registered');
+
+    const stats = await callTool(server, 'get_registry_stats') as Record<string, unknown>;
     expect((stats.by_type as Record<string, number>).project).toBe(1);
-    expect((stats.by_type as Record<string, number>).area_of_focus).toBe(1);
+    expect((stats.by_type as Record<string, number>).area_of_focus ?? 0).toBe(0);
+  });
+
+  // spec 0.13: set_project_area tool (S74, S77)
+  it('set_project_area assigns and clears areas', async () => {
+    await callTool(server, 'register_project', { name: 'area-proj' });
+    const r1 = await callTool(server, 'set_project_area', { name: 'area-proj', area: 'Work' }) as Record<string, unknown>;
+    expect(r1.area).toBe('Work');
+    const r2 = await callTool(server, 'set_project_area', { name: 'area-proj', area: null }) as Record<string, unknown>;
+    expect(r2.area).toBeNull();
+  });
+
+  it('set_project_area rejects invalid canonical area names', async () => {
+    await callTool(server, 'register_project', { name: 'ap' });
+    const result = await callTool(server, 'set_project_area', { name: 'ap', area: 'NotReal' }) as string;
+    expect(result).toContain('NotReal');
+    expect(result).toContain('Work');
+  });
+
+  // spec 0.13: set_parent_project tool (S75, S76)
+  it('set_parent_project links child to parent and detects cycles', async () => {
+    await callTool(server, 'register_project', { name: 'parent' });
+    await callTool(server, 'register_project', { name: 'child' });
+
+    const linked = await callTool(server, 'set_parent_project', { name: 'child', parent_name: 'parent' }) as Record<string, unknown>;
+    expect(linked.parent_project).toBe('parent');
+
+    const parent = await callTool(server, 'get_project', { name: 'parent' }) as Record<string, unknown>;
+    expect(parent.children).toContain('child');
+
+    // Cycle attempt: parent -> child's parent = cycle
+    const cycle = await callTool(server, 'set_parent_project', { name: 'parent', parent_name: 'child' }) as string;
+    expect(cycle).toContain('cycle');
+  });
+
+  // spec 0.13: list_projects accepts area_filter and __unassigned__ sentinel
+  it('list_projects area_filter narrows to a single area or __unassigned__', async () => {
+    await callTool(server, 'register_project', { name: 'w1', area: 'Work' });
+    await callTool(server, 'register_project', { name: 'w2', area: 'Work' });
+    await callTool(server, 'register_project', { name: 'h1', area: 'Home' });
+    await callTool(server, 'register_project', { name: 'loose' });
+
+    const work = await callTool(server, 'list_projects', { area_filter: 'Work' }) as Record<string, unknown>[];
+    expect(work).toHaveLength(2);
+
+    const unassigned = await callTool(server, 'list_projects', { area_filter: '__unassigned__' }) as Record<string, unknown>[];
+    expect(unassigned).toHaveLength(1);
+    expect(unassigned[0].name).toBe('loose');
   });
 
   it('update_project changes fields and returns updated summary', async () => {

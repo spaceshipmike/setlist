@@ -612,14 +612,15 @@ export class Registry {
   batchUpdate(opts: {
     type_filter?: string;
     status_filter?: string;
+    area_filter?: string;
     status?: string;
     description?: string;
     goals?: string;
     display_name?: string;
     dry_run?: boolean;
   }): { count: number; projects: string[]; dry_run: boolean } {
-    if (!opts.type_filter && !opts.status_filter) {
-      throw new InvalidInputError('batch_update requires at least one filter (type_filter or status_filter).');
+    if (!opts.type_filter && !opts.status_filter && !opts.area_filter) {
+      throw new InvalidInputError('batch_update requires at least one filter (type_filter, status_filter, or area_filter).');
     }
     const hasUpdates = opts.status !== undefined || opts.description !== undefined ||
       opts.goals !== undefined || opts.display_name !== undefined;
@@ -635,6 +636,15 @@ export class Registry {
 
       if (opts.type_filter) { conditions.push('type = ?'); params.push(opts.type_filter); }
       if (opts.status_filter) { conditions.push('status = ?'); params.push(opts.status_filter); }
+      if (opts.area_filter) {
+        if (opts.area_filter === UNASSIGNED_AREA_SENTINEL) {
+          conditions.push('area_id IS NULL');
+        } else {
+          const areaId = this.resolveAreaIdOrThrow(db, opts.area_filter);
+          conditions.push('area_id = ?');
+          params.push(areaId);
+        }
+      }
       sql += ' WHERE ' + conditions.join(' AND ');
 
       const matched = db.prepare(sql).all(...params) as { id: number; name: string; type: string }[];
@@ -907,13 +917,11 @@ export class Registry {
     schedule: string;
     type_filter?: string;
     status_filter?: string;
+    area_filter?: string;
   }): { task_id?: number; count?: number; projects?: string[] } {
-    const isFanOut = opts.type_filter || opts.status_filter;
+    const isFanOut = opts.type_filter || opts.status_filter || opts.area_filter;
 
     if (isFanOut) {
-      if (!opts.type_filter && !opts.status_filter) {
-        throw new InvalidInputError('Cross-project dispatch requires at least one filter.');
-      }
       return this.dispatchTasks(opts);
     }
 
@@ -934,6 +942,7 @@ export class Registry {
     schedule: string;
     type_filter?: string;
     status_filter?: string;
+    area_filter?: string;
   }): { count: number; projects: string[] } {
     const db = this.open();
     try {
@@ -942,6 +951,15 @@ export class Registry {
       const params: unknown[] = [];
       if (opts.type_filter) { conditions.push('type = ?'); params.push(opts.type_filter); }
       if (opts.status_filter) { conditions.push('status = ?'); params.push(opts.status_filter); }
+      if (opts.area_filter) {
+        if (opts.area_filter === UNASSIGNED_AREA_SENTINEL) {
+          conditions.push('area_id IS NULL');
+        } else {
+          const areaId = this.resolveAreaIdOrThrow(db, opts.area_filter);
+          conditions.push('area_id = ?');
+          params.push(areaId);
+        }
+      }
       sql += ' WHERE ' + conditions.join(' AND ');
 
       const projects = db.prepare(sql).all(...params) as { name: string }[];

@@ -25,23 +25,25 @@ export function createServer(dbPath?: string): Server {
   server.setRequestHandler(ListToolsRequestSchema, async () => ({
     tools: [
       // Project Identity (9)
-      { name: 'list_projects', description: 'List all projects at a given depth, with optional type/status filters. Suggestion: use get_project() for full details on any project.', inputSchema: { type: 'object' as const, properties: { detail: { type: 'string', enum: ['minimal', 'summary', 'standard', 'full'], default: 'summary' }, type_filter: { type: 'string' }, status_filter: { type: 'string' } } } },
+      { name: 'list_projects', description: 'List all projects at a given depth, with optional type/status/area filters. Suggestion: use get_project() for full details on any project.', inputSchema: { type: 'object' as const, properties: { detail: { type: 'string', enum: ['minimal', 'summary', 'standard', 'full'], default: 'summary' }, type_filter: { type: 'string' }, status_filter: { type: 'string' }, area_filter: { type: 'string', description: 'Canonical area name (Work/Family/Home/Health/Finance/Personal/Infrastructure) or "__unassigned__" for projects with no area' } } } },
       { name: 'get_project', description: 'Get a single project by name at a given depth. Suggestion: use switch_project() for workspace context.', inputSchema: { type: 'object' as const, properties: { name: { type: 'string' }, detail: { type: 'string', enum: ['minimal', 'summary', 'standard', 'full'], default: 'full' } }, required: ['name'] } },
       { name: 'switch_project', description: 'Look up a project by name and return paths, status, ports, and workspace metadata.', inputSchema: { type: 'object' as const, properties: { name: { type: 'string' } }, required: ['name'] } },
-      { name: 'search_projects', description: 'Search projects by keyword across name, description, goals, and extended fields.', inputSchema: { type: 'object' as const, properties: { query: { type: 'string' }, type_filter: { type: 'string' }, status_filter: { type: 'string' } }, required: ['query'] } },
-      { name: 'get_registry_stats', description: 'Return project count, type distribution, and status distribution.', inputSchema: { type: 'object' as const, properties: {} } },
-      { name: 'register_project', description: 'Register a new project in the registry. Suggestion: use update_project() to modify existing projects.', inputSchema: { type: 'object' as const, properties: { name: { type: 'string' }, display_name: { type: 'string' }, project_type: { type: 'string', default: 'project' }, status: { type: 'string', default: 'active' }, description: { type: 'string' }, goals: { type: 'string' }, paths: { type: 'string' }, producer: { type: 'string', default: 'system' } }, required: ['name'] } },
-      { name: 'update_project', description: 'Update core identity fields on an existing project.', inputSchema: { type: 'object' as const, properties: { name: { type: 'string' }, display_name: { type: 'string' }, status: { type: 'string' }, description: { type: 'string' }, goals: { type: 'string' } }, required: ['name'] } },
-      { name: 'archive_project', description: 'Archive a project (releases ports, clears capabilities).', inputSchema: { type: 'object' as const, properties: { name: { type: 'string' } }, required: ['name'] } },
+      { name: 'search_projects', description: 'Search projects by keyword across name, description, goals, and extended fields. Optional area_filter narrows to a single canonical area.', inputSchema: { type: 'object' as const, properties: { query: { type: 'string' }, type_filter: { type: 'string' }, status_filter: { type: 'string' }, area_filter: { type: 'string' } }, required: ['query'] } },
+      { name: 'get_registry_stats', description: 'Return project count, type distribution, status distribution, per-area distribution, and unassigned count.', inputSchema: { type: 'object' as const, properties: {} } },
+      { name: 'register_project', description: 'Register a new project in the registry. Optional area assigns to one of the 7 canonical areas; optional parent_project links as a sub-project. Suggestion: use update_project() to modify existing projects.', inputSchema: { type: 'object' as const, properties: { name: { type: 'string' }, display_name: { type: 'string' }, project_type: { type: 'string', enum: ['project'], default: 'project' }, status: { type: 'string', default: 'active' }, description: { type: 'string' }, goals: { type: 'string' }, paths: { type: 'string' }, area: { type: 'string', description: 'Canonical area: Work, Family, Home, Health, Finance, Personal, or Infrastructure' }, parent_project: { type: 'string', description: 'Name of the parent project for sub-project linking' }, producer: { type: 'string', default: 'system' } }, required: ['name'] } },
+      { name: 'update_project', description: 'Update core identity fields on an existing project, including optional area and parent_project. Pass null to clear area or parent_project.', inputSchema: { type: 'object' as const, properties: { name: { type: 'string' }, display_name: { type: 'string' }, status: { type: 'string' }, description: { type: 'string' }, goals: { type: 'string' }, area: { type: ['string', 'null'] }, parent_project: { type: ['string', 'null'] } }, required: ['name'] } },
+      { name: 'set_project_area', description: 'Assign or clear a project\'s canonical area. Pass null to move the project to Unassigned.', inputSchema: { type: 'object' as const, properties: { name: { type: 'string' }, area: { type: ['string', 'null'], description: 'Canonical area name or null to clear' } }, required: ['name'] } },
+      { name: 'set_parent_project', description: 'Link a child project to a parent project (sub-project relationship). Pass null as parent_name to detach. Rejects self-parenting and cycles.', inputSchema: { type: 'object' as const, properties: { name: { type: 'string', description: 'Child project name' }, parent_name: { type: ['string', 'null'], description: 'Parent project name, or null to detach' } }, required: ['name'] } },
+      { name: 'archive_project', description: 'Archive a project (releases ports, clears capabilities). Children are NOT archived and remain linked via parent_archived flag.', inputSchema: { type: 'object' as const, properties: { name: { type: 'string' } }, required: ['name'] } },
       { name: 'rename_project', description: 'Rename a project atomically (rewrites all references).', inputSchema: { type: 'object' as const, properties: { name: { type: 'string' }, new_name: { type: 'string' } }, required: ['name', 'new_name'] } },
-      { name: 'batch_update', description: 'Apply field changes to all projects matching a filter. Supports dry_run.', inputSchema: { type: 'object' as const, properties: { type_filter: { type: 'string' }, status_filter: { type: 'string' }, display_name: { type: 'string' }, status: { type: 'string' }, description: { type: 'string' }, goals: { type: 'string' }, dry_run: { type: 'boolean' } } } },
+      { name: 'batch_update', description: 'Apply field changes to all projects matching a filter (type/status/area). Supports dry_run.', inputSchema: { type: 'object' as const, properties: { type_filter: { type: 'string' }, status_filter: { type: 'string' }, area_filter: { type: 'string' }, display_name: { type: 'string' }, status: { type: 'string' }, description: { type: 'string' }, goals: { type: 'string' }, dry_run: { type: 'boolean' } } } },
       { name: 'enrich_project', description: 'Add structured profile data (goals, topics, entities, concerns) to a project. Union semantics — new items are merged with existing.', inputSchema: { type: 'object' as const, properties: { name: { type: 'string' }, goals: { type: 'array', items: { type: 'string' } }, topics: { type: 'array', items: { type: 'string' } }, entities: { type: 'array', items: { type: 'string' } }, concerns: { type: 'array', items: { type: 'string' } } }, required: ['name'] } },
       { name: 'write_fields', description: 'Write extended fields to a project (short_description, medium_description, tech_stack, etc.). Producer-owned: fields written by one producer are not overwritten by another.', inputSchema: { type: 'object' as const, properties: { project_name: { type: 'string' }, fields: { type: 'object', description: 'Key-value pairs of field names to values. Values can be strings or arrays.' }, producer: { type: 'string', default: 'system', description: 'Producer identity (e.g., "fctry", "chorus", "user")' } }, required: ['project_name', 'fields'] } },
       // Capabilities (2)
       { name: 'register_capabilities', description: 'Write a project\'s complete capability set (replace semantics).', inputSchema: { type: 'object' as const, properties: { project_name: { type: 'string' }, capabilities: { type: 'array' } }, required: ['project_name', 'capabilities'] } },
       { name: 'query_capabilities', description: 'Discover capabilities across the ecosystem by project, type, or keyword.', inputSchema: { type: 'object' as const, properties: { project_name: { type: 'string' }, type: { type: 'string' }, keyword: { type: 'string' } } } },
       // Memory Agent (4)
-      { name: 'retain', description: 'Store a memory. Suggestion: use recall() to retrieve.', inputSchema: { type: 'object' as const, properties: { content: { type: 'string' }, type: { type: 'string', enum: ['decision', 'outcome', 'pattern', 'preference', 'dependency', 'correction', 'learning', 'context', 'procedural', 'observation'] }, project: { type: 'string' }, scope: { type: 'string', enum: ['project', 'area_of_focus', 'portfolio', 'global'] }, tags: { type: 'array', items: { type: 'string' } }, session_id: { type: 'string' }, agent_role: { type: 'string' }, belief: { type: 'string', enum: ['fact', 'opinion', 'hypothesis'] }, extraction_confidence: { type: 'number' }, valid_from: { type: 'string' }, valid_until: { type: 'string' }, entities: { type: 'array', items: { type: 'object', properties: { name: { type: 'string' }, type: { type: 'string' } }, required: ['name', 'type'] } }, parent_version_id: { type: 'string' } }, required: ['content', 'type'] } },
+      { name: 'retain', description: 'Store a memory. Suggestion: use recall() to retrieve.', inputSchema: { type: 'object' as const, properties: { content: { type: 'string' }, type: { type: 'string', enum: ['decision', 'outcome', 'pattern', 'preference', 'dependency', 'correction', 'learning', 'context', 'procedural', 'observation'] }, project: { type: 'string' }, scope: { type: 'string', enum: ['project', 'area', 'portfolio', 'global'] }, tags: { type: 'array', items: { type: 'string' } }, session_id: { type: 'string' }, agent_role: { type: 'string' }, belief: { type: 'string', enum: ['fact', 'opinion', 'hypothesis'] }, extraction_confidence: { type: 'number' }, valid_from: { type: 'string' }, valid_until: { type: 'string' }, entities: { type: 'array', items: { type: 'object', properties: { name: { type: 'string' }, type: { type: 'string' } }, required: ['name', 'type'] } }, parent_version_id: { type: 'string' } }, required: ['content', 'type'] } },
       { name: 'recall', description: 'Retrieve relevant memories. Omit query for bootstrap mode. Suggestion: use retain() to capture new knowledge.', inputSchema: { type: 'object' as const, properties: { query: { type: 'string' }, project: { type: 'string' }, token_budget: { type: 'number' } } } },
       { name: 'feedback', description: 'Report a build outcome for memory reinforcement.', inputSchema: { type: 'object' as const, properties: { result: { type: 'string', enum: ['success', 'failure'] }, memory_ids: { type: 'array', items: { type: 'string' } } }, required: ['result', 'memory_ids'] } },
       { name: 'memory_status', description: 'Memory store health check. Suggestion: use reflect() for maintenance.', inputSchema: { type: 'object' as const, properties: {} } },
@@ -62,8 +64,8 @@ export function createServer(dbPath?: string): Server {
       { name: 'list_tasks', description: 'List tasks with optional status and project filters.', inputSchema: { type: 'object' as const, properties: { status_filter: { type: 'string' }, project_name: { type: 'string' } } } },
       { name: 'cross_query', description: 'Search across all projects for a natural-language question.', inputSchema: { type: 'object' as const, properties: { query: { type: 'string' }, scope: { type: 'string', enum: ['registry', 'memories', 'all'], default: 'registry' } }, required: ['query'] } },
       // Bootstrap (2)
-      { name: 'bootstrap_project', description: 'Create a new project end-to-end: register in registry, create folder, apply templates, init git (code projects). Requires configure_bootstrap first.', inputSchema: { type: 'object' as const, properties: { name: { type: 'string' }, project_type: { type: 'string', enum: ['project', 'area_of_focus'], default: 'project' }, status: { type: 'string', default: 'active' }, description: { type: 'string' }, goals: { type: 'string' }, display_name: { type: 'string' }, path_override: { type: 'string' }, skip_git: { type: 'boolean', default: false }, producer: { type: 'string', default: 'bootstrap' } }, required: ['name'] } },
-      { name: 'configure_bootstrap', description: 'Configure bootstrap: set path roots per project type and template directory. Call with no arguments to view current config.', inputSchema: { type: 'object' as const, properties: { path_roots: { type: 'object', description: 'Mapping of project type to default path root (e.g., {"project": "~/Code", "area_of_focus": "~/Areas"})' }, template_dir: { type: 'string', description: 'Path to the template directory' }, archive_path_root: { type: 'string', description: 'Filesystem root where archived projects are moved (e.g., "~/Archive")' } } } },
+      { name: 'bootstrap_project', description: 'Create a new project end-to-end: register in registry, create folder, apply templates, init git (code projects). Optional area assigns to a canonical area at registration. Requires configure_bootstrap first.', inputSchema: { type: 'object' as const, properties: { name: { type: 'string' }, project_type: { type: 'string', enum: ['project'], default: 'project' }, status: { type: 'string', default: 'active' }, description: { type: 'string' }, goals: { type: 'string' }, display_name: { type: 'string' }, path_override: { type: 'string' }, skip_git: { type: 'boolean', default: false }, producer: { type: 'string', default: 'bootstrap' }, area: { type: 'string', description: 'Canonical area: Work, Family, Home, Health, Finance, Personal, or Infrastructure' }, parent_project: { type: 'string', description: 'Parent project name for sub-project linking' } }, required: ['name'] } },
+      { name: 'configure_bootstrap', description: 'Configure bootstrap: set path roots per project type and template directory. Call with no arguments to view current config.', inputSchema: { type: 'object' as const, properties: { path_roots: { type: 'object', description: 'Mapping of project type to default path root (e.g., {"project": "~/Code", "non_code_project": "~/Projects"})' }, template_dir: { type: 'string', description: 'Path to the template directory' }, archive_path_root: { type: 'string', description: 'Filesystem root where archived projects are moved (e.g., "~/Archive")' } } } },
       // Health (1)
       { name: 'assess_health', description: 'Assess project health. With a name, returns overall tier, per-dimension tiers (activity/completeness/outcomes), and reasons. Without a name, returns a portfolio-wide snapshot ordered worst-to-best plus summary counts. Cached briefly; pass fresh=true to bypass.', inputSchema: { type: 'object' as const, properties: { name: { type: 'string' }, fresh: { type: 'boolean', default: false } } } },
     ],
@@ -85,6 +87,7 @@ export function createServer(dbPath?: string): Server {
             depth: ((a.detail as string) ?? 'summary') as QueryDepth,
             type_filter: a.type_filter as string | undefined,
             status_filter: a.status_filter as string | undefined,
+            area_filter: a.area_filter as string | undefined,
           });
           break;
         case 'get_project':
@@ -98,6 +101,7 @@ export function createServer(dbPath?: string): Server {
             query: a.query as string,
             type_filter: a.type_filter as string | undefined,
             status_filter: a.status_filter as string | undefined,
+            area_filter: a.area_filter as string | undefined,
           });
           break;
         case 'get_registry_stats':
@@ -107,13 +111,16 @@ export function createServer(dbPath?: string): Server {
           const paths = typeof a.paths === 'string' ? a.paths.split(',').map(p => p.trim()).filter(Boolean) : undefined;
           registry.register({
             name: a.name as string,
-            type: (a.project_type as string ?? 'project') as 'project' | 'area_of_focus',
+            type: 'project',
             status: a.status as string ?? 'active',
             description: a.description as string ?? '',
             goals: a.goals as string ?? '',
             display_name: a.display_name as string ?? '',
             paths,
             producer: a.producer as string ?? 'system',
+            // spec 0.13: optional structural area + parent at registration
+            area: a.area as string | null | undefined,
+            parent_project: a.parent_project as string | null | undefined,
           });
           result = { result: `Project '${a.name}' registered successfully.` };
           break;
@@ -124,8 +131,23 @@ export function createServer(dbPath?: string): Server {
             status: a.status as string | undefined,
             description: a.description as string | undefined,
             goals: a.goals as string | undefined,
+            // spec 0.13: allow updating area + parent (null clears)
+            area: (a.area === null ? null : a.area as string | undefined),
+            parent_project: (a.parent_project === null ? null : a.parent_project as string | undefined),
           });
           result = registry.getProject(a.name as string, 'summary');
+          break;
+        case 'set_project_area':
+          result = registry.setProjectArea(
+            a.name as string,
+            a.area === null ? null : (a.area as string),
+          );
+          break;
+        case 'set_parent_project':
+          result = registry.setParentProject(
+            a.name as string,
+            a.parent_name === null ? null : (a.parent_name as string),
+          );
           break;
         case 'archive_project': {
           const archiveResult = registry.archiveProject(a.name as string);
@@ -307,7 +329,7 @@ export function createServer(dbPath?: string): Server {
         case 'bootstrap_project':
           result = bootstrapManager.bootstrapProject({
             name: a.name as string,
-            type: (a.project_type as string ?? 'project') as 'project' | 'area_of_focus',
+            type: (a.project_type as string ?? 'project') as 'project' | 'non_code_project',
             status: a.status as string | undefined,
             description: a.description as string | undefined,
             goals: a.goals as string | undefined,
@@ -315,6 +337,8 @@ export function createServer(dbPath?: string): Server {
             path_override: a.path_override as string | undefined,
             skip_git: a.skip_git as boolean | undefined,
             producer: a.producer as string | undefined,
+            area: a.area as string | undefined,
+            parent_project: a.parent_project as string | undefined,
           });
           break;
         case 'configure_bootstrap':

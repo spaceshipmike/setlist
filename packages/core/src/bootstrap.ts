@@ -38,6 +38,9 @@ export interface BootstrapProjectOpts {
   path_override?: string;
   skip_git?: boolean;
   producer?: string;
+  // spec 0.13: pass-through to Registry.register for area + parent linking
+  area?: string | null;
+  parent_project?: string | null;
 }
 
 export interface BootstrapResult {
@@ -236,6 +239,8 @@ export class Bootstrap {
           display_name: opts.display_name,
           paths: [targetPath],
           producer: opts.producer ?? 'bootstrap',
+          area: opts.area ?? undefined,
+          parent_project: opts.parent_project ?? undefined,
         });
       } catch (err) {
         // Atomicity: clean up folder if something failed after creation
