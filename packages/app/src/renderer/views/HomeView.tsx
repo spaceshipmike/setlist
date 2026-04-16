@@ -1,9 +1,16 @@
 // @fctry: #health-assessment
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import { useProjects, type SortField, type SortDir } from '../hooks/useProjects';
 import { EmptyState } from '../components/EmptyState';
-import api, { type HealthTier } from '../lib/api';
+import api, { type HealthTier, type ProjectSummary, AREA_NAMES, type AreaName } from '../lib/api';
+
+// spec 0.13: 7 canonical areas + Unassigned bucket. Lane collapse state is
+// persisted in localStorage per-user so reloads don't blow away the layout.
+const UNASSIGNED_LANE = '__unassigned__';
+const LANE_ORDER: readonly string[] = [...AREA_NAMES, UNASSIGNED_LANE];
+const LANE_COLLAPSE_KEY = 'setlist:home:lane-collapsed';
+const AREA_FILTER_KEY = 'setlist:home:area-chips';
 
 interface HomeViewProps {
   onProjectClick: (name: string) => void;
@@ -196,6 +203,60 @@ export function HomeView({
     filter, statusFilters, sort, sortDir, healthMap,
   });
 
+  // spec 0.13: area filter chips (multi-select OR) + lane collapse state.
+  // Both persisted to localStorage; initialized lazily on mount.
+  const [areaChips, setAreaChips] = useState<string[]>(() => {
+    try {
+      const raw = localStorage.getItem(AREA_FILTER_KEY);
+      return raw ? JSON.parse(raw) : [];
+    } catch { return []; }
+  });
+  useEffect(() => {
+    try { localStorage.setItem(AREA_FILTER_KEY, JSON.stringify(areaChips)); } catch { /* ignore */ }
+  }, [areaChips]);
+
+  const [collapsed, setCollapsed] = useState<Record<string, boolean>>(() => {
+    try {
+      const raw = localStorage.getItem(LANE_COLLAPSE_KEY);
+      return raw ? JSON.parse(raw) : {};
+    } catch { return {}; }
+  });
+  useEffect(() => {
+    try { localStorage.setItem(LANE_COLLAPSE_KEY, JSON.stringify(collapsed)); } catch { /* ignore */ }
+  }, [collapsed]);
+
+  const toggleLane = (laneKey: string) => {
+    setCollapsed(prev => ({ ...prev, [laneKey]: !prev[laneKey] }));
+  };
+
+  const toggleAreaChip = (area: string) => {
+    setAreaChips(prev =>
+      prev.includes(area) ? prev.filter(a => a !== area) : [...prev, area]
+    );
+  };
+
+  // Filter projects by area chips (multi-select OR). Empty chips = show all.
+  const areaFiltered = useMemo(() => {
+    if (areaChips.length === 0) return projects;
+    const chipSet = new Set(areaChips);
+    return projects.filter(p => {
+      const key = p.area ?? UNASSIGNED_LANE;
+      return chipSet.has(key);
+    });
+  }, [projects, areaChips]);
+
+  // Group projects into lanes by area (7 canonical + Unassigned).
+  const lanes = useMemo(() => {
+    const buckets: Record<string, ProjectSummary[]> = {};
+    for (const key of LANE_ORDER) buckets[key] = [];
+    for (const p of areaFiltered) {
+      const key = p.area ?? UNASSIGNED_LANE;
+      if (buckets[key]) buckets[key].push(p as ProjectSummary);
+      else buckets[UNASSIGNED_LANE].push(p as ProjectSummary);
+    }
+    return buckets;
+  }, [areaFiltered]);
+
   const handleSortClick = (field: SortField) => {
     if (field === sort) {
       onSortDirChange(sortDir === 'asc' ? 'desc' : 'asc');
@@ -275,72 +336,151 @@ export function HomeView({
           onChange={onStatusFiltersChange}
         />
         <span className="text-xs text-[var(--color-text-tertiary)]">
-          {projects.length} project{projects.length !== 1 ? 's' : ''}
+          {areaFiltered.length} project{areaFiltered.length !== 1 ? 's' : ''}
           {refreshing && (
             <span className="ml-1.5 text-[var(--color-text-tertiary)] opacity-60">updating...</span>
           )}
         </span>
       </div>
 
-      {/* Table */}
-      {projects.length === 0 ? (
+      {/* spec 0.13: Area filter chips (multi-select OR) */}
+      <div className="flex flex-wrap items-center gap-1.5 mb-3" role="group" aria-label="Filter by area">
+        {LANE_ORDER.map(laneKey => {
+          const active = areaChips.includes(laneKey);
+          const label = laneKey === UNASSIGNED_LANE ? 'Unassigned' : laneKey;
+          const count = lanes[laneKey]?.length ?? 0;
+          return (
+            <button
+              key={laneKey}
+              onClick={() => toggleAreaChip(laneKey)}
+              className={`px-2.5 py-1 rounded-full text-xs font-medium border transition-colors ${
+                active
+                  ? 'bg-[var(--color-accent)] text-white border-[var(--color-accent)]'
+                  : 'bg-[var(--color-bg-elevated)] text-[var(--color-text-secondary)] border-[var(--color-border)] hover:border-[var(--color-border-strong)]'
+              }`}
+              title={active ? `Remove ${label} filter` : `Show only ${label}`}
+            >
+              {label}{count > 0 && <span className="ml-1 opacity-60">{count}</span>}
+            </button>
+          );
+        })}
+        {areaChips.length > 0 && (
+          <button
+            onClick={() => setAreaChips([])}
+            className="px-2 py-1 text-xs text-[var(--color-text-tertiary)]
+              hover:text-[var(--color-text-secondary)] transition-colors"
+          >
+            Clear
+          </button>
+        )}
+      </div>
+
+      {/* Grouped lanes — one per canonical area + Unassigned */}
+      {areaFiltered.length === 0 ? (
         <div className="text-center py-12 text-[var(--color-text-tertiary)]">
           No projects match the current filters
         </div>
       ) : (
-        <div className="border border-[var(--color-border)] rounded-lg overflow-hidden">
-          {/* Column headers */}
-          <div className="grid grid-cols-[1fr_90px_100px_80px_100px] gap-4 px-4 py-2
-            bg-[var(--color-bg-elevated)] border-b border-[var(--color-border)]">
-            <SortHeader label="Name" field="name" current={sort} dir={sortDir} onClick={handleSortClick} />
-            <SortHeader label="Health" field="health" current={sort} dir={sortDir} onClick={handleSortClick} />
-            <SortHeader label="Status" field="status" current={sort} dir={sortDir} onClick={handleSortClick} />
-            <SortHeader label="Type" field="type" current={sort} dir={sortDir} onClick={handleSortClick} />
-            <SortHeader label="Updated" field="updated_at" current={sort} dir={sortDir} onClick={handleSortClick} />
-          </div>
-
-          {/* Rows */}
-          {projects.map((p) => {
-            const tier = p.status !== 'archived' ? healthMap[p.name] : undefined;
+        <div className="space-y-3">
+          {LANE_ORDER.map(laneKey => {
+            const laneProjects = lanes[laneKey] ?? [];
+            if (laneProjects.length === 0) return null;
+            const isCollapsed = collapsed[laneKey] === true;
+            const isUnassigned = laneKey === UNASSIGNED_LANE;
+            const laneLabel = isUnassigned ? 'Unassigned' : (laneKey as AreaName);
             return (
-              <button
-                key={p.name}
-                onClick={() => onProjectClick(p.name)}
-                className="w-full grid grid-cols-[1fr_90px_100px_80px_100px] gap-4 px-4 py-2.5
-                  items-center text-left border-b border-[var(--color-border)] last:border-b-0
-                  hover:bg-[var(--color-bg-elevated)] transition-colors
-                  focus:outline-none focus:bg-[var(--color-bg-elevated)]"
+              <section
+                key={laneKey}
+                className={`border rounded-lg overflow-hidden ${
+                  isUnassigned
+                    ? 'border-dashed border-[var(--color-border-strong)] bg-[var(--color-bg-card)]/40'
+                    : 'border-[var(--color-border)]'
+                }`}
               >
-                <span className="text-sm text-[var(--color-text-primary)] truncate">
-                  {p.display_name || p.name}
-                </span>
-                <div
-                  className="flex items-center gap-1.5"
-                  title={tier ? HEALTH_LABEL[tier] : (p.status === 'archived' ? '' : 'Assessing...')}
+                {/* Lane header (clickable to collapse/expand) */}
+                <button
+                  onClick={() => toggleLane(laneKey)}
+                  className="w-full flex items-center justify-between px-4 py-2
+                    bg-[var(--color-bg-elevated)] border-b border-[var(--color-border)]
+                    hover:bg-[var(--color-bg-surface)] transition-colors
+                    focus:outline-none"
+                  aria-expanded={!isCollapsed}
                 >
-                  {p.status === 'archived' ? (
-                    <span className="text-xs text-[var(--color-text-tertiary)]">—</span>
-                  ) : (
-                    <>
-                      <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${
-                        tier ? HEALTH_DOT[tier] : 'bg-[var(--color-text-tertiary)]/40'
-                      }`} />
-                      <span className="text-xs text-[var(--color-text-secondary)]">
-                        {tier ? HEALTH_LABEL[tier] : '…'}
-                      </span>
-                    </>
+                  <div className="flex items-center gap-2">
+                    <span aria-hidden className="text-xs text-[var(--color-text-tertiary)]">
+                      {isCollapsed ? '▶' : '▼'}
+                    </span>
+                    <span className={`text-sm font-semibold ${
+                      isUnassigned ? 'text-[var(--color-text-tertiary)]' : 'text-[var(--color-text-primary)]'
+                    }`}>
+                      {laneLabel}
+                    </span>
+                    <span className="text-xs text-[var(--color-text-tertiary)]">
+                      {laneProjects.length}
+                    </span>
+                  </div>
+                  {isUnassigned && (
+                    <span className="text-xs text-[var(--color-text-tertiary)] italic">
+                      Assign an area to group these
+                    </span>
                   )}
-                </div>
-                <span className="text-xs text-[var(--color-text-secondary)]">{p.status}</span>
-                <span className="text-xs text-[var(--color-text-tertiary)]">
-                  {p.type === 'area_of_focus' ? 'Area' :
-                   Array.isArray(p.paths) && p.paths.some((path: string) => path.includes('/Code/')) ? 'Code' :
-                   'Project'}
-                </span>
-                <span className="text-xs text-[var(--color-text-tertiary)]">
-                  {timeAgo(p.updated_at)}
-                </span>
-              </button>
+                </button>
+
+                {!isCollapsed && (
+                  <>
+                    {/* Column headers */}
+                    <div className="grid grid-cols-[1fr_90px_100px_80px_100px] gap-4 px-4 py-1.5
+                      bg-[var(--color-bg-elevated)]/40 border-b border-[var(--color-border)]">
+                      <SortHeader label="Name" field="name" current={sort} dir={sortDir} onClick={handleSortClick} />
+                      <SortHeader label="Health" field="health" current={sort} dir={sortDir} onClick={handleSortClick} />
+                      <SortHeader label="Status" field="status" current={sort} dir={sortDir} onClick={handleSortClick} />
+                      <SortHeader label="Type" field="type" current={sort} dir={sortDir} onClick={handleSortClick} />
+                      <SortHeader label="Updated" field="updated_at" current={sort} dir={sortDir} onClick={handleSortClick} />
+                    </div>
+                    {laneProjects.map(p => {
+                      const tier = p.status !== 'archived' ? healthMap[p.name] : undefined;
+                      return (
+                        <button
+                          key={p.name}
+                          onClick={() => onProjectClick(p.name)}
+                          className="w-full grid grid-cols-[1fr_90px_100px_80px_100px] gap-4 px-4 py-2.5
+                            items-center text-left border-b border-[var(--color-border)] last:border-b-0
+                            hover:bg-[var(--color-bg-elevated)] transition-colors
+                            focus:outline-none focus:bg-[var(--color-bg-elevated)]"
+                        >
+                          <span className="text-sm text-[var(--color-text-primary)] truncate">
+                            {p.display_name || p.name}
+                          </span>
+                          <div
+                            className="flex items-center gap-1.5"
+                            title={tier ? HEALTH_LABEL[tier] : (p.status === 'archived' ? '' : 'Assessing...')}
+                          >
+                            {p.status === 'archived' ? (
+                              <span className="text-xs text-[var(--color-text-tertiary)]">—</span>
+                            ) : (
+                              <>
+                                <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${
+                                  tier ? HEALTH_DOT[tier] : 'bg-[var(--color-text-tertiary)]/40'
+                                }`} />
+                                <span className="text-xs text-[var(--color-text-secondary)]">
+                                  {tier ? HEALTH_LABEL[tier] : '…'}
+                                </span>
+                              </>
+                            )}
+                          </div>
+                          <span className="text-xs text-[var(--color-text-secondary)]">{p.status}</span>
+                          <span className="text-xs text-[var(--color-text-tertiary)]">
+                            {Array.isArray(p.paths) && p.paths.some((path: string) => path.includes('/Code/')) ? 'Code' : 'Project'}
+                          </span>
+                          <span className="text-xs text-[var(--color-text-tertiary)]">
+                            {timeAgo(p.updated_at)}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </>
+                )}
+              </section>
             );
           })}
         </div>

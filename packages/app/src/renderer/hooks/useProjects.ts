@@ -20,7 +20,8 @@ const HEALTH_RANK: Record<HealthTier, number> = {
 };
 
 function displayType(p: ProjectSummary): string {
-  if (p.type === 'area_of_focus') return 'Area';
+  // spec 0.13: 'area_of_focus' retired — type is always 'project'. Fall back
+  // to path-based code-vs-non-code classification.
   const paths = Array.isArray(p.paths) ? (p.paths as string[]) : [];
   if (paths.some((path) => path.includes('/Code/'))) return 'Code';
   return 'Project';
