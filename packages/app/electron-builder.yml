@@ -17,7 +17,14 @@ mac:
       arch:
         - arm64
         - x64
-  notarize: false
+  # Notarization + hardened runtime are mandatory for the auto-update path
+  # (#hard-constraints §4.3). Without notarization, macOS quarantines the
+  # downloaded update and the Squirrel.Mac handoff fails Gatekeeper checks.
+  notarize: true
+  hardenedRuntime: true
+  gatekeeperAssess: false
+  entitlements: build/entitlements.mac.plist
+  entitlementsInherit: build/entitlements.mac.plist
 publish:
   provider: github
   owner: spaceshipmike

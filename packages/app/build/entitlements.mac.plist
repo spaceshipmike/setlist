@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+  <dict>
+    <!--
+      Minimum entitlements for an Electron 35+ app running with the
+      hardened runtime (required for notarization — #hard-constraints §4.3).
+
+      allow-jit and allow-unsigned-executable-memory are required by V8
+      for modern JavaScript execution under the hardened runtime.
+
+      disable-library-validation permits loading native modules whose
+      signature doesn't match the host's Team ID — specifically
+      better-sqlite3's prebuilt binaries. Without this, the app crashes
+      on first DB access with a codesign validation error.
+
+      network.client is required for electron-updater to reach the
+      GitHub Releases feed and download update artifacts — the whole
+      #auto-update path depends on it.
+
+      No microphone, camera, or location entitlements — Setlist doesn't
+      use them and requesting them would trigger unnecessary TCC prompts.
+    -->
+    <key>com.apple.security.cs.allow-jit</key>
+    <true/>
+    <key>com.apple.security.cs.allow-unsigned-executable-memory</key>
+    <true/>
+    <key>com.apple.security.cs.disable-library-validation</key>
+    <true/>
+    <key>com.apple.security.network.client</key>
+    <true/>
+  </dict>
+</plist>

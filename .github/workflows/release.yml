@@ -12,10 +12,48 @@ jobs:
         with:
           node-version: 22
           cache: npm
+
+      # Hard-fail up front if any required signing/notarization credential
+      # is missing. Per spec #hard-constraints (§4.3): "The packaging
+      # pipeline refuses to produce a release build when signing/
+      # notarization credentials are missing (hard failure, not a silent
+      # skip)." Naming the specific missing variable makes misconfiguration
+      # diagnosable from the workflow log without spelunking.
+      - name: Verify signing credentials
+        env:
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          CSC_LINK: ${{ secrets.CSC_LINK }}
+          CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
+        run: |
+          missing=0
+          for name in APPLE_ID APPLE_APP_SPECIFIC_PASSWORD APPLE_TEAM_ID CSC_LINK CSC_KEY_PASSWORD; do
+            if [ -z "${!name}" ]; then
+              echo "::error::missing required env var: $name"
+              missing=1
+            fi
+          done
+          if [ "$missing" -ne 0 ]; then
+            echo "::error::Release build aborted — signing/notarization credentials are incomplete."
+            echo "::error::Configure these as GitHub repo secrets (see packages/app/README.md)."
+            exit 1
+          fi
+          echo "All required credentials present."
+
       - run: npm ci
       - run: npm run build
-      - name: Package & Publish Desktop App
+
+      - name: Package, sign, notarize, and publish
         working-directory: packages/app
-        run: npx electron-builder --mac --arm64 --x64 --publish always
         env:
+          # GitHub token for electron-updater's publish step.
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Developer ID certificate (base64-encoded .p12) and its password.
+          CSC_LINK: ${{ secrets.CSC_LINK }}
+          CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
+          # Apple ID credentials for notarization.
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: npx electron-builder --mac --arm64 --x64 --publish always
