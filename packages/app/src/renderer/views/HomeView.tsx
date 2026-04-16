@@ -1,7 +1,7 @@
 // @fctry: #health-assessment
 import { useEffect, useState } from 'react';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
-import { useProjects, type SortField } from '../hooks/useProjects';
+import { useProjects, type SortField, type SortDir } from '../hooks/useProjects';
 import { EmptyState } from '../components/EmptyState';
 import api, { type HealthTier } from '../lib/api';
 
@@ -14,18 +14,14 @@ interface HomeViewProps {
   statusFilters: string[];
   onStatusFiltersChange: (value: string[]) => void;
   sort: SortField;
+  sortDir: SortDir;
   onSortChange: (value: SortField) => void;
+  onSortDirChange: (value: SortDir) => void;
   onRefreshRef: (fn: () => void) => void;
 }
 
-const STATUS_DOT: Record<string, string> = {
-  active: 'bg-[var(--color-success)]',
-  paused: 'bg-[var(--color-warning)]',
-  draft: 'bg-[var(--color-text-tertiary)]',
-  idea: 'bg-[var(--color-info)]',
-  complete: 'bg-[var(--color-accent)]',
-  archived: 'bg-[var(--color-text-tertiary)]',
-};
+// Fields where the first click feels more natural descending (newest-first, worst-first).
+const DEFAULT_DESC_FIELDS: SortField[] = ['updated_at', 'health'];
 
 const HEALTH_DOT: Record<HealthTier, string> = {
   healthy: 'bg-[var(--color-success)]',
@@ -80,18 +76,24 @@ function timeAgo(dateStr: string): string {
 }
 
 function SortHeader({
-  label, field, current, onChange,
+  label, field, current, dir, onClick,
 }: {
-  label: string; field: SortField; current: SortField; onChange: (f: SortField) => void;
+  label: string;
+  field: SortField;
+  current: SortField;
+  dir: SortDir;
+  onClick: (f: SortField) => void;
 }) {
+  const isActive = current === field;
   return (
     <button
-      onClick={() => onChange(field)}
-      className={`text-left text-xs uppercase tracking-wider font-medium
-        ${current === field ? 'text-[var(--color-accent)]' : 'text-[var(--color-text-tertiary)]'}
+      onClick={() => onClick(field)}
+      className={`text-left text-xs uppercase tracking-wider font-medium flex items-center gap-1
+        ${isActive ? 'text-[var(--color-accent)]' : 'text-[var(--color-text-tertiary)]'}
         hover:text-[var(--color-text-secondary)] transition-colors`}
     >
-      {label}
+      <span>{label}</span>
+      {isActive && <span aria-hidden>{dir === 'asc' ? '↑' : '↓'}</span>}
     </button>
   );
 }
@@ -159,7 +161,6 @@ function StatusFilterMenu({
                   </svg>
                 )}
               </span>
-              <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${STATUS_DOT[status] || STATUS_DOT.draft}`} />
               <span>{status}</span>
             </DropdownMenu.CheckboxItem>
           ))}
@@ -187,13 +188,22 @@ export function HomeView({
   onProjectClick, onRegister, onSettings,
   filter, onFilterChange,
   statusFilters, onStatusFiltersChange,
-  sort, onSortChange,
+  sort, sortDir, onSortChange, onSortDirChange,
   onRefreshRef,
 }: HomeViewProps) {
-  const { projects, loading, refreshing, error, statuses, archivedCount, refresh } = useProjects({
-    filter, statusFilters, sort,
-  });
   const { map: healthMap } = useHealthMap();
+  const { projects, loading, refreshing, error, statuses, archivedCount, refresh } = useProjects({
+    filter, statusFilters, sort, sortDir, healthMap,
+  });
+
+  const handleSortClick = (field: SortField) => {
+    if (field === sort) {
+      onSortDirChange(sortDir === 'asc' ? 'desc' : 'asc');
+    } else {
+      onSortChange(field);
+      onSortDirChange(DEFAULT_DESC_FIELDS.includes(field) ? 'desc' : 'asc');
+    }
+  };
 
   useEffect(() => {
     onRefreshRef(refresh);
@@ -280,50 +290,59 @@ export function HomeView({
       ) : (
         <div className="border border-[var(--color-border)] rounded-lg overflow-hidden">
           {/* Column headers */}
-          <div className="grid grid-cols-[1fr_100px_80px_100px] gap-4 px-4 py-2
+          <div className="grid grid-cols-[1fr_90px_100px_80px_100px] gap-4 px-4 py-2
             bg-[var(--color-bg-elevated)] border-b border-[var(--color-border)]">
-            <SortHeader label="Name" field="name" current={sort} onChange={onSortChange} />
-            <SortHeader label="Status" field="status" current={sort} onChange={onSortChange} />
-            <SortHeader label="Type" field="type" current={sort} onChange={onSortChange} />
-            <SortHeader label="Updated" field="updated_at" current={sort} onChange={onSortChange} />
+            <SortHeader label="Name" field="name" current={sort} dir={sortDir} onClick={handleSortClick} />
+            <SortHeader label="Health" field="health" current={sort} dir={sortDir} onClick={handleSortClick} />
+            <SortHeader label="Status" field="status" current={sort} dir={sortDir} onClick={handleSortClick} />
+            <SortHeader label="Type" field="type" current={sort} dir={sortDir} onClick={handleSortClick} />
+            <SortHeader label="Updated" field="updated_at" current={sort} dir={sortDir} onClick={handleSortClick} />
           </div>
 
           {/* Rows */}
-          {projects.map((p) => (
-            <button
-              key={p.name}
-              onClick={() => onProjectClick(p.name)}
-              className="w-full grid grid-cols-[1fr_100px_80px_100px] gap-4 px-4 py-2.5
-                text-left border-b border-[var(--color-border)] last:border-b-0
-                hover:bg-[var(--color-bg-elevated)] transition-colors
-                focus:outline-none focus:bg-[var(--color-bg-elevated)]"
-            >
-              <span className="text-sm text-[var(--color-text-primary)] truncate flex items-center gap-2">
-                {p.status !== 'archived' && (
-                  <span
-                    title={healthMap[p.name] ? `Health: ${HEALTH_LABEL[healthMap[p.name]]}` : 'Health: assessing...'}
-                    aria-label={healthMap[p.name] ? `Health: ${HEALTH_LABEL[healthMap[p.name]]}` : 'Health: assessing'}
-                    className={`inline-block w-1.5 h-1.5 rounded-full shrink-0 ${
-                      healthMap[p.name] ? HEALTH_DOT[healthMap[p.name]] : 'bg-[var(--color-text-tertiary)]/40'
-                    }`}
-                  />
-                )}
-                <span className="truncate">{p.display_name || p.name}</span>
-              </span>
-              <div className="flex items-center gap-1.5">
-                <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${STATUS_DOT[p.status] || STATUS_DOT.draft}`} />
+          {projects.map((p) => {
+            const tier = p.status !== 'archived' ? healthMap[p.name] : undefined;
+            return (
+              <button
+                key={p.name}
+                onClick={() => onProjectClick(p.name)}
+                className="w-full grid grid-cols-[1fr_90px_100px_80px_100px] gap-4 px-4 py-2.5
+                  items-center text-left border-b border-[var(--color-border)] last:border-b-0
+                  hover:bg-[var(--color-bg-elevated)] transition-colors
+                  focus:outline-none focus:bg-[var(--color-bg-elevated)]"
+              >
+                <span className="text-sm text-[var(--color-text-primary)] truncate">
+                  {p.display_name || p.name}
+                </span>
+                <div
+                  className="flex items-center gap-1.5"
+                  title={tier ? HEALTH_LABEL[tier] : (p.status === 'archived' ? '' : 'Assessing...')}
+                >
+                  {p.status === 'archived' ? (
+                    <span className="text-xs text-[var(--color-text-tertiary)]">—</span>
+                  ) : (
+                    <>
+                      <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${
+                        tier ? HEALTH_DOT[tier] : 'bg-[var(--color-text-tertiary)]/40'
+                      }`} />
+                      <span className="text-xs text-[var(--color-text-secondary)]">
+                        {tier ? HEALTH_LABEL[tier] : '…'}
+                      </span>
+                    </>
+                  )}
+                </div>
                 <span className="text-xs text-[var(--color-text-secondary)]">{p.status}</span>
-              </div>
-              <span className="text-xs text-[var(--color-text-tertiary)]">
-                {p.type === 'area_of_focus' ? 'Area' :
-                 Array.isArray(p.paths) && p.paths.some((path: string) => path.includes('/Code/')) ? 'Code' :
-                 'Project'}
-              </span>
-              <span className="text-xs text-[var(--color-text-tertiary)]">
-                {timeAgo(p.updated_at)}
-              </span>
-            </button>
-          ))}
+                <span className="text-xs text-[var(--color-text-tertiary)]">
+                  {p.type === 'area_of_focus' ? 'Area' :
+                   Array.isArray(p.paths) && p.paths.some((path: string) => path.includes('/Code/')) ? 'Code' :
+                   'Project'}
+                </span>
+                <span className="text-xs text-[var(--color-text-tertiary)]">
+                  {timeAgo(p.updated_at)}
+                </span>
+              </button>
+            );
+          })}
         </div>
       )}
 

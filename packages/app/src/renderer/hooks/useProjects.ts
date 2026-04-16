@@ -1,15 +1,32 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import api, { type ProjectSummary } from '../lib/api';
+import api, { type ProjectSummary, type HealthTier } from '../lib/api';
 
-export type SortField = 'name' | 'updated_at' | 'type' | 'status';
+export type SortField = 'name' | 'updated_at' | 'type' | 'status' | 'health';
+export type SortDir = 'asc' | 'desc';
 
 interface UseProjectsOpts {
   filter: string;
   statusFilters: string[];
   sort: SortField;
+  sortDir?: SortDir;
+  healthMap?: Record<string, HealthTier>;
 }
 
-export function useProjects({ filter, statusFilters, sort }: UseProjectsOpts) {
+const HEALTH_RANK: Record<HealthTier, number> = {
+  stale: 0,
+  at_risk: 1,
+  healthy: 2,
+  unknown: 3,
+};
+
+function displayType(p: ProjectSummary): string {
+  if (p.type === 'area_of_focus') return 'Area';
+  const paths = Array.isArray(p.paths) ? (p.paths as string[]) : [];
+  if (paths.some((path) => path.includes('/Code/'))) return 'Code';
+  return 'Project';
+}
+
+export function useProjects({ filter, statusFilters, sort, sortDir = 'asc', healthMap }: UseProjectsOpts) {
   const [allProjects, setAllProjects] = useState<ProjectSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -66,21 +83,33 @@ export function useProjects({ filter, statusFilters, sort }: UseProjectsOpts) {
     return true;
   });
 
-  // Sort (defensive: tolerate missing fields)
-  const projects = [...filtered].sort((a, b) => {
+  // Sort (defensive: tolerate missing fields). Each comparator expresses the
+  // natural ascending order for the field; sortDir flips the result at the end.
+  const compare = (a: ProjectSummary, b: ProjectSummary): number => {
     switch (sort) {
-      case 'name':
-        return (a.name ?? '').localeCompare(b.name ?? '');
+      case 'name': {
+        const an = (a.display_name ?? a.name ?? '').toLowerCase();
+        const bn = (b.display_name ?? b.name ?? '').toLowerCase();
+        return an.localeCompare(bn);
+      }
       case 'updated_at':
-        return (b.updated_at ?? '').localeCompare(a.updated_at ?? '');
+        // Natural ascending = oldest first. Default dir 'asc' reads as newest-first
+        // only because HomeView defaults updated_at to 'desc'.
+        return (a.updated_at ?? '').localeCompare(b.updated_at ?? '');
       case 'type':
-        return (a.type ?? '').localeCompare(b.type ?? '') || (a.name ?? '').localeCompare(b.name ?? '');
+        return displayType(a).localeCompare(displayType(b)) || (a.name ?? '').localeCompare(b.name ?? '');
       case 'status':
         return (a.status ?? '').localeCompare(b.status ?? '') || (a.name ?? '').localeCompare(b.name ?? '');
+      case 'health': {
+        const ra = HEALTH_RANK[healthMap?.[a.name ?? ''] ?? 'unknown'];
+        const rb = HEALTH_RANK[healthMap?.[b.name ?? ''] ?? 'unknown'];
+        return ra - rb || (a.name ?? '').localeCompare(b.name ?? '');
+      }
       default:
         return 0;
     }
-  });
+  };
+  const projects = [...filtered].sort((a, b) => (sortDir === 'desc' ? -compare(a, b) : compare(a, b)));
 
   // Unique statuses for the filter dropdown
   const statuses = [...new Set(allProjects.map(p => p.status))].sort();

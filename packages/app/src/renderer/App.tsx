@@ -3,7 +3,7 @@ import { HomeView } from './views/HomeView';
 import { ProjectDetailView } from './views/ProjectDetailView';
 import { SettingsView } from './views/SettingsView';
 import { RegisterProjectDialog } from './components/RegisterProjectDialog';
-import type { SortField } from './hooks/useProjects';
+import type { SortField, SortDir } from './hooks/useProjects';
 
 type View =
   | { kind: 'home' }
@@ -19,6 +19,7 @@ export function App(): JSX.Element {
   const [filter, setFilter] = useState('');
   const [statusFilters, setStatusFilters] = useState<string[]>([]);
   const [sort, setSort] = useState<SortField>('name');
+  const [sortDir, setSortDir] = useState<SortDir>('asc');
 
   const navigateToProject = (name: string) => setView({ kind: 'detail', projectName: name });
   const navigateHome = useCallback(() => {
@@ -40,7 +41,7 @@ export function App(): JSX.Element {
             onSettings={() => setView({ kind: 'settings' })}
             filter={filter} onFilterChange={setFilter}
             statusFilters={statusFilters} onStatusFiltersChange={setStatusFilters}
-            sort={sort} onSortChange={setSort}
+            sort={sort} sortDir={sortDir} onSortChange={setSort} onSortDirChange={setSortDir}
             onRefreshRef={(fn) => { refreshRef.current = fn; }}
           />
         ) : view.kind === 'settings' ? (

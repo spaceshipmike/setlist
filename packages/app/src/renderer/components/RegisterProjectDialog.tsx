@@ -22,6 +22,13 @@ const TYPE_TO_PATH_KEY: Record<string, string> = {
   area_of_focus: 'area_of_focus',
 };
 
+// Map UI type values to the project type stored in the registry
+const TYPE_TO_DB_TYPE: Record<string, 'project' | 'area_of_focus'> = {
+  code_project: 'project',
+  non_code_project: 'project',
+  area_of_focus: 'area_of_focus',
+};
+
 export function RegisterProjectDialog({ open, onOpenChange, onSuccess }: RegisterProjectDialogProps) {
   const [name, setName] = useState('');
   const [displayName, setDisplayName] = useState('');
@@ -103,7 +110,7 @@ export function RegisterProjectDialog({ open, onOpenChange, onSuccess }: Registe
         // Register only (no filesystem changes)
         await api.register({
           name: name.trim(),
-          type,
+          type: TYPE_TO_DB_TYPE[type],
           status: 'active',
           description: description.trim() || undefined,
           display_name: displayName.trim() || undefined,

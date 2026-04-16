@@ -6,6 +6,22 @@ import { Registry } from './registry.js';
 import { RegistryError } from './errors.js';
 import type { ProjectType } from './models.js';
 
+type BootstrapType = ProjectType | 'code_project' | 'non_code_project';
+
+function resolveBootstrapType(type: BootstrapType): {
+  pathRootKey: string;
+  dbType: ProjectType;
+  isCodeProject: boolean;
+} {
+  if (type === 'area_of_focus') {
+    return { pathRootKey: 'area_of_focus', dbType: 'area_of_focus', isCodeProject: false };
+  }
+  if (type === 'non_code_project') {
+    return { pathRootKey: 'non_code_project', dbType: 'project', isCodeProject: false };
+  }
+  return { pathRootKey: 'project', dbType: 'project', isCodeProject: true };
+}
+
 export interface BootstrapConfig {
   path_roots: Record<string, string>;
   template_dir?: string;
@@ -14,7 +30,7 @@ export interface BootstrapConfig {
 
 export interface BootstrapProjectOpts {
   name: string;
-  type: ProjectType;
+  type: BootstrapType;
   status?: string;
   description?: string;
   goals?: string;
@@ -147,17 +163,19 @@ export class Bootstrap {
         throw new BootstrapNotConfiguredError();
       }
 
+      const { pathRootKey, dbType, isCodeProject } = resolveBootstrapType(opts.type);
+
       // Resolve target path
       let targetPath: string;
       if (opts.path_override) {
         targetPath = opts.path_override;
       } else {
-        const root = config.path_roots[opts.type];
+        const root = config.path_roots[pathRootKey];
         if (!root) {
           throw new RegistryError(
             'BOOTSTRAP_NOT_CONFIGURED',
-            `No path root configured for type '${opts.type}'.`,
-            `Call configure_bootstrap to set a path root for '${opts.type}'.`,
+            `No path root configured for type '${pathRootKey}'.`,
+            `Call configure_bootstrap to set a path root for '${pathRootKey}'.`,
           );
         }
         targetPath = join(root, opts.name);
@@ -188,7 +206,7 @@ export class Bootstrap {
       try {
         // Copy templates if configured
         if (config.template_dir && existsSync(config.template_dir)) {
-          const templateSubdir = this._resolveTemplateSubdir(config.template_dir, opts.type);
+          const templateSubdir = this._resolveTemplateSubdir(config.template_dir, pathRootKey);
           if (templateSubdir && existsSync(templateSubdir)) {
             cpSync(templateSubdir, targetPath, { recursive: true });
             templatesApplied = true;
@@ -196,7 +214,7 @@ export class Bootstrap {
         }
 
         // Git init for code projects (unless skip_git)
-        if (opts.type === 'project' && !opts.skip_git) {
+        if (isCodeProject && !opts.skip_git) {
           execSync('git init -q', { cwd: targetPath, stdio: 'pipe' });
           execSync('git add .', { cwd: targetPath, stdio: 'pipe' });
           execSync('git commit -q -m "Initial project scaffold from bootstrap_project" --allow-empty', {
@@ -209,7 +227,7 @@ export class Bootstrap {
         // Register in the registry
         registry.register({
           name: opts.name,
-          type: opts.type,
+          type: dbType,
           status: opts.status ?? 'active',
           description: opts.description ?? '',
           goals: opts.goals ?? '',
@@ -230,7 +248,7 @@ export class Bootstrap {
       return {
         name: opts.name,
         path: targetPath,
-        type: opts.type,
+        type: dbType,
         git_initialized: gitInitialized,
         templates_applied: templatesApplied,
       };
@@ -313,10 +331,11 @@ export class Bootstrap {
     return { ...result, folders_moved };
   }
 
-  private _resolveTemplateSubdir(templateDir: string, type: ProjectType): string | null {
+  private _resolveTemplateSubdir(templateDir: string, type: string): string | null {
     // Look for type-specific subdirectory first
     const typeMap: Record<string, string[]> = {
       project: ['code-repo', 'project', 'code_project'],
+      non_code_project: ['non_code_project', 'non-code', 'project'],
       area_of_focus: ['area-of-focus', 'area_of_focus', 'area'],
     };
 
