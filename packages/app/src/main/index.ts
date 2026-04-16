@@ -4,6 +4,7 @@ import { join } from 'node:path';
 import { registerIpcHandlers } from './ipc.js';
 import { initAutoUpdater } from './auto-update.js';
 import { loadPrefs } from './prefs.js';
+import { installAppMenu, handleMenuCheckForUpdates } from './menu.js';
 
 // Single-instance lock
 const gotLock = app.requestSingleInstanceLock();
@@ -71,6 +72,12 @@ app.whenReady().then(() => {
   loadPrefs();
 
   registerIpcHandlers(ipcMain);
+
+  // Install the macOS app menu (About + Check for Updates…). Always
+  // installed so the About dialog is reachable in dev too; the
+  // Check for Updates… item is disabled in dev.
+  installAppMenu(handleMenuCheckForUpdates);
+
   createWindow();
 
   // Auto-update (skip in dev — Chunk 2 reads the channel from prefs).
