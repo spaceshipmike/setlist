@@ -69,3 +69,54 @@ Append-only structured lessons from builds. The State Owner manages maturation.
 **Anti-pattern:** Trusting npm rebuild / electron-rebuild to produce a launch-ready signature on macOS arm64.
 **Context:** Running packages/core vitest after a prior Electron ABI swap returned to Node ABI produced silent worker deaths.
 **Outcome:** Updated swap-sqlite-abi.sh to codesign --force -s - after every swap/build path (not just Electron). Noted that cache copies also discard signatures on some filesystems so re-sign is idempotent and safe.
+
+---
+
+### 2026-04-16T18:50:00Z | #auto-update (2.14.1)
+
+**Status:** candidate | **Confidence:** 1
+**Helpful:** 0 | **Harmful:** 0
+**Agent:** executor
+**Trigger:** tech-stack-pattern
+**Component:** app/main
+**Severity:** medium
+**Tags:** electron, electron-updater, github-releases, prereleases
+**Rule:** For electron-updater with GitHub provider, set BOTH `autoUpdater.channel` (filename lever: `'latest'` vs `'beta'`) AND `autoUpdater.allowPrerelease` (boolean: true allows prereleases, false skips them). Using channel alone does not gate prereleases.
+**Evidence:** Setlist auto-update build 2026-04-16, chunk 2 (S84 channel → tag mapping)
+**Anti-pattern:** Setting only `autoUpdater.channel = 'beta'` and assuming prereleases will be selected. The channel controls which YAML manifest is fetched; `allowPrerelease` controls whether prerelease tags are honored at all.
+**Context:** Wiring spec language 'stable'/'beta' to electron-updater's API for scenario S84 (Beta → prereleases, Stable → non-prereleases only).
+**Outcome:** Using both `channel` + `allowPrerelease` at the boundary correctly mapped both channels to their expected GitHub tag subsets.
+
+---
+
+### 2026-04-16T18:51:00Z | #auto-update (2.14.1)
+
+**Status:** candidate | **Confidence:** 1
+**Helpful:** 0 | **Harmful:** 0
+**Agent:** executor
+**Trigger:** tech-stack-pattern
+**Component:** app/main
+**Severity:** low
+**Tags:** electron, about-panel, version
+**Rule:** In `app.setAboutPanelOptions({ applicationVersion, version, ... })`, `applicationVersion` is the app's semantic version; the `version` field maps to the "Version" label in the native About panel, which Apple convention uses for the BUILD number/date — not the semver.
+**Evidence:** Setlist auto-update build 2026-04-16, chunk 4 (S86 About shows version + build date + channel)
+**Anti-pattern:** Putting the semver in `version` and leaving `applicationVersion` empty — the About panel will render an awkward label.
+**Context:** Satisfying S86 (About dialog shows version, build date, active channel) without a custom dialog.
+**Outcome:** Using `applicationVersion` for "vX.Y.Z (Stable)" and `version` for the YYYY-MM-DD build date produces the expected layout.
+
+---
+
+### 2026-04-16T18:52:00Z | #auto-update (2.14.1)
+
+**Status:** candidate | **Confidence:** 1
+**Helpful:** 0 | **Harmful:** 0
+**Agent:** executor
+**Trigger:** tech-stack-pattern
+**Component:** app/main
+**Severity:** medium
+**Tags:** electron, electron-updater, quit-prompt, auto-install
+**Rule:** For an interactive "Install or Skip?" prompt on quit with a staged electron-updater download, set `autoUpdater.autoInstallOnAppQuit = false` and handle the install path explicitly via `app.on('before-quit', ...)` + `quitAndInstall()`. Leaving auto-install enabled races the prompt.
+**Evidence:** Setlist auto-update build 2026-04-16, chunk 5 (S89 install-or-skip prompt)
+**Anti-pattern:** Keeping `autoInstallOnAppQuit = true` and showing a prompt — the library will silently install once the app exits regardless of user choice.
+**Context:** Satisfying S89 where the user must be given a real choice to skip a staged install.
+**Outcome:** Disabling auto-install, using `event.preventDefault()` in before-quit, and calling `quitAndInstall()` only on confirm gives a clean install-or-skip UX; skip uses `app.exit(0)` so the staged update remains on disk for the next prompt cycle.
