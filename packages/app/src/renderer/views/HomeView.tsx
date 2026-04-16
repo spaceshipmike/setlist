@@ -246,6 +246,8 @@ export function HomeView({
   }, [projects, areaChips]);
 
   // Group projects into lanes by area (7 canonical + Unassigned).
+  // Within each lane, reorder so same-area children immediately follow
+  // their parent — preserving the sort field's order among top-level rows.
   const lanes = useMemo(() => {
     const buckets: Record<string, ProjectSummary[]> = {};
     for (const key of LANE_ORDER) buckets[key] = [];
@@ -253,6 +255,36 @@ export function HomeView({
       const key = p.area ?? UNASSIGNED_LANE;
       if (buckets[key]) buckets[key].push(p as ProjectSummary);
       else buckets[UNASSIGNED_LANE].push(p as ProjectSummary);
+    }
+    // Child reordering: for each lane, pull children whose parent is in the
+    // SAME lane out of their current slot and splice them in after the parent.
+    // Children whose parent is in a different lane (or archived/missing)
+    // stay where they were sorted — the cross-area caption handles that case.
+    for (const key of LANE_ORDER) {
+      const lane = buckets[key];
+      if (!lane || lane.length === 0) continue;
+      const byName = new Map(lane.map(p => [p.name, p]));
+      const placed = new Set<string>();
+      const out: ProjectSummary[] = [];
+      const appendWithChildren = (p: ProjectSummary) => {
+        if (placed.has(p.name)) return;
+        out.push(p);
+        placed.add(p.name);
+        // Append same-lane children directly beneath
+        for (const q of lane) {
+          if (q.parent_project === p.name && byName.has(q.name)) {
+            appendWithChildren(q);
+          }
+        }
+      };
+      for (const p of lane) {
+        // Top-level rows are those without a same-lane parent
+        const parent = p.parent_project;
+        if (!parent || !byName.has(parent)) appendWithChildren(p);
+      }
+      // Anything still unplaced (should be empty, but safe-guard cycles)
+      for (const p of lane) if (!placed.has(p.name)) out.push(p);
+      buckets[key] = out;
     }
     return buckets;
   }, [areaFiltered]);
@@ -439,6 +471,12 @@ export function HomeView({
                     </div>
                     {laneProjects.map(p => {
                       const tier = p.status !== 'archived' ? healthMap[p.name] : undefined;
+                      const parent = p.parent_project ?? null;
+                      // Same-area parent present in this lane → indent + connector
+                      const sameAreaParent = parent
+                        && laneProjects.some(q => q.name === parent);
+                      // Cross-area parent (or archived parent not in this lane) → caption
+                      const crossAreaParent = parent && !sameAreaParent;
                       return (
                         <button
                           key={p.name}
@@ -448,9 +486,22 @@ export function HomeView({
                             hover:bg-[var(--color-bg-elevated)] transition-colors
                             focus:outline-none focus:bg-[var(--color-bg-elevated)]"
                         >
-                          <span className="text-sm text-[var(--color-text-primary)] truncate">
-                            {p.display_name || p.name}
-                          </span>
+                          <div className={`min-w-0 ${sameAreaParent ? 'pl-6 relative' : ''}`}>
+                            {sameAreaParent && (
+                              <span
+                                aria-hidden
+                                className="absolute left-2 top-0 bottom-0 w-px bg-[var(--color-border)]"
+                              />
+                            )}
+                            <span className="block text-sm text-[var(--color-text-primary)] truncate">
+                              {p.display_name || p.name}
+                            </span>
+                            {crossAreaParent && (
+                              <span className="block text-[11px] text-[var(--color-text-tertiary)] truncate">
+                                ↳ {parent}
+                              </span>
+                            )}
+                          </div>
                           <div
                             className="flex items-center gap-1.5"
                             title={tier ? HEALTH_LABEL[tier] : (p.status === 'archived' ? '' : 'Assessing...')}

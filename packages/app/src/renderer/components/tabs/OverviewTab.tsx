@@ -6,6 +6,7 @@ import api, {
 
 interface OverviewTabProps {
   project: ProjectFull;
+  onNavigate?: (name: string) => void;
 }
 
 function parseArray(value: unknown): string[] {
@@ -20,7 +21,7 @@ function parseArray(value: unknown): string[] {
   return [];
 }
 
-export function OverviewTab({ project }: OverviewTabProps) {
+export function OverviewTab({ project, onNavigate }: OverviewTabProps) {
   const health = useProjectHealth(project.name, project.updated_at);
   const goals = parseArray(project.goals);
   const topics = parseArray((project as Record<string, unknown>).topics);
@@ -28,10 +29,60 @@ export function OverviewTab({ project }: OverviewTabProps) {
   const concerns = parseArray((project as Record<string, unknown>).concerns);
   const fields = project.extended_fields || {};
 
+  const area = project.area ?? null;
+  const parent = project.parent_project ?? null;
+  const parentArchived = Boolean(project.parent_archived);
+  const children = Array.isArray(project.children) ? project.children : [];
+  const hasStructural = area || parent || children.length > 0;
+
   return (
     <div className="space-y-6">
       {/* Health */}
       <HealthSection health={health} />
+
+      {/* spec 0.13: Structural — area + parent + children */}
+      {hasStructural && (
+        <Section title="Structure">
+          <div className="space-y-2 text-sm">
+            <div className="flex gap-3">
+              <span className="text-[var(--color-text-tertiary)] min-w-[80px] shrink-0">Area</span>
+              <span className="text-[var(--color-text-secondary)]">
+                {area ?? <em className="text-[var(--color-text-tertiary)]">Unassigned</em>}
+              </span>
+            </div>
+            {parent && (
+              <div className="flex gap-3">
+                <span className="text-[var(--color-text-tertiary)] min-w-[80px] shrink-0">Parent</span>
+                <button
+                  onClick={() => onNavigate?.(parent)}
+                  className="text-[var(--color-accent)] hover:underline text-left"
+                >
+                  {parent}
+                  {parentArchived && (
+                    <span className="ml-1.5 text-xs text-[var(--color-text-tertiary)] italic">(archived)</span>
+                  )}
+                </button>
+              </div>
+            )}
+            {children.length > 0 && (
+              <div className="flex gap-3">
+                <span className="text-[var(--color-text-tertiary)] min-w-[80px] shrink-0">Sub-projects</span>
+                <div className="flex flex-col gap-0.5">
+                  {children.map(c => (
+                    <button
+                      key={c}
+                      onClick={() => onNavigate?.(c)}
+                      className="text-[var(--color-accent)] hover:underline text-left"
+                    >
+                      {c}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </Section>
+      )}
 
       {/* Goals */}
       {goals.length > 0 && (

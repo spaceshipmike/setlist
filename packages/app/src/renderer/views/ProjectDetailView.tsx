@@ -92,7 +92,7 @@ export function ProjectDetailView({ projectName, onBack, onNavigate }: ProjectDe
         </Tabs.List>
 
         <Tabs.Content value="overview">
-          <OverviewTab project={project} />
+          <OverviewTab project={project} onNavigate={onNavigate} />
         </Tabs.Content>
         <Tabs.Content value="memory">
           <MemoryTab memories={memories} />
