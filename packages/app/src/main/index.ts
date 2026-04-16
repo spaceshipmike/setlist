@@ -1,7 +1,9 @@
+// @fctry: #auto-update
 import { app, BrowserWindow, ipcMain } from 'electron';
 import { join } from 'node:path';
 import { registerIpcHandlers } from './ipc.js';
 import { initAutoUpdater } from './auto-update.js';
+import { loadPrefs } from './prefs.js';
 
 // Single-instance lock
 const gotLock = app.requestSingleInstanceLock();
@@ -63,12 +65,17 @@ app.on('second-instance', () => {
 });
 
 app.whenReady().then(() => {
+  // Load persisted user prefs (update channel, last-check status).
+  // Side effect: caches to memory so subsequent reads in this session
+  // are instant.
+  loadPrefs();
+
   registerIpcHandlers(ipcMain);
   createWindow();
 
-  // Auto-update (skip in dev)
+  // Auto-update (skip in dev — Chunk 2 reads the channel from prefs).
   if (!process.env.ELECTRON_RENDERER_URL) {
-    initAutoUpdater('latest');
+    initAutoUpdater();
   }
 
   app.on('activate', () => {
