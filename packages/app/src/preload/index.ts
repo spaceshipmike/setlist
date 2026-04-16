@@ -1,5 +1,9 @@
 // @fctry: #health-assessment
+// @fctry: #auto-update
 import { contextBridge, ipcRenderer } from 'electron';
+
+// Channel name for main → renderer update event broadcasts.
+const UPDATE_EVENT_CHANNEL = 'update-event';
 
 const api = {
   // Project Identity
@@ -89,6 +93,24 @@ const api = {
     area?: string | null;
     parent_project?: string | null;
   }) => ipcRenderer.invoke('bootstrapProject', opts),
+
+  // Auto-Update (#auto-update)
+  getUpdateStatus: () =>
+    ipcRenderer.invoke('getUpdateStatus'),
+  setUpdateChannel: (channel: 'stable' | 'beta') =>
+    ipcRenderer.invoke('setUpdateChannel', channel),
+  checkForUpdates: () =>
+    ipcRenderer.invoke('checkForUpdates'),
+  quitAndInstallUpdate: () =>
+    ipcRenderer.invoke('quitAndInstallUpdate'),
+  onUpdateEvent: (handler: (payload: unknown) => void) => {
+    const wrapped = (_e: unknown, payload: unknown) => handler(payload);
+    ipcRenderer.on(UPDATE_EVENT_CHANNEL, wrapped);
+    // Return an unsubscribe fn — renderer useEffect cleanup calls it.
+    return () => {
+      ipcRenderer.removeListener(UPDATE_EVENT_CHANNEL, wrapped);
+    };
+  },
 } as const;
 
 export type SetlistAPI = typeof api;

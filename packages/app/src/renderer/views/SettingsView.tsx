@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import api, { type BootstrapConfig } from '../lib/api';
+import { UpdatesSection } from '../components/UpdatesSection';
 
 interface SettingsViewProps {
   onBack: () => void;
@@ -178,6 +179,8 @@ export function SettingsView({ onBack }: SettingsViewProps) {
           saving={saving}
         />
       </div>
+
+      <UpdatesSection />
     </div>
   );
 }

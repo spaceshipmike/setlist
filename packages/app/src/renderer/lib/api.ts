@@ -201,7 +201,52 @@ const api = {
 
   assessPortfolioHealth: (opts?: { fresh?: boolean }) =>
     window.setlist.assessHealth(undefined, opts) as Promise<PortfolioHealth>,
+
+  // ── Auto-Update ────────────────────────────────────────────────
+  getUpdateStatus: () =>
+    window.setlist.getUpdateStatus() as Promise<UpdateStatus>,
+  setUpdateChannel: (channel: UpdateChannel) =>
+    window.setlist.setUpdateChannel(channel) as Promise<UpdateChannel>,
+  checkForUpdates: () =>
+    window.setlist.checkForUpdates() as Promise<{ initiated?: boolean; dev_skip?: boolean }>,
+  quitAndInstallUpdate: () =>
+    window.setlist.quitAndInstallUpdate() as Promise<boolean>,
+  onUpdateEvent: (handler: (payload: UpdateEventPayload) => void) =>
+    window.setlist.onUpdateEvent(handler as (p: unknown) => void) as () => void,
 };
+
+export type UpdateChannel = 'stable' | 'beta';
+export type UpdateOutcome =
+  | 'checking'
+  | 'up-to-date'
+  | 'update-available'
+  | 'downloading'
+  | 'downloaded'
+  | 'error';
+
+export interface LastCheck {
+  timestamp: string;
+  outcome: UpdateOutcome;
+  message?: string;
+  version?: string;
+}
+
+export interface UpdateStatus {
+  channel: UpdateChannel;
+  version: string;
+  last_check: LastCheck | null;
+  in_flight: boolean;
+  downloaded: boolean;
+  downloaded_version: string | null;
+  dev_mode: boolean;
+}
+
+export interface UpdateEventPayload {
+  outcome: UpdateOutcome;
+  version?: string;
+  message?: string;
+  timestamp: string;
+}
 
 export interface BootstrapConfig {
   path_roots: Record<string, string>;

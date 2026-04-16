@@ -3,6 +3,7 @@ import { HomeView } from './views/HomeView';
 import { ProjectDetailView } from './views/ProjectDetailView';
 import { SettingsView } from './views/SettingsView';
 import { RegisterProjectDialog } from './components/RegisterProjectDialog';
+import { UpdateToast } from './components/UpdateToast';
 import type { SortField, SortDir } from './hooks/useProjects';
 
 type View =
@@ -60,6 +61,8 @@ export function App(): JSX.Element {
         onOpenChange={setShowRegister}
         onSuccess={() => refreshRef.current?.()}
       />
+
+      <UpdateToast />
     </div>
   );
 }
