@@ -1,7 +1,7 @@
-import { app, BrowserWindow, ipcMain } from "electron";
+import { app, BrowserWindow, Menu, dialog, ipcMain } from "electron";
 import { join, dirname, basename } from "node:path";
 import Database from "better-sqlite3";
-import { existsSync, mkdirSync, copyFileSync, readFileSync, cpSync, rmSync, renameSync, statSync, readdirSync } from "node:fs";
+import { existsSync, mkdirSync, copyFileSync, readFileSync, cpSync, rmSync, renameSync, statSync, readdirSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { createHash, randomUUID } from "node:crypto";
 import { execSync, execFileSync } from "node:child_process";
@@ -1941,7 +1941,7 @@ const EMA_ALPHA = 0.1;
 function newId$1() {
   return randomUUID().replace(/-/g, "");
 }
-function nowIso$1() {
+function nowIso$2() {
   return (/* @__PURE__ */ new Date()).toISOString().replace(/\.\d{3}Z$/, "Z");
 }
 function normalizeContent(content) {
@@ -1967,7 +1967,7 @@ class MemoryStore {
     }
     const normalized = normalizeContent(opts.content);
     const hash = contentHash(opts.type, normalized);
-    const now = nowIso$1();
+    const now = nowIso$2();
     const scope = opts.scope ?? (opts.project_id ? "project" : "global");
     if (opts.scope && !MEMORY_SCOPES.has(opts.scope)) {
       throw new InvalidInputError(`Unknown scope '${opts.scope}'. Allowed: ${[...MEMORY_SCOPES].join(", ")}`);
@@ -2105,7 +2105,7 @@ class MemoryStore {
   // ── Feedback ──────────────────────────────────────────────
   feedback(opts) {
     const signal = opts.outcome === "success" ? 1 : 0;
-    const now = nowIso$1();
+    const now = nowIso$2();
     const updatedIds = [];
     const newScores = {};
     const db = this.open();
@@ -2134,7 +2134,7 @@ class MemoryStore {
   }
   // ── Correct ───────────────────────────────────────────────
   correct(opts) {
-    const now = nowIso$1();
+    const now = nowIso$2();
     const db = this.open();
     try {
       const original = db.prepare("SELECT * FROM memories WHERE id = ?").get(opts.memory_id);
@@ -2183,7 +2183,7 @@ class MemoryStore {
   }
   // ── Forget ────────────────────────────────────────────────
   forget(opts) {
-    const now = nowIso$1();
+    const now = nowIso$2();
     const db = this.open();
     try {
       const row = db.prepare("SELECT id, content FROM memories WHERE id = ?").get(opts.memory_id);
@@ -2288,7 +2288,7 @@ class MemoryStore {
 function newId() {
   return randomUUID().replace(/-/g, "");
 }
-function nowIso() {
+function nowIso$1() {
   return (/* @__PURE__ */ new Date()).toISOString().replace(/\.\d{3}Z$/, "Z");
 }
 function sanitizeFtsQuery(query) {
@@ -2565,7 +2565,7 @@ class MemoryRetrieval {
     db.prepare(`
       INSERT INTO recall_audit (id, query, mode, budget_tokens, scope, project_id, memory_ids_returned, scores, timestamp)
       VALUES (?, ?, ?, ?, NULL, ?, ?, ?, ?)
-    `).run(auditId, query, mode, budget, projectId, memoryIds, scores, nowIso());
+    `).run(auditId, query, mode, budget, projectId, memoryIds, scores, nowIso$1());
   }
 }
 join(homedir(), ".claude", "projects");
@@ -2842,9 +2842,9 @@ class HealthAssessor {
    */
   assessProject(name, opts) {
     if (!opts?.noCache) {
-      const cached = this.getCached(`p:${name}`);
-      if (cached)
-        return cached;
+      const cached2 = this.getCached(`p:${name}`);
+      if (cached2)
+        return cached2;
     }
     const db = connect(this._dbPath);
     try {
@@ -2866,9 +2866,9 @@ class HealthAssessor {
    */
   assessPortfolio(opts) {
     if (!opts?.noCache) {
-      const cached = this.getCached("portfolio");
-      if (cached)
-        return cached;
+      const cached2 = this.getCached("portfolio");
+      if (cached2)
+        return cached2;
     }
     const db = connect(this._dbPath);
     try {
@@ -3103,6 +3103,220 @@ function latestCommitInPath(path) {
     return null;
   }
 }
+const DEFAULTS = {
+  update_channel: "stable",
+  last_check: null
+};
+let cached = null;
+let prefsPath = null;
+function resolvePath() {
+  if (prefsPath) return prefsPath;
+  prefsPath = join(app.getPath("userData"), "update-prefs.json");
+  return prefsPath;
+}
+function merge(partial) {
+  const base = cached ?? DEFAULTS;
+  return {
+    update_channel: partial.update_channel ?? base.update_channel,
+    last_check: partial.last_check !== void 0 ? partial.last_check : base.last_check
+  };
+}
+function isValidChannel(v) {
+  return v === "stable" || v === "beta";
+}
+function normalize(raw) {
+  if (!raw || typeof raw !== "object") return { ...DEFAULTS };
+  const obj = raw;
+  const channel = isValidChannel(obj.update_channel) ? obj.update_channel : DEFAULTS.update_channel;
+  const last = obj.last_check;
+  let lastCheck = null;
+  if (last && typeof last === "object") {
+    const l = last;
+    if (typeof l.timestamp === "string" && typeof l.outcome === "string") {
+      lastCheck = {
+        timestamp: l.timestamp,
+        outcome: l.outcome,
+        ...typeof l.message === "string" ? { message: l.message } : {},
+        ...typeof l.version === "string" ? { version: l.version } : {}
+      };
+    }
+  }
+  return { update_channel: channel, last_check: lastCheck };
+}
+function loadPrefs() {
+  if (cached) return cached;
+  const path = resolvePath();
+  try {
+    if (existsSync(path)) {
+      const raw = readFileSync(path, "utf8");
+      cached = normalize(JSON.parse(raw));
+    } else {
+      cached = { ...DEFAULTS };
+    }
+  } catch (err) {
+    console.error("[prefs] Failed to load, using defaults:", err instanceof Error ? err.message : err);
+    cached = { ...DEFAULTS };
+  }
+  return cached;
+}
+function setPrefs(partial) {
+  const next = merge(partial);
+  const path = resolvePath();
+  try {
+    mkdirSync(dirname(path), { recursive: true });
+    const tmp = `${path}.tmp`;
+    writeFileSync(tmp, JSON.stringify(next, null, 2), "utf8");
+    renameSync(tmp, path);
+    cached = next;
+  } catch (err) {
+    console.error("[prefs] Failed to save:", err instanceof Error ? err.message : err);
+    cached = next;
+  }
+  return next;
+}
+function getChannel() {
+  return loadPrefs().update_channel;
+}
+function setChannel(channel) {
+  return setPrefs({ update_channel: channel });
+}
+function getLastCheck() {
+  return loadPrefs().last_check;
+}
+function setLastCheck(check) {
+  return setPrefs({ last_check: check });
+}
+const { autoUpdater } = pkg;
+let initialized = false;
+let checkInFlight = false;
+let updateDownloaded = false;
+let downloadedVersion = null;
+let pollInterval = null;
+const listeners = /* @__PURE__ */ new Set();
+function channelToPrereleaseFlag(channel) {
+  return channel === "beta";
+}
+function channelToUpdaterName(channel) {
+  return channel === "beta" ? "beta" : "latest";
+}
+function nowIso() {
+  return (/* @__PURE__ */ new Date()).toISOString();
+}
+function emit(payload) {
+  setLastCheck({
+    timestamp: payload.timestamp,
+    outcome: payload.outcome,
+    ...payload.message !== void 0 ? { message: payload.message } : {},
+    ...payload.version !== void 0 ? { version: payload.version } : {}
+  });
+  for (const win of BrowserWindow.getAllWindows()) {
+    if (!win.isDestroyed()) {
+      win.webContents.send("update-event", payload);
+    }
+  }
+  for (const listener of listeners) {
+    try {
+      listener(payload);
+    } catch (err) {
+      console.error("[auto-update] listener threw:", err);
+    }
+  }
+}
+function plainError(err) {
+  if (!err) return "Unknown error";
+  const raw = err instanceof Error ? err.message : String(err);
+  if (/ENOTFOUND|ENETUNREACH|EAI_AGAIN/i.test(raw)) return "No network connection";
+  if (/404/.test(raw)) return "GitHub feed returned 404";
+  if (/signature|code signing/i.test(raw)) return "Signature verification failed";
+  if (/ETIMEDOUT|timeout/i.test(raw)) return "Update check timed out";
+  const firstLine = raw.split("\n")[0];
+  return firstLine.length > 200 ? `${firstLine.slice(0, 197)}…` : firstLine;
+}
+function initAutoUpdater(options = {}) {
+  const { autoCheck = true } = options;
+  applyChannel(getChannel());
+  if (initialized) {
+    if (autoCheck && !pollInterval) schedulePolling();
+    return;
+  }
+  initialized = true;
+  autoUpdater.autoDownload = true;
+  autoUpdater.autoInstallOnAppQuit = false;
+  autoUpdater.on("checking-for-update", () => {
+    checkInFlight = true;
+    emit({ outcome: "checking", timestamp: nowIso() });
+  });
+  autoUpdater.on("update-available", (info) => {
+    checkInFlight = false;
+    emit({
+      outcome: "update-available",
+      version: info?.version,
+      timestamp: nowIso()
+    });
+    emit({ outcome: "downloading", version: info?.version, timestamp: nowIso() });
+  });
+  autoUpdater.on("update-not-available", () => {
+    checkInFlight = false;
+    emit({ outcome: "up-to-date", timestamp: nowIso() });
+  });
+  autoUpdater.on("update-downloaded", (info) => {
+    updateDownloaded = true;
+    downloadedVersion = info?.version ?? null;
+    emit({
+      outcome: "downloaded",
+      version: info?.version,
+      timestamp: nowIso()
+    });
+  });
+  autoUpdater.on("error", (err) => {
+    checkInFlight = false;
+    const message = plainError(err);
+    console.error("[auto-update] error:", message);
+    emit({ outcome: "error", message, timestamp: nowIso() });
+  });
+  if (autoCheck) {
+    void checkForUpdates();
+    schedulePolling();
+  }
+}
+function schedulePolling() {
+  if (pollInterval) return;
+  pollInterval = setInterval(() => {
+    void checkForUpdates();
+  }, 4 * 60 * 60 * 1e3);
+}
+async function checkForUpdates() {
+  if (checkInFlight) return false;
+  checkInFlight = true;
+  try {
+    await autoUpdater.checkForUpdates();
+    return true;
+  } catch (err) {
+    checkInFlight = false;
+    const message = plainError(err);
+    emit({ outcome: "error", message, timestamp: nowIso() });
+    return true;
+  }
+}
+function applyChannel(channel) {
+  autoUpdater.allowPrerelease = channelToPrereleaseFlag(channel);
+  autoUpdater.channel = channelToUpdaterName(channel);
+}
+function isCheckInFlight() {
+  return checkInFlight;
+}
+function isUpdateDownloaded() {
+  return updateDownloaded;
+}
+function getDownloadedVersion() {
+  return downloadedVersion;
+}
+function quitAndInstall() {
+  autoUpdater.quitAndInstall(false, true);
+}
+function isDev$1() {
+  return Boolean(process.env.ELECTRON_RENDERER_URL);
+}
 let registry = null;
 let healthAssessor = null;
 function getRegistry() {
@@ -3185,6 +3399,32 @@ function registerIpcHandlers(ipcMain2) {
     if (name) return health.assessProject(name, { noCache });
     return health.assessPortfolio({ noCache });
   });
+  ipcMain2.handle("getUpdateStatus", () => {
+    return {
+      channel: getChannel(),
+      version: app.getVersion(),
+      last_check: getLastCheck(),
+      in_flight: isCheckInFlight(),
+      downloaded: isUpdateDownloaded(),
+      downloaded_version: getDownloadedVersion(),
+      dev_mode: isDev$1()
+    };
+  });
+  ipcMain2.handle("setUpdateChannel", (_e, channel) => {
+    setChannel(channel);
+    if (!isDev$1()) applyChannel(channel);
+    return getChannel();
+  });
+  ipcMain2.handle("checkForUpdates", async () => {
+    if (isDev$1()) return { dev_skip: true };
+    const initiated = await checkForUpdates();
+    return { initiated };
+  });
+  ipcMain2.handle("quitAndInstallUpdate", () => {
+    if (!isUpdateDownloaded()) return false;
+    quitAndInstall();
+    return true;
+  });
   ipcMain2.handle("bootstrapProject", (_e, opts) => {
     const bootstrap = new Bootstrap(reg.dbPath);
     return bootstrap.bootstrapProject({
@@ -3196,22 +3436,124 @@ function registerIpcHandlers(ipcMain2) {
     });
   });
 }
-const { autoUpdater } = pkg;
-function initAutoUpdater(channel = "latest") {
-  autoUpdater.channel = channel;
-  autoUpdater.autoDownload = true;
-  autoUpdater.autoInstallOnAppQuit = true;
-  autoUpdater.on("update-available", (info) => {
-    console.log("[auto-update] Update available:", info.version);
+function isDev() {
+  return Boolean(process.env.ELECTRON_RENDERER_URL);
+}
+function buildDateLabel() {
+  try {
+    if (isDev()) return "development build";
+    const stat = require2("node:fs").statSync(app.getAppPath());
+    return stat.mtime.toISOString().slice(0, 10);
+  } catch {
+    return "unknown";
+  }
+}
+function refreshAboutPanel() {
+  const channel = getChannel();
+  const version = app.getVersion();
+  const channelLabel = channel === "beta" ? "Beta" : "Stable";
+  app.setAboutPanelOptions({
+    applicationName: "Setlist",
+    applicationVersion: `${version} (${channelLabel})`,
+    version: buildDateLabel(),
+    copyright: "Setlist — project registry control panel"
   });
-  autoUpdater.on("update-downloaded", (info) => {
-    console.log("[auto-update] Update downloaded:", info.version, "— will install on quit");
+}
+function installAppMenu(handleCheckForUpdates) {
+  refreshAboutPanel();
+  const dev = isDev();
+  const appSubmenu = [
+    { role: "about", label: "About Setlist" },
+    { type: "separator" },
+    dev ? {
+      label: "Check for Updates…",
+      enabled: false,
+      toolTip: "Not available in development"
+    } : {
+      label: "Check for Updates…",
+      // In-flight guard is enforced inside handleCheckForUpdates;
+      // the menu item doesn't need a disabled state because the
+      // check call itself is idempotent.
+      click: () => {
+        void handleCheckForUpdates();
+      }
+    },
+    { type: "separator" },
+    { role: "services" },
+    { type: "separator" },
+    { role: "hide", label: "Hide Setlist" },
+    { role: "hideOthers" },
+    { role: "unhide" },
+    { type: "separator" },
+    { role: "quit", label: "Quit Setlist" }
+  ];
+  const template = [
+    { label: "Setlist", submenu: appSubmenu },
+    {
+      label: "Edit",
+      submenu: [
+        { role: "undo" },
+        { role: "redo" },
+        { type: "separator" },
+        { role: "cut" },
+        { role: "copy" },
+        { role: "paste" },
+        { role: "selectAll" }
+      ]
+    },
+    {
+      label: "View",
+      submenu: [
+        { role: "reload" },
+        { role: "forceReload" },
+        { role: "toggleDevTools" },
+        { type: "separator" },
+        { role: "resetZoom" },
+        { role: "zoomIn" },
+        { role: "zoomOut" },
+        { type: "separator" },
+        { role: "togglefullscreen" }
+      ]
+    },
+    {
+      label: "Window",
+      role: "windowMenu"
+    }
+  ];
+  const menu = Menu.buildFromTemplate(template);
+  Menu.setApplicationMenu(menu);
+}
+async function handleMenuCheckForUpdates() {
+  if (isCheckInFlight()) {
+    return;
+  }
+  await checkForUpdates();
+}
+let installing = false;
+function registerQuitPrompt(electronApp, getMainWindow) {
+  electronApp.on("before-quit", (event) => {
+    if (installing) return;
+    if (!isUpdateDownloaded()) return;
+    event.preventDefault();
+    const version = getDownloadedVersion();
+    const versionLabel = version ? `v${version}` : "a new version";
+    const parent = getMainWindow() ?? void 0;
+    const choice = dialog.showMessageBoxSync(parent, {
+      type: "info",
+      buttons: ["Install and quit", "Skip"],
+      defaultId: 0,
+      cancelId: 1,
+      title: "Update ready",
+      message: "Update ready — install now or skip?",
+      detail: `Setlist will install ${versionLabel} and relaunch after install. Choosing Skip quits without installing; the update stays staged and you'll be asked again next time you quit.`
+    });
+    if (choice === 0) {
+      installing = true;
+      quitAndInstall();
+    } else {
+      app.exit(0);
+    }
   });
-  autoUpdater.on("error", (err) => {
-    console.error("[auto-update] Error:", err.message);
-  });
-  autoUpdater.checkForUpdatesAndNotify();
-  setInterval(() => autoUpdater.checkForUpdatesAndNotify(), 4 * 60 * 60 * 1e3);
 }
 const gotLock = app.requestSingleInstanceLock();
 if (!gotLock) {
@@ -3263,10 +3605,13 @@ app.on("second-instance", () => {
   }
 });
 app.whenReady().then(() => {
+  loadPrefs();
   registerIpcHandlers(ipcMain);
+  installAppMenu(handleMenuCheckForUpdates);
   createWindow();
   if (!process.env.ELECTRON_RENDERER_URL) {
-    initAutoUpdater("latest");
+    initAutoUpdater();
+    registerQuitPrompt(app, () => mainWindow);
   }
   app.on("activate", () => {
     if (BrowserWindow.getAllWindows().length === 0) {

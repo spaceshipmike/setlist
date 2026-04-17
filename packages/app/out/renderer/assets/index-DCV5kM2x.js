@@ -17739,7 +17739,13 @@ const api = {
   bootstrapProject: (opts) => window.setlist.bootstrapProject(opts),
   assessHealth: (name, opts) => window.setlist.assessHealth(name, opts),
   assessProjectHealth: (name, opts) => window.setlist.assessHealth(name, opts),
-  assessPortfolioHealth: (opts) => window.setlist.assessHealth(void 0, opts)
+  assessPortfolioHealth: (opts) => window.setlist.assessHealth(void 0, opts),
+  // ── Auto-Update ────────────────────────────────────────────────
+  getUpdateStatus: () => window.setlist.getUpdateStatus(),
+  setUpdateChannel: (channel) => window.setlist.setUpdateChannel(channel),
+  checkForUpdates: () => window.setlist.checkForUpdates(),
+  quitAndInstallUpdate: () => window.setlist.quitAndInstallUpdate(),
+  onUpdateEvent: (handler) => window.setlist.onUpdateEvent(handler)
 };
 const HEALTH_RANK = {
   stale: 0,
@@ -19539,6 +19545,175 @@ function TabTrigger({ value, children }) {
 function Count({ n }) {
   return /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "ml-1.5 text-xs px-1.5 py-0.5 rounded-full bg-[var(--color-bg-elevated)] text-[var(--color-text-tertiary)]", children: n });
 }
+function formatTimestamp(iso) {
+  const d = new Date(iso);
+  const now = /* @__PURE__ */ new Date();
+  const diffMs = now.getTime() - d.getTime();
+  const diffSec = Math.floor(diffMs / 1e3);
+  if (diffSec < 60) return "just now";
+  const diffMin = Math.floor(diffSec / 60);
+  if (diffMin < 60) return `${diffMin} minute${diffMin === 1 ? "" : "s"} ago`;
+  const diffHour = Math.floor(diffMin / 60);
+  if (diffHour < 24) return `${diffHour} hour${diffHour === 1 ? "" : "s"} ago`;
+  const diffDay = Math.floor(diffHour / 24);
+  if (diffDay < 7) return `${diffDay} day${diffDay === 1 ? "" : "s"} ago`;
+  return d.toISOString().slice(0, 16).replace("T", " ");
+}
+function describeOutcome(check) {
+  switch (check.outcome) {
+    case "checking":
+      return "Checking for updates…";
+    case "up-to-date":
+      return "Up to date";
+    case "update-available":
+      return check.version ? `Update available — v${check.version}` : "Update available";
+    case "downloading":
+      return check.version ? `Downloading v${check.version}…` : "Downloading update…";
+    case "downloaded":
+      return check.version ? `Update ready — v${check.version} will install on next quit` : "Update ready — install on next quit";
+    case "error":
+      return check.message ? `Check failed: ${check.message}` : "Check failed";
+    default:
+      return check.outcome;
+  }
+}
+function outcomeColor(outcome) {
+  switch (outcome) {
+    case "error":
+      return "var(--color-error)";
+    case "downloaded":
+    case "update-available":
+      return "var(--color-accent)";
+    default:
+      return "var(--color-text-secondary)";
+  }
+}
+function UpdatesSection() {
+  const [status, setStatus] = reactExports.useState(null);
+  const [loading, setLoading] = reactExports.useState(true);
+  const [liveCheck, setLiveCheck] = reactExports.useState(null);
+  const [toggling, setToggling] = reactExports.useState(false);
+  const refresh = reactExports.useCallback(async () => {
+    try {
+      const s = await api.getUpdateStatus();
+      setStatus(s);
+      setLiveCheck(s.last_check);
+    } catch (err) {
+      console.error("[updates-section] failed to load status", err);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+  reactExports.useEffect(() => {
+    void refresh();
+  }, [refresh]);
+  reactExports.useEffect(() => {
+    const unsubscribe = api.onUpdateEvent((payload) => {
+      setLiveCheck({
+        timestamp: payload.timestamp,
+        outcome: payload.outcome,
+        ...payload.message !== void 0 ? { message: payload.message } : {},
+        ...payload.version !== void 0 ? { version: payload.version } : {}
+      });
+    });
+    return () => unsubscribe();
+  }, []);
+  const handleChannelChange = async (channel) => {
+    if (!status || status.channel === channel) return;
+    setToggling(true);
+    try {
+      await api.setUpdateChannel(channel);
+      await refresh();
+    } finally {
+      setToggling(false);
+    }
+  };
+  const handleCheckNow = async () => {
+    await api.checkForUpdates();
+    await refresh();
+  };
+  if (loading) {
+    return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-8", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-base font-semibold text-[var(--color-text-primary)] mb-2", children: "Updates" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-sm text-[var(--color-text-tertiary)]", children: "Loading…" })
+    ] });
+  }
+  if (!status) return /* @__PURE__ */ jsxRuntimeExports.jsx(jsxRuntimeExports.Fragment, {});
+  const devMode = status.dev_mode;
+  const showStatus = liveCheck ?? status.last_check;
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-8", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-base font-semibold text-[var(--color-text-primary)] mb-1", children: "Updates" }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-[var(--color-text-tertiary)] mb-4", children: "Setlist checks GitHub Releases periodically. Quiet by default — updates install on next quit." }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "py-3 border-b border-[var(--color-border)] flex items-center justify-between", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-sm font-medium text-[var(--color-text-primary)]", children: "Current version" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-xs text-[var(--color-text-tertiary)] mt-0.5 font-mono", children: [
+        "v",
+        status.version
+      ] })
+    ] }) }),
+    devMode ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "py-3 border-b border-[var(--color-border)]", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-sm text-[var(--color-text-secondary)]", children: "Updates disabled in development." }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs text-[var(--color-text-tertiary)] mt-1", children: "Update checks and channel switching are only active in packaged builds." })
+    ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "py-3 border-b border-[var(--color-border)]", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-sm font-medium text-[var(--color-text-primary)] mb-0.5", children: "Channel" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs text-[var(--color-text-tertiary)] mb-2", children: "Stable is recommended. Beta delivers prereleases earlier — expect rougher edges." }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "div",
+          {
+            role: "radiogroup",
+            "aria-label": "Update channel",
+            className: "inline-flex rounded-md border border-[var(--color-border)] overflow-hidden",
+            children: ["stable", "beta"].map((ch) => {
+              const selected = status.channel === ch;
+              return /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "button",
+                {
+                  role: "radio",
+                  "aria-checked": selected,
+                  onClick: () => handleChannelChange(ch),
+                  disabled: toggling,
+                  className: selected ? "px-3 py-1 text-xs font-medium bg-[var(--color-accent)] text-white" : "px-3 py-1 text-xs text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-elevated)] transition-colors",
+                  children: ch === "stable" ? "Stable" : "Beta"
+                },
+                ch
+              );
+            })
+          }
+        )
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "py-3 border-b border-[var(--color-border)]", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between gap-4", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-1 min-w-0", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-sm font-medium text-[var(--color-text-primary)]", children: "Last checked" }),
+          showStatus ? /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "div",
+              {
+                className: "text-sm mt-0.5",
+                style: { color: outcomeColor(showStatus.outcome) },
+                children: describeOutcome(showStatus)
+              }
+            ),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs text-[var(--color-text-tertiary)] mt-0.5", children: formatTimestamp(showStatus.timestamp) })
+          ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs text-[var(--color-text-tertiary)] mt-0.5 italic", children: "No checks this session yet" })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "button",
+          {
+            onClick: handleCheckNow,
+            disabled: status.in_flight || showStatus?.outcome === "checking",
+            className: "px-3 py-1 rounded text-xs\n                  bg-[var(--color-bg-elevated)] text-[var(--color-text-secondary)]\n                  border border-[var(--color-border)] hover:border-[var(--color-border-strong)]\n                  disabled:opacity-50 transition-colors shrink-0",
+            children: status.in_flight || showStatus?.outcome === "checking" ? "Checking…" : "Check now"
+          }
+        )
+      ] }) }),
+      status.downloaded && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "py-3 border-b border-[var(--color-border)]", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-sm text-[var(--color-accent)] font-medium", children: "Update staged" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs text-[var(--color-text-tertiary)] mt-0.5", children: status.downloaded_version ? `v${status.downloaded_version} will install when you quit — you'll be asked to confirm.` : "A new version will install when you quit — you'll be asked to confirm." })
+      ] })
+    ] })
+  ] });
+}
 function PathField({ label, description, value, onChange, saving }) {
   const [editing, setEditing] = reactExports.useState(false);
   const [draft, setDraft] = reactExports.useState(value);
@@ -19703,7 +19878,8 @@ function SettingsView({ onBack }) {
           saving
         }
       )
-    ] })
+    ] }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx(UpdatesSection, {})
   ] });
 }
 const PROJECT_TYPES = [
@@ -19955,6 +20131,80 @@ function Field({ label, children }) {
     children
   ] });
 }
+function UpdateToast() {
+  const [visible, setVisible] = reactExports.useState(false);
+  const [version, setVersion] = reactExports.useState(null);
+  const [installing, setInstalling] = reactExports.useState(false);
+  const lastVersionRef = reactExports.useRef(null);
+  reactExports.useEffect(() => {
+    api.getUpdateStatus().then((s) => {
+      if (s.downloaded && s.downloaded_version && lastVersionRef.current !== s.downloaded_version) {
+        lastVersionRef.current = s.downloaded_version;
+        setVersion(s.downloaded_version);
+        setVisible(true);
+      }
+    }).catch(() => {
+    });
+    const unsubscribe = api.onUpdateEvent((payload) => {
+      if (payload.outcome === "downloaded") {
+        const v = payload.version ?? null;
+        if (lastVersionRef.current === v && visible) return;
+        lastVersionRef.current = v;
+        setVersion(v);
+        setVisible(true);
+      }
+    });
+    return () => unsubscribe();
+  }, []);
+  if (!visible) return null;
+  const handleQuitInstall = async () => {
+    setInstalling(true);
+    try {
+      await api.quitAndInstallUpdate();
+    } catch {
+      setInstalling(false);
+    }
+  };
+  const handleDismiss = () => {
+    setVisible(false);
+  };
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs(
+    "div",
+    {
+      role: "alert",
+      "aria-live": "polite",
+      className: "fixed bottom-4 right-4 z-50 max-w-sm\n        rounded-lg border border-[var(--color-border)]\n        bg-[var(--color-bg-card)] shadow-lg\n        p-4 flex flex-col gap-3 titlebar-no-drag",
+      children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-sm font-semibold text-[var(--color-text-primary)]", children: "Update ready — install on next quit" }),
+          version && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-xs text-[var(--color-text-tertiary)] mt-0.5", children: [
+            "Version ",
+            version
+          ] })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "button",
+            {
+              onClick: handleQuitInstall,
+              disabled: installing,
+              className: "px-3 py-1.5 rounded text-xs font-medium\n            bg-[var(--color-accent)] text-white\n            hover:bg-[var(--color-accent-hover)]\n            disabled:opacity-50 transition-colors",
+              children: installing ? "Quitting…" : "Quit and install"
+            }
+          ),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "button",
+            {
+              onClick: handleDismiss,
+              className: "px-3 py-1.5 rounded text-xs\n            text-[var(--color-text-secondary)]\n            hover:bg-[var(--color-bg-elevated)] transition-colors",
+              children: "Later"
+            }
+          )
+        ] })
+      ]
+    }
+  );
+}
 function App() {
   const [view, setView] = reactExports.useState({ kind: "home" });
   const [showRegister, setShowRegister] = reactExports.useState(false);
@@ -20003,7 +20253,8 @@ function App() {
         onOpenChange: setShowRegister,
         onSuccess: () => refreshRef.current?.()
       }
-    )
+    ),
+    /* @__PURE__ */ jsxRuntimeExports.jsx(UpdateToast, {})
   ] });
 }
 clientExports.createRoot(document.getElementById("root")).render(

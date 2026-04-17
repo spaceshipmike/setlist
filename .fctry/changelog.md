@@ -1,5 +1,14 @@
 # Setlist — Changelog
 
+## 2026-04-16T12:00:00Z — /fctry:evolve auto-update (0.13 → 0.14)
+- Frontmatter: [modified] spec-version 0.13 → 0.14; synopsis short/medium updated to call out auto-update + two channels; tech-stack adds `electron-updater`; patterns add `signed-notarized-builds`, `silent-download-prompt-before-install`, `two-channel-release`; goals add `auto-update-with-channels`
+- `#auto-update` (2.14.1): [added] New subsection inside §2.14 describing the auto-update experience — two user-selectable channels (stable/beta, stable default), Settings › Updates section (channel toggle, current version, Check now button, status line), About dialog (version + build date + channel), Check for Updates… app menu item, silent background download, toast on update downloaded with Quit-and-install action, confirmation prompt on user-initiated quit (install or skip, never forced), failures surfaced only in the Settings status line, no telemetry
+- `#hard-constraints` (4.3): [modified] New bullet requiring release builds to be signed with a Developer ID certificate and notarized by Apple; calls out that any `notarize: false` override in `packages/app/electron-builder.yml` is incorrect and must be reversed before a release channel ships
+- `#ts-decisions` (5.3): [modified] New paragraph noting auto-update is delivered by `electron-updater` against GitHub Releases, with stable/beta channels mapping to prerelease tag flags
+- TOC: [structural] Added 2.14.1 Auto-Update entry under 2.14 Desktop Control Panel
+- Non-goals (out of scope for this evolve): Windows/Linux update flows; rollback UI; delta updates; a dedicated update log file; forced-install policy
+(1 added, 4 modified, 0 removed)
+
 ## 2026-04-15T18:00:00Z — /fctry:evolve (canonical areas + sub-projects, schema v11)
 - Frontmatter: [modified] spec-version 0.12 → 0.13; synopsis short/medium/readme updated; tech-stack and goals augmented
 - `#registration` (2.2): [modified] Core identity fields 6 → 7 (adds `area`); optional `parent_project` declared as a structural edge; registerProject signature gains area + parentProject

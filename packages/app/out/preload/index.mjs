@@ -1,4 +1,5 @@
 import { contextBridge, ipcRenderer } from "electron";
+const UPDATE_EVENT_CHANNEL = "update-event";
 const api = {
   // Project Identity
   listProjects: (opts) => ipcRenderer.invoke("listProjects", opts),
@@ -27,6 +28,18 @@ const api = {
   configureBootstrap: (opts) => ipcRenderer.invoke("configureBootstrap", opts),
   // Health
   assessHealth: (name, opts) => ipcRenderer.invoke("assessHealth", name, opts),
-  bootstrapProject: (opts) => ipcRenderer.invoke("bootstrapProject", opts)
+  bootstrapProject: (opts) => ipcRenderer.invoke("bootstrapProject", opts),
+  // Auto-Update (#auto-update)
+  getUpdateStatus: () => ipcRenderer.invoke("getUpdateStatus"),
+  setUpdateChannel: (channel) => ipcRenderer.invoke("setUpdateChannel", channel),
+  checkForUpdates: () => ipcRenderer.invoke("checkForUpdates"),
+  quitAndInstallUpdate: () => ipcRenderer.invoke("quitAndInstallUpdate"),
+  onUpdateEvent: (handler) => {
+    const wrapped = (_e, payload) => handler(payload);
+    ipcRenderer.on(UPDATE_EVENT_CHANNEL, wrapped);
+    return () => {
+      ipcRenderer.removeListener(UPDATE_EVENT_CHANNEL, wrapped);
+    };
+  }
 };
 contextBridge.exposeInMainWorld("setlist", api);

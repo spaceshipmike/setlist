@@ -2,7 +2,7 @@
   "versions": {
     "external": {
       "type": "external",
-      "current": "0.1.26",
+      "current": "0.1.32",
       "propagationTargets": [],
       "incrementRules": {
         "patch": "auto-per-chunk",
@@ -46,7 +46,7 @@
     "freshAudit": "codex",
     "localPrefilter": "oss"
   },
-  "formatVersion": "0.81.0",
+  "formatVersion": "0.82.0",
   "evaluation": {
     "trials": 3,
     "passThreshold": 2,

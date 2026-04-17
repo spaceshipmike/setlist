@@ -58,6 +58,8 @@
     --text-xs--line-height: calc(1 / .75);
     --text-sm: .875rem;
     --text-sm--line-height: calc(1.25 / .875);
+    --text-base: 1rem;
+    --text-base--line-height: calc(1.5 / 1);
     --text-lg: 1.125rem;
     --text-lg--line-height: calc(1.75 / 1.125);
     --text-xl: 1.25rem;
@@ -372,8 +374,16 @@
     top: 50%;
   }
 
+  .right-4 {
+    right: calc(var(--spacing) * 4);
+  }
+
   .bottom-0 {
     bottom: calc(var(--spacing) * 0);
+  }
+
+  .bottom-4 {
+    bottom: calc(var(--spacing) * 4);
   }
 
   .left-1\/2 {
@@ -402,6 +412,10 @@
 
   .mt-3 {
     margin-top: calc(var(--spacing) * 3);
+  }
+
+  .mt-8 {
+    margin-top: calc(var(--spacing) * 8);
   }
 
   .mb-0\.5 {
@@ -967,6 +981,11 @@
   .text-2xl {
     font-size: var(--text-2xl);
     line-height: var(--tw-leading, var(--text-2xl--line-height));
+  }
+
+  .text-base {
+    font-size: var(--text-base);
+    line-height: var(--tw-leading, var(--text-base--line-height));
   }
 
   .text-lg {

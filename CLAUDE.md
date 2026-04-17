@@ -4,14 +4,14 @@
 
 Setlist is the TypeScript implementation of the Project Registry — the active intelligence hub for the user's personal ecosystem. It provides project identity, capability declarations, portfolio memory, port allocation, task routing, batch operations, cross-project intelligence, and a desktop control panel via a local SQLite database, MCP server, and Electron app.
 
-Originally a direct port of `project-registry-service` (Python), now evolved beyond parity. Schema v10 (unified memory types, belief classification, temporal validity, entity extraction, procedural versioning), 34 MCP tools, desktop UI sharing Chorus's design system with multiselect status filtering and archived project visibility. Different language (TypeScript), different packaging (npm monorepo).
+Originally a direct port of `project-registry-service` (Python), now evolved beyond parity. Schema v11 (canonical areas table, first-class area_id/parent_project_id columns on projects, area_of_focus type retired; builds on v10's unified memory types, belief classification, temporal validity, entity extraction, procedural versioning), 36 MCP tools, desktop UI sharing Chorus's design system with multiselect status filtering and archived project visibility. Different language (TypeScript), different packaging (npm monorepo).
 
 ## Factory Contract
 
 This project is built and maintained using the fctry spec-driven workflow.
 
 - **Spec:** `.fctry/spec.md` — the complete natural-language specification
-- **Scenarios:** `.fctry/scenarios.md` — 70 end-to-end scenarios defining behavioral satisfaction
+- **Scenarios:** `.fctry/scenarios.md` — 80 end-to-end scenarios defining behavioral satisfaction
 - **Config:** `.fctry/config.json` — version registry (external 0.1.0, spec 0.1)
 - **State:** `.fctry/state.json` — current workflow state
 
@@ -40,7 +40,7 @@ npm run typecheck
 ```
 packages/
 ├── core/    # @setlist/core — library (all registry logic)
-├── mcp/     # @setlist/mcp — MCP server (34 tools, stdio)
+├── mcp/     # @setlist/mcp — MCP server (36 tools, stdio)
 ├── cli/     # @setlist/cli — CLI commands + async worker
 └── app/     # @setlist/app — desktop control panel (Electron + React)
 ```
@@ -52,17 +52,17 @@ packages/
 - **Electron** — Desktop shell for @setlist/app. Main process imports @setlist/core via IPC bridge.
 - **React + Tailwind CSS 4 + Radix UI** — Renderer stack, shared design system with Chorus.
 - **ESM-only** — All packages produce ESM output. No CJS.
-- **Schema v10** — Evolved from Python's v8. The .db file is the contract.
+- **Schema v11** — Evolved from Python's v8 through v9 (observation memory type), v10 (unified memory types + belief/temporal/entity/procedural-versioning fields), and v11 (canonical areas, first-class area_id and parent_project_id, area_of_focus retired). The .db file is the contract.
 - **Library-first** — @setlist/core is the primary interface. MCP, CLI, and desktop app are thin wrappers.
 
 ### Database
 
 Location: `~/.local/share/project-registry/registry.db`
-18 tables, schema v10, WAL mode, FTS5 for memory search.
+19 tables, schema v11, WAL mode, FTS5 for memory search.
 
-### 34 MCP Tools
+### 36 MCP Tools
 
-**Identity (12):** list_projects, get_project, switch_project, search_projects, get_registry_stats, register_project, update_project, archive_project, rename_project, batch_update, write_fields, enrich_project
+**Identity (14):** list_projects, get_project, switch_project, search_projects, get_registry_stats, register_project, update_project, archive_project, rename_project, batch_update, write_fields, enrich_project, set_project_area, set_parent_project
 
 **Capabilities (2):** register_capabilities, query_capabilities
 
@@ -116,7 +116,7 @@ Every project in the registry should be discoverable and understandable by agent
 | File | Purpose |
 |------|---------|
 | spec.md | NLSpec v2 — the complete specification |
-| scenarios.md | Holdout scenario set (70 scenarios) |
+| scenarios.md | Holdout scenario set (80 scenarios) |
 | config.json | Version registry |
 | state.json | Current workflow state |
 | interview-state.md | Interview completion record |
@@ -150,14 +150,15 @@ Scenarios in `.fctry/scenarios.md` define the behavioral contract. Key categorie
 - **S38-S44:** Project bootstrap (configuration, code/non-code/area bootstrapping, error states)
 - **S45-S64:** Desktop app (window management, IPC bridge, card grid, filtering/sorting, detail tabs, CRUD operations, design system, CLI launcher, empty state, error feedback, data refresh, packaging)
 - **S65-S70:** Project health assessment (composite tier, activity/completeness/outcomes dimensions, assess_health MCP tool, Home view health dot and Overview Health section)
+- **S71-S80:** Canonical areas and sub-projects (areas seed, area_of_focus retirement, knowmarks soft-link migration, set_project_area, set_parent_project + cycle prevention, invalid area rejection, memory scope bubble-up through area, parent archive non-cascade, get_project returns area+parent+children)
 
 <!-- compact-instructions
 Preserve during auto-compaction:
 - Spec: .fctry/spec.md (Setlist NLSpec, experience-ported from project-registry-service)
-- Scenarios: .fctry/scenarios.md (70 scenarios, S01-S70)
-- Config: .fctry/config.json (external 0.1.10, spec 0.9)
+- Scenarios: .fctry/scenarios.md (80 scenarios, S01-S80)
+- Config: .fctry/config.json (external 0.1.24, spec 0.13)
 - State: .fctry/state.json (current workflow step)
-- Key constraint: Schema v10 with unified memory types, 18 tables
-- Key constraint: 29 Python-compatible MCP tools + 4 Setlist additions (enrich, rename, bootstrap, configure_bootstrap)
+- Key constraint: Schema v11 with canonical areas + sub-projects, 19 tables
+- Key constraint: 27 Python-compatible MCP tools + 9 Setlist additions (enrich_project, write_fields, portfolio_brief, rename_project, bootstrap_project, configure_bootstrap, assess_health, set_project_area, set_parent_project)
 - Key constraint: Library-first (@setlist/core), ESM-only, better-sqlite3
 -->

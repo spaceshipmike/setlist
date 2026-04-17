@@ -1273,3 +1273,200 @@ Difficulty: medium
 - A project with no area, no parent, and no children returns `area: null`, `parent_project: null`, `children: []` (empty array, not missing key)
 
 Difficulty: easy
+
+---
+
+## S81: Auto-Update Disabled in Development [App] {#s81}
+**Given** the Electron app is launched in development mode (e.g. `npm run dev` with `ELECTRON_RENDERER_URL` set to a local Vite server)
+**When** the main process starts up and initializes its subsystems
+**Then** the auto-update subsystem is not wired in and no update checks are performed against the GitHub Releases feed.
+
+Validates: `#auto-update` (2.14.x)
+
+**Satisfaction criteria:**
+- When `ELECTRON_RENDERER_URL` is set (dev mode), `autoUpdater.checkForUpdatesAndNotify` (or equivalent) is never invoked during app startup
+- No outbound network request is made to the GitHub Releases update feed during dev launches
+- The Settings > Updates section either indicates "Updates disabled in development" or hides check-related controls entirely — it does not display a stale/failed status from a dev run
+- The "Check for Updates…" menu item is either absent in dev or shows a clear "not available in development" message when invoked
+- In a packaged production build (no `ELECTRON_RENDERER_URL`), the auto-update subsystem initializes and performs its normal check on launch
+- The dev/prod branch is determined by environment inspection at startup, not by a hardcoded feature flag that could drift
+
+Difficulty: easy
+
+---
+
+## S82: Release Build Signed and Notarized [App] {#s82}
+**Given** a release build produced by the project's packaging pipeline with Developer ID credentials configured (`APPLE_ID`, `APPLE_APP_SPECIFIC_PASSWORD`, `APPLE_TEAM_ID` or equivalent CSC env vars) and `notarize: true` in `packages/app/electron-builder.yml`
+**When** the `.app` bundle and `.dmg`/`.zip` artifacts are inspected on a Gatekeeper-enforced macOS machine
+**Then** the bundle is signed with a valid Developer ID certificate and stapled with an Apple notarization ticket, and Gatekeeper permits launch and auto-install without prompting.
+
+Validates: `#auto-update` (2.14.x)
+
+**Satisfaction criteria:**
+- `codesign -dv --verbose=4 /path/to/Setlist.app` reports a valid signature with Authority chain including "Developer ID Application: ..." and the configured Team ID
+- `codesign --verify --deep --strict /path/to/Setlist.app` exits 0 with no warnings
+- `spctl -a -vv /path/to/Setlist.app` reports "accepted" with source "Notarized Developer ID"
+- `stapler validate /path/to/Setlist.app` confirms a stapled notarization ticket is present
+- Gatekeeper permits first launch of the downloaded artifact without the "cannot be opened because Apple cannot check it for malicious software" dialog
+- A deliberately-unsigned-or-unnotarized build, when handed to Squirrel.Mac for auto-install, fails to complete the install handoff on a Gatekeeper-enforced machine — this establishes why signing and notarization are not optional for the update path
+- The packaging pipeline refuses to produce a release build when signing/notarization credentials are missing (hard failure, not a silent skip)
+
+Difficulty: hard
+
+---
+
+## S83: Update Channel Persists Across Launches [App] {#s83}
+**Given** the app is running and the user opens Settings > Updates
+**When** the user switches the channel from Stable to Beta (or vice versa) and then quits and relaunches the app
+**Then** the newly-selected channel is remembered and used for the next update check — the toggle does not revert to a default.
+
+Validates: `#auto-update` (2.14.x)
+
+**Satisfaction criteria:**
+- The Settings > Updates section contains a channel toggle with exactly two options labeled Stable and Beta
+- Switching the toggle takes effect immediately — subsequent update checks in the same session use the new channel
+- The selected channel is persisted to durable storage (preferences file, registry, or equivalent) — not held only in memory
+- After a full app quit and relaunch, Settings > Updates displays the previously-selected channel with no user action required
+- First-launch default is Stable when no prior preference exists
+- Switching to Stable while a Beta update is already downloaded does not auto-install the Beta build — the user's channel intent is respected on next check
+
+Difficulty: medium
+
+---
+
+## S84: Beta Channel Receives Prereleases, Stable Does Not [App] {#s84}
+**Given** the GitHub repository has a non-prerelease tag `v1.2.0` and a prerelease tag `v1.3.0-beta.1`, both published with full release assets and update metadata
+**When** an app on channel Stable and an app on channel Beta each perform an update check
+**Then** the Stable app sees `v1.2.0` as the latest available, and the Beta app sees `v1.3.0-beta.1`.
+
+Validates: `#auto-update` (2.14.x)
+
+**Satisfaction criteria:**
+- An app on channel Stable, currently at `v1.1.0`, reports an available update to `v1.2.0` and does not offer `v1.3.0-beta.1`
+- An app on channel Beta, currently at `v1.1.0`, reports an available update to `v1.3.0-beta.1` (the newer prerelease)
+- The channel-to-tag mapping is: Stable → latest non-prerelease tag; Beta → latest prerelease-or-stable tag (whichever is newer)
+- A user who switches from Beta back to Stable while running a prerelease build does not get an automatic downgrade — they continue on their current version until Stable ships a newer non-prerelease tag
+- The update metadata feed honored by the app matches electron-updater's channel convention (stable.yml vs beta.yml, or the project's equivalent naming)
+- A draft or unpublished GitHub release is never offered on either channel
+
+Difficulty: medium
+
+---
+
+## S85: Check For Updates Menu Item Triggers Immediate Check [App] {#s85}
+**Given** the app is running and the macOS app menu (Setlist > ...) is available
+**When** the user selects "Check for Updates…" from the app menu
+**Then** an update check runs immediately — without waiting for the next scheduled interval — and the user sees feedback that a check is in progress and what the result was.
+
+Validates: `#auto-update` (2.14.x)
+
+**Satisfaction criteria:**
+- The macOS app menu includes a "Check for Updates…" item in a conventional location (near About, per macOS convention)
+- Selecting the item triggers an immediate check against the currently-selected channel's update feed
+- The user sees a clear "Checking for updates…" indication (in Settings, a menu state, or a modal — implementation flexible) while the check is in flight
+- If an update is available, the normal download and install-on-quit flow begins
+- If no update is available, the user sees a brief confirmation ("You're up to date" or equivalent) — no silent no-op
+- If the check fails, the failure is surfaced in Settings > Updates (per S90) and optionally in a brief user-facing acknowledgment — not swallowed silently
+- Invoking the menu item while a check is already in flight does not fire a duplicate request
+
+Difficulty: easy
+
+---
+
+## S86: About Dialog Shows Running Version [App] {#s86}
+**Given** the app is running
+**When** the user selects "About Setlist" from the macOS app menu
+**Then** a standard About dialog appears displaying the exact version of the running app.
+
+Validates: `#auto-update` (2.14.x)
+
+**Satisfaction criteria:**
+- The macOS app menu includes a standard "About Setlist" item (provided by Electron's default app menu role or an explicit equivalent)
+- Selecting the item opens an About dialog — not a full Settings view
+- The dialog displays the app name and the current version string (matching `app.getVersion()` and the `version` field in the packaged `package.json`)
+- The version displayed is the version of the currently-running binary, not a value baked into the renderer at a different build time
+- After an auto-update install completes and the app relaunches, the About dialog displays the new version
+- The dialog is dismissible via the standard macOS window close affordances
+
+Difficulty: easy
+
+---
+
+## S87: Silent Background Download [App] {#s87}
+**Given** the app is running, an update is available on the user's selected channel, and the app has begun downloading it
+**When** the download is in progress
+**Then** the user experiences no interruption — there is no modal, no progress bar stealing focus, and no toast spam — the download happens silently in the background.
+
+Validates: `#auto-update` (2.14.x)
+
+**Satisfaction criteria:**
+- During the download phase, no modal dialog appears
+- No system notification or in-app toast fires while bytes are transferring
+- The user's current work (viewing cards, editing a project, etc.) is not interrupted by the download
+- Download progress is not shown as a blocking UI element — at most, it may be reflected subtly in Settings > Updates if the user chooses to look
+- Bandwidth use is limited to what electron-updater's background download does by default — no aggressive retries that saturate the connection
+- If the download fails mid-transfer, the failure is recorded to Settings > Updates status (per S90) but produces no user-facing toast or modal
+- The only user-visible signal tied to the download is the `update-downloaded` toast at completion (per S88) — nothing before then
+
+Difficulty: medium
+
+---
+
+## S88: Update Downloaded Toast With Install Action [App] {#s88}
+**Given** the app is running and a background download has just completed (`update-downloaded` event fired)
+**When** the download completes
+**Then** the user sees a single, non-intrusive toast notification announcing the update is ready, with an action offering to install on next quit or quit now.
+
+Validates: `#auto-update` (2.14.x)
+
+**Satisfaction criteria:**
+- A toast appears exactly once per downloaded update — duplicate `update-downloaded` events do not stack toasts
+- The toast message clearly states that an update has been downloaded and is ready to install (naming the new version is preferable but not required)
+- The toast includes an actionable control labeled something like "Install on next quit (or quit now)" — a single control with that dual-option semantics, not a separate modal
+- Choosing "quit now" initiates an app quit that proceeds into the install handoff (per S89)
+- Dismissing the toast (without action) defers install to the next natural quit — the downloaded update remains staged and is not re-downloaded
+- The toast is non-blocking — it does not steal focus or prevent continued work
+- If the user ignores the toast and it auto-dismisses, the update still installs on next quit per the quit-prompt flow (S89)
+
+Difficulty: medium
+
+---
+
+## S89: Install Prompt on Quit With Update Ready [App] {#s89}
+**Given** an update has been downloaded and staged, and the user initiates a quit (Cmd-Q, App > Quit Setlist, or closing the last window on a quit-on-close configuration)
+**When** the quit is initiated
+**Then** the user sees an install prompt offering "Install now" or "Skip" — choosing install completes the quit and applies the update on relaunch; choosing skip quits without installing and leaves the update staged for a future quit.
+
+Validates: `#auto-update` (2.14.x)
+
+**Satisfaction criteria:**
+- When quit is initiated and an update is staged, a prompt appears with clear "Install now" and "Skip" choices before the app exits
+- Choosing "Install now" allows the app to exit and Squirrel.Mac (or electron-updater's macOS path) applies the update before the next launch
+- On relaunch after install, the About dialog shows the new version (per S86)
+- Choosing "Skip" quits the app normally without applying the update — the staged update file is retained, not discarded
+- On the next launch after a skip, the update is still staged; the app does not re-download the same version
+- On the next quit after a skip, the install prompt appears again (the user is not trapped into skipping forever, but skip is always honored for the current quit)
+- The prompt is suppressed when no update is staged — users with no pending update quit normally with no extra dialog
+- If a newer update has arrived since the last skip, the staged version is superseded by the newer one and the prompt reflects the newer version
+
+Difficulty: hard
+
+---
+
+## S90: Update Status Line In Settings [App] {#s90}
+**Given** the app has performed at least one update check (successful, no-update-available, or failed) since launch
+**When** the user opens Settings > Updates
+**Then** a persistent, glanceable status line shows the timestamp of the last check and its outcome, with enough detail to diagnose a failure without opening logs.
+
+Validates: `#auto-update` (2.14.x)
+
+**Satisfaction criteria:**
+- Settings > Updates always shows a "Last checked" timestamp in a human-readable relative or absolute form (e.g., "2 minutes ago" or "2026-04-16 14:32")
+- The status line reflects one of: success with update available, success with up-to-date, or failed with a short error message
+- A failure message is plain-language and surfaces the cause (e.g., "No network connection", "GitHub feed returned 404", "Signature verification failed") — not a raw exception string or stack trace
+- Failed update checks do NOT fire a toast — the Settings status line is the only failure surface, so the user is not spammed by transient network hiccups
+- The status line updates in place when a new check runs — it does not accumulate a history list
+- The timestamp survives across app launches (persisted) so a user returning to the app can see when the last check ran even if none has happened yet this session
+- stderr logging of check activity continues for debugging purposes but is not surfaced in the UI beyond the status line — no telemetry leaves the machine
+
+Difficulty: medium

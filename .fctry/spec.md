@@ -3,24 +3,24 @@
 ```yaml
 ---
 title: Setlist
-spec-version: "0.13"
-date: 2026-04-15
+spec-version: "0.14"
+date: 2026-04-16
 status: active
 author: Mike (via fctry interview, experience-ported from project-registry-service)
 spec-format: nlspec-v2
 experience-source: project-registry-service/.fctry/spec.md (v1.3)
 ---
 synopsis:
-  short: "TypeScript project registry — intelligence hub with desktop control panel, 36 MCP tools, canonical areas, sub-projects, unified memory"
-  medium: "TypeScript monorepo (@setlist/core, @setlist/mcp, @setlist/cli, @setlist/app) implementing the project registry as both invisible infrastructure and a directly operable desktop surface. Local SQLite (better-sqlite3) + MCP server + Electron control panel sharing Chorus's design system (Tailwind 4, Radix UI). Provides project identity, capability declarations, unified portfolio memory (10 types with hierarchical compaction, progressive retrieval, knowledge distillation, and graph gap detection), project bootstrap, port allocation, batch operations, cross-project intelligence, and composite project health assessment (activity + completeness + outcomes). Schema v11 (canonical areas table + projects.area_id + projects.parent_project_id; area_of_focus type retired), 36 MCP tools, importable as @setlist/core by Chorus and Ensemble."
+  short: "TypeScript project registry — intelligence hub with desktop control panel, auto-update with stable/beta channels, 36 MCP tools, canonical areas, sub-projects, unified memory"
+  medium: "TypeScript monorepo (@setlist/core, @setlist/mcp, @setlist/cli, @setlist/app) implementing the project registry as both invisible infrastructure and a directly operable desktop surface. Local SQLite (better-sqlite3) + MCP server + Electron control panel sharing Chorus's design system (Tailwind 4, Radix UI), distributed as signed and notarized release builds that auto-update over two user-selectable channels (stable, beta). Provides project identity, capability declarations, unified portfolio memory (10 types with hierarchical compaction, progressive retrieval, knowledge distillation, and graph gap detection), project bootstrap, port allocation, batch operations, cross-project intelligence, and composite project health assessment (activity + completeness + outcomes). Schema v11 (canonical areas table + projects.area_id + projects.parent_project_id; area_of_focus type retired), 36 MCP tools, importable as @setlist/core by Chorus and Ensemble."
   readme: "Setlist is the TypeScript implementation of the Project Registry — both invisible infrastructure at the center of the user's personal ecosystem and a directly operable desktop control panel. As infrastructure, it provides structured, queryable identity for every project (organized under a closed set of seven canonical areas — Work, Family, Home, Health, Finance, Personal, Infrastructure — with optional parent-child sub-project relationships), with programmatic administration, capability declarations, unified portfolio memory (10 types with belief classification, temporal validity, entity extraction, and procedural versioning, scoped hierarchically so area-scoped memories flow to every project in that area), budget-controlled hybrid retrieval, port allocation, project bootstrap, batch operations, and cross-project intelligence via 36 MCP tools and direct library import. As a desktop application, it presents a card-grid dashboard of all projects with multiselect status filtering (archived hidden by default), tabbed project detail views (overview, memory, capabilities, ports), and full project CRUD — register, edit, archive, rename — through a native macOS Electron app sharing Chorus's design language (Tailwind CSS 4, Radix UI, terracotta accent, warm charcoal surfaces). The main process imports @setlist/core directly; no API layer sits between the UI and the registry. Distributed as four npm packages (@setlist/core, @setlist/mcp, @setlist/cli, @setlist/app), Setlist is directly consumable by Chorus, Ensemble, and any Node.js tool in the ecosystem, while also standing alone as a full-featured project management surface."
-  tech-stack: [typescript, better-sqlite3, "@modelcontextprotocol/sdk", node, npm-monorepo, electron, react, tailwindcss-v4, radix-ui]
-  patterns: [canonical-closed-set-areas, structural-parent-child, area-scoped-memory-inheritance, atomized-fields, progressive-disclosure, producer-consumer, registration-not-discovery, invisible-infrastructure, operable-surface, config-file-scanning, hub-and-spoke, capability-declaration, definition-is-truth, fuzzy-match-suggestions, archive-triggered-cleanup, producer-attribution, summary-compactness, freshness-importance-scoring, invocation-metadata, retain-recall-reflect, outcome-aware-reinforcement, content-hash-dedup, embedding-provider-abstraction, budget-controlled-recall, four-level-scoping, hybrid-retrieval, belief-classification, temporal-validity, entity-extraction, procedural-versioning, unified-memory-store, template-driven-bootstrap, configure-then-use, shared-design-system, ipc-bridge, native-vector-search, hierarchical-compaction, progressive-retrieval, knowledge-distillation, graph-gap-detection, mcp-startup-validation, progress-notification, worst-tier-wins, on-demand-assessment, qualitative-tiers]
-  goals: [canonical-area-organization, sub-project-hierarchy, unified-project-identity, capability-discovery, programmatic-project-administration, batch-operations, cross-project-task-dispatch, conflict-free-port-allocation, automatic-port-discovery, async-task-execution, cross-project-intelligence, crash-resilient-worker, ranked-cross-project-results, capability-invocation-awareness, portfolio-memory, outcome-reinforcement, hybrid-retrieval, npm-packageable-distribution, canonical-memory-store, chorus-memory-unification, project-bootstrap-and-scaffolding, desktop-control-panel, project-dashboard, project-crud-ui, implicit-connection-surfacing, fast-first-pass-recall, synthesized-knowledge-from-memory-clusters, memory-graph-blind-spot-detection, project-health-assessment, composite-tier-surfacing, glanceable-portfolio-health]
-plugin-version: 0.77.3
+  tech-stack: [typescript, better-sqlite3, "@modelcontextprotocol/sdk", node, npm-monorepo, electron, electron-updater, react, tailwindcss-v4, radix-ui]
+  patterns: [canonical-closed-set-areas, structural-parent-child, area-scoped-memory-inheritance, atomized-fields, progressive-disclosure, producer-consumer, registration-not-discovery, invisible-infrastructure, operable-surface, config-file-scanning, hub-and-spoke, capability-declaration, definition-is-truth, fuzzy-match-suggestions, archive-triggered-cleanup, producer-attribution, summary-compactness, freshness-importance-scoring, invocation-metadata, retain-recall-reflect, outcome-aware-reinforcement, content-hash-dedup, embedding-provider-abstraction, budget-controlled-recall, four-level-scoping, hybrid-retrieval, belief-classification, temporal-validity, entity-extraction, procedural-versioning, unified-memory-store, template-driven-bootstrap, configure-then-use, shared-design-system, ipc-bridge, native-vector-search, hierarchical-compaction, progressive-retrieval, knowledge-distillation, graph-gap-detection, mcp-startup-validation, progress-notification, worst-tier-wins, on-demand-assessment, qualitative-tiers, signed-notarized-builds, silent-download-prompt-before-install, two-channel-release]
+  goals: [canonical-area-organization, sub-project-hierarchy, unified-project-identity, capability-discovery, programmatic-project-administration, batch-operations, cross-project-task-dispatch, conflict-free-port-allocation, automatic-port-discovery, async-task-execution, cross-project-intelligence, crash-resilient-worker, ranked-cross-project-results, capability-invocation-awareness, portfolio-memory, outcome-reinforcement, hybrid-retrieval, npm-packageable-distribution, canonical-memory-store, chorus-memory-unification, project-bootstrap-and-scaffolding, desktop-control-panel, project-dashboard, project-crud-ui, implicit-connection-surfacing, fast-first-pass-recall, synthesized-knowledge-from-memory-clusters, memory-graph-blind-spot-detection, project-health-assessment, composite-tier-surfacing, glanceable-portfolio-health, auto-update-with-channels]
+plugin-version: 0.81.0
 ```
 
-Setlist is the TypeScript implementation of the Project Registry — the active intelligence hub at the center of the user's personal ecosystem. Originally a direct port of the Python project-registry-service, it has since evolved beyond parity: schema v11 (canonical areas table, first-class `area_id` and `parent_project_id` columns on projects, `area_of_focus` type retired; builds on v10's unified memory types, belief classification, temporal validity, entity extraction, and procedural versioning), 36 MCP tools (the original 29 plus `enrich_project`, `rename_project`, `bootstrap_project`, `configure_bootstrap`, `assess_health`, `set_project_area`, and `set_parent_project`), an expanded portfolio memory subsystem with area-scoped inheritance, a composite project health assessment, and a native desktop control panel for direct human interaction. The .db file is the shared contract — both implementations read and write the same database, though the Python implementation remains at schema v8.
+Setlist is the TypeScript implementation of the Project Registry — the active intelligence hub at the center of the user's personal ecosystem. Originally a direct port of the Python project-registry-service, it has since evolved beyond parity: schema v11 (canonical areas table, first-class `area_id` and `parent_project_id` columns on projects, `area_of_focus` type retired; builds on v10's unified memory types, belief classification, temporal validity, entity extraction, and procedural versioning), 36 MCP tools (the original 27 Python-compatible tools plus 9 Setlist additions: `enrich_project`, `write_fields`, `portfolio_brief`, `rename_project`, `bootstrap_project`, `configure_bootstrap`, `assess_health`, `set_project_area`, and `set_parent_project`), an expanded portfolio memory subsystem with area-scoped inheritance, a composite project health assessment, and a native desktop control panel for direct human interaction. The .db file is the shared contract — both implementations read and write the same database, though the Python implementation remains at schema v8.
 
 The rewrite exists because Chorus (Electron + React) and Ensemble need the registry as a direct npm dependency, not a subprocess or MCP-only integration. @setlist/core provides the library API importable from any Node.js process. @setlist/mcp wraps it as an MCP server. @setlist/cli exposes it from the terminal. @setlist/app provides a desktop control panel — an Electron app that imports @setlist/core directly, giving the user a visual surface for project management alongside the programmatic interfaces. The 786 Python tests define the behavioral contract to port against.
 
@@ -48,6 +48,7 @@ The rewrite exists because Chorus (Electron + React) and Ensemble need the regis
    - 2.12 [Portfolio Memory](#212-portfolio-memory) `#portfolio-memory`
    - 2.13 [Project Bootstrap](#213-project-bootstrap) `#project-bootstrap`
    - 2.14 [Desktop Control Panel](#214-desktop-control-panel) `#desktop-app`
+     - 2.14.1 [Auto-Update](#2141-auto-update) `#auto-update`
    - 2.15 [Project Health Assessment](#215-project-health-assessment) `#health-assessment`
 3. [System Behavior](#3-system-behavior)
    - 3.1 [Core Capabilities](#31-core-capabilities) `#capabilities`
@@ -98,13 +99,13 @@ Setlist is a TypeScript monorepo providing the Project Registry as four npm pack
 
 - **@setlist/core** -- The library. All registry logic: project identity, field model, variable-depth querying, filtering, migration, port management, capability declarations, portfolio memory (retain/recall/reflect), task queue, cross-project queries, batch operations. Importable from any Node.js process. This is what Chorus, Ensemble, and the desktop app consume directly.
 
-- **@setlist/mcp** -- The MCP server. A thin translation layer wrapping @setlist/core as 36 MCP tools via @modelcontextprotocol/sdk, using stdio transport managed by Claude Code's lifecycle. The original 29 tools match the Python server identically; `enrich_project`, `bootstrap_project`, `configure_bootstrap`, `rename_project`, `assess_health`, `set_project_area`, and `set_parent_project` are Setlist-specific additions.
+- **@setlist/mcp** -- The MCP server. A thin translation layer wrapping @setlist/core as 36 MCP tools via @modelcontextprotocol/sdk, using stdio transport managed by Claude Code's lifecycle. The original 27 tools match the Python server identically; `enrich_project`, `write_fields`, `portfolio_brief`, `rename_project`, `bootstrap_project`, `configure_bootstrap`, `assess_health`, `set_project_area`, and `set_parent_project` are the 9 Setlist-specific additions.
 
 - **@setlist/cli** -- The CLI. Terminal commands for project management, migration, worker installation, and diagnostics. Entry point: `setlist`.
 
 - **@setlist/app** -- The desktop control panel. An Electron application providing a visual surface for project management: a card-grid dashboard of all projects, tabbed project detail views, and project CRUD operations. The main process imports @setlist/core directly via an IPC bridge to the renderer. Consumes design tokens from the `chorus-ui` package (Tailwind CSS 4, Radix UI). Launchable as a standalone macOS .app bundle or via `setlist ui` from the CLI.
 
-The four packages share the same SQLite database (schema v10) at `~/.local/share/project-registry/registry.db`. The database file is the shared contract between Setlist, the Python implementation, and any tool that opens it directly.
+The four packages share the same SQLite database (schema v11) at `~/.local/share/project-registry/registry.db`. The database file is the shared contract between Setlist, the Python implementation, and any tool that opens it directly.
 
 ### 1.3 Design Principles {#design-principles}
 
@@ -753,6 +754,33 @@ The desktop app includes a Settings view accessible from the home view. Settings
 
 Each path field shows the current configured value (or "Not configured") and allows the user to set or change it. Changes are saved immediately via `configure_bootstrap` through the IPC bridge.
 
+#### 2.14.1 Auto-Update {#auto-update}
+
+The user runs an installed native app, not a web service — so updates have to come to them. Setlist delivers new versions through an in-app auto-update flow that is quiet by default, under the user's control, and never forced.
+
+**Two channels: stable and beta.** The user picks which release stream they follow. **Stable** is the default; new users are on stable from first launch and stay there unless they opt out. **Beta** delivers earlier, less-proven builds for users who want to help shake out issues before general release. The active channel persists across launches, across updates, and across reinstalls (it is user state, not app state). Switching channels takes effect on the next update check.
+
+**Settings › Updates.** The Settings view (alongside the bootstrap path configuration above) gains an Updates section containing:
+
+- A **channel toggle** (Stable / Beta) — changing this immediately changes which release stream subsequent checks consult. The choice persists.
+- The **current app version**, displayed plainly.
+- A **Check now** button — triggers an immediate update check on demand.
+- A **status line** showing the most recent check: timestamp and result. On success, the result reads "Up to date" or "Update available — vX.Y.Z downloading" or "Update ready — install on next quit." On failure, the status line shows the timestamp and the error message. This is the only durable in-app record of update activity.
+
+**About dialog.** The standard macOS **About Setlist** menu item opens a small dialog showing the current app version, the build date, and the active channel. Nothing interactive — this is the canonical "what am I running?" answer.
+
+**Check for Updates… menu item.** The standard macOS app menu (Setlist menu, next to About) includes **Check for Updates…**. Selecting it runs the same check as the Settings button. If an update is found, it enters the silent download flow below. The outcome is reflected in the Settings status line; if a new update downloads, the user also sees the toast described next. The menu item never opens a blocking progress window.
+
+**Silent background download.** When a check finds an update, the download runs in the background with no progress UI. The user continues working. No spinners, no banners, no interruption. If the download fails, the failure lands only in the Settings status line.
+
+**Toast on update downloaded.** When the download finishes, an in-app toast appears: "**Update ready — install on next quit.**" with a **Quit and install** action. Dismissing the toast leaves the update staged; the app continues running normally. The toast supersedes any OS-level notification for the same event.
+
+**Prompt before install.** The user is never forced to restart. When the user initiates a quit (Cmd-Q, the App › Quit Setlist menu item, or closing the last window on a platform that treats that as quit), if an update is staged, a confirmation dialog asks: "**Update ready — install now or skip?**" with **Install and quit** and **Skip** actions. Choosing install quits the app and installs the new version on the next launch. Choosing skip quits without installing; the downloaded update stays staged and is offered again on the next quit, or installs immediately if the user clicks the toast's Quit and install action. There is no force-restart and no timer.
+
+**Failure surface.** Update check failures and download failures surface only in the Settings › Updates status line, with timestamp and error message. There is no toast, no menu-bar badge, no error dialog, no modal. Failures do not interrupt the user's work. The user sees them when they go look. Errors continue to write to stderr for developer debugging.
+
+**No telemetry.** Update events are not retained as portfolio memory, not written to a dedicated log, and not reported anywhere external. The Settings status line is the only in-app record beyond stderr.
+
 **What the desktop app does NOT do in v1:**
 
 - Memory write operations (retain, correct, forget, reflect) — the Memory tab is read-only
@@ -897,7 +925,7 @@ The fctry-owned field domain includes: tech_stack, patterns, short_description, 
 
 **Desktop project CRUD.** Provides UI forms for registering new projects, editing project identity fields (display name, status, description, goals), archiving projects, and renaming projects. Each operation delegates to the corresponding @setlist/core method through the IPC bridge.
 
-**MCP server access.** @setlist/mcp wraps @setlist/core as 36 MCP tools via @modelcontextprotocol/sdk using stdio transport managed by Claude Code's lifecycle. The 29 original tools match the Python server; `enrich_project`, `bootstrap_project`, `configure_bootstrap`, `rename_project`, `assess_health`, `set_project_area`, and `set_parent_project` are Setlist-specific additions. The server provides:
+**MCP server access.** @setlist/mcp wraps @setlist/core as 36 MCP tools via @modelcontextprotocol/sdk using stdio transport managed by Claude Code's lifecycle. The 27 original tools match the Python server; `enrich_project`, `write_fields`, `portfolio_brief`, `rename_project`, `bootstrap_project`, `configure_bootstrap`, `assess_health`, `set_project_area`, and `set_parent_project` are the 9 Setlist-specific additions. The server provides:
 
 - `list_projects` -- List projects at a given depth with optional filters.
 - `get_project` -- Get a single project by name at a given depth.
@@ -909,6 +937,8 @@ The fctry-owned field domain includes: tech_stack, patterns, short_description, 
 - `archive_project` -- Archive a project.
 - `rename_project` -- Rename a project atomically (rewrites all references).
 - `batch_update` -- Apply field changes to filtered project sets. Supports `dry_run`.
+- `write_fields` -- Write arbitrary extended fields to a project (Setlist addition).
+- `enrich_project` -- Update profile fields (goals, topics, entities, concerns) on a project (Setlist addition).
 - `register_capabilities` -- Write a project's complete capability set.
 - `query_capabilities` -- Discover capabilities across the ecosystem.
 - `claim_port` -- Claim a port for a project's service.
@@ -922,13 +952,17 @@ The fctry-owned field domain includes: tech_stack, patterns, short_description, 
 - `recall` -- Retrieve relevant memories.
 - `feedback` -- Report build outcome.
 - `memory_status` -- Memory health check.
+- `portfolio_brief` -- Cross-project memory brief at portfolio scope (Setlist addition).
 - `reflect` -- Trigger consolidation.
 - `correct` -- Create correction memory.
 - `forget` -- Archive a memory.
 - `inspect_memory` -- View memory details.
 - `configure_memory` -- Set memory configuration.
-- `bootstrap_project` -- Register a project and create its folder from templates.
-- `configure_bootstrap` -- Set path roots per project type and template directory.
+- `bootstrap_project` -- Register a project and create its folder from templates (Setlist addition).
+- `configure_bootstrap` -- Set path roots per project type and template directory (Setlist addition).
+- `assess_health` -- Compute composite project health score (activity + completeness + outcomes) (Setlist addition).
+- `set_project_area` -- Assign or change a project's canonical area (Setlist addition).
+- `set_parent_project` -- Assign or change a project's parent (sub-project link) (Setlist addition).
 
 See [Appendix D](#appendix-d-mcp-tool-reference) for the complete tool reference with parameters and return types.
 
@@ -991,7 +1025,7 @@ See [Appendix D](#appendix-d-mcp-tool-reference) for the complete tool reference
 
 - **Tasks** -- Async work items. Each has: ID, project, description, schedule (now, tonight, weekly), status (pending, running, completed, failed), session_reference, timestamps.
 
-- **Bootstrap configuration** -- Settings governing project bootstrap behavior. Maps each project type (project, area_of_focus) to a default filesystem path root where new projects of that type are created. Also stores the template directory path from which scaffolding files are copied. Persisted in the registry database. Must be configured before `bootstrap_project` can be used.
+- **Bootstrap configuration** -- Settings governing project bootstrap behavior. Maps each project type (project, non_code_project) to a default filesystem path root where new projects of that type are created. Also stores the template directory path from which scaffolding files are copied. Persisted in the registry database. Must be configured before `bootstrap_project` can be used.
 
 ### 3.3 Rules and Logic {#rules}
 
@@ -1170,13 +1204,15 @@ All Python spec hard constraints apply, plus:
 
 - **Schema evolution from v8 through v11.** The SQLite schema originated as v8, byte-compatible with the Python implementation. Setlist has since evolved the schema: v9 added the `observation` memory type, v10 added unified memory types (learning, context, procedural) plus new fields (belief, extraction_confidence, valid_from, valid_until, entities, parent_version_id, is_current) and migrated `skill` → `procedural`, and **v11 introduces the canonical areas table, first-class `projects.area_id` and `projects.parent_project_id` columns, retires the `area_of_focus` project type, narrows the `projects.type` CHECK constraint to `('project')`, and remaps the `area_of_focus` memory scope to `area`**. The Python implementation remains at v8; the shared .db file is forward-compatible (Python can read v11 databases but will not recognize newer types, fields, or structural columns). Schema migrations are incremental and non-destructive.
 
-- **36 MCP tools with Python-compatible core.** The original 29 tools are a drop-in replacement for the Python server — same names, parameters, and response shapes (with optional area and parent_project parameters added where applicable, which the Python server will ignore harmlessly). Setlist adds `enrich_project`, `bootstrap_project`, `configure_bootstrap`, `rename_project`, `assess_health`, `set_project_area`, and `set_parent_project` as Setlist-specific tools (#30--#36). An agent that works with the Python MCP server works identically with Setlist's for the original 29.
+- **36 MCP tools with Python-compatible core.** The 27 original tools are a drop-in replacement for the Python server — same names, parameters, and response shapes (with optional area and parent_project parameters added where applicable, which the Python server will ignore harmlessly). Setlist adds 9 tools: `enrich_project`, `write_fields`, `portfolio_brief`, `rename_project`, `bootstrap_project`, `configure_bootstrap`, `assess_health`, `set_project_area`, and `set_parent_project`. An agent that works with the Python MCP server works identically with Setlist's for the original 27.
 
 - **ESM-only.** All packages produce ESM output. No CommonJS dual-publishing.
 
 - **Electron security: no nodeIntegration in renderer.** The renderer process must not have direct access to Node.js APIs. All communication between the renderer and main process flows through Electron's `contextBridge` with explicitly exposed IPC methods. The main process imports @setlist/core and exposes a defined set of operations; the renderer calls these through the preload script. This is a hard security boundary.
 
 - **Single-instance Electron app.** Only one instance of the desktop app may run at a time. Attempting to launch a second instance activates the existing window. This prevents database contention and user confusion.
+
+- **Signed and notarized release builds.** Release builds must be signed with a Developer ID certificate and notarized by Apple. The auto-update feature depends on this for binary delivery to pass Gatekeeper — without notarization, auto-updated binaries are quarantined by macOS on first delivery and the update surface is effectively broken. The build pipeline must wire Apple credentials into the electron-builder configuration; any `notarize: false` override in `packages/app/electron-builder.yml` is incorrect and must be reversed before a release channel ships to users.
 
 - **No per-project manifest files.** Same as Python spec. The central SQLite database is the sole storage mechanism.
 
@@ -1227,8 +1263,7 @@ setlist/
 │   │   └── tsconfig.json
 │   ├── cli/                         # @setlist/cli
 │   │   ├── src/
-│   │   │   ├── index.ts             # CLI entry point
-│   │   │   ├── commands/            # Subcommands
+│   │   │   ├── index.ts             # CLI entry point (subcommands inlined as a switch statement)
 │   │   │   └── worker.ts            # Async worker (launchd target)
 │   │   ├── package.json
 │   │   └── tsconfig.json
@@ -1264,7 +1299,7 @@ The SQLite schema v11 is the current schema. It extends the Python implementatio
 - `project_paths` — filesystem paths (project_id FK, path, added_at, added_by)
 - `project_fields` — EAV table for extended fields (project_id FK, field_name, field_value, producer, updated_at)
 - `field_catalog` — master list of known fields (name PK, type, category, description). Advisory — fields not in the catalog are still accepted.
-- `templates` — project type templates (name PK, description). Three canonical templates: code_project, non_code_project, area_of_focus.
+- `templates` — project type templates (name PK, description). Two canonical templates as of schema v11: code_project, non_code_project. The legacy `area_of_focus` template was retired in the v10→v11 migration.
 - `template_fields` — maps templates to field names (template_name FK, field_name FK). Governs which fields appear at standard depth.
 - `schema_meta` — schema version tracking (key PK, value). Stores `schema_version = 11`.
 - `project_ports` — port allocations (id PK, project_id FK, port UNIQUE, service_label, protocol, claimed_by, claimed_at)
@@ -1353,6 +1388,8 @@ await server.connect(transport);
 **React + Tailwind CSS 4 + Radix UI + chorus-ui.** The renderer uses React for component architecture, Tailwind CSS 4 for styling, `chorus-ui` for design tokens (imported as CSS custom properties, referenced via Tailwind's `@theme` or directly in CSS), and Radix UI for accessible primitive components (dialogs, tabs, dropdown menus, etc.). This matches Chorus's frontend stack, ensuring visual consistency and reducing the learning curve for maintenance across both applications.
 
 **Electron Forge or electron-builder for packaging.** The desktop app is packaged as a standalone macOS `.app` bundle. The specific packaging tool is an agent decision. The `setlist ui` CLI command launches the Electron process from the installed npm package.
+
+**Auto-update via electron-updater against GitHub Releases.** The auto-update experience in `#auto-update` (2.14.1) is delivered by `electron-updater` (the updater shipped with electron-builder) consuming GitHub Releases as the update feed. The two user-visible channels map to release tag prerelease flags — `stable` serves non-prerelease tags, `beta` serves prerelease tags. Polling cadence, download staging, and on-disk update paths are electron-updater defaults unless a specific scenario overrides them.
 
 **Testing.** Tests cover all behavioral categories from the 786 Python tests using vitest. Coverage is measured by behavioral surface (every scenario S01-S30 has corresponding tests), not raw test count. Python-specific patterns (pytest fixtures, parametrize) are translated to vitest equivalents (beforeEach, test.each).
 
@@ -1598,7 +1635,7 @@ Additional TypeScript-specific deferred future:
 
 ## Appendix D: MCP Tool Reference {#appendix-d-mcp-tool-reference}
 
-Complete tool reference for the 36 MCP tools. The original 29 have identical names and response shapes to the Python implementation (with optional `area` and `parent_project` parameters added on registration/update/query tools, which the Python server ignores); `enrich_project`, `bootstrap_project`, `configure_bootstrap`, `rename_project`, `assess_health`, `set_project_area`, and `set_parent_project` are Setlist additions.
+Complete tool reference for the 36 MCP tools. The 27 original tools have identical names and response shapes to the Python implementation (with optional `area` and `parent_project` parameters added on registration/update/query tools, which the Python server ignores); the 9 Setlist additions are `enrich_project`, `write_fields`, `portfolio_brief`, `rename_project`, `bootstrap_project`, `configure_bootstrap`, `assess_health`, `set_project_area`, and `set_parent_project`.
 
 **Project Identity:**
 
