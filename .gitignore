@@ -1,8 +1,15 @@
 node_modules/
 dist/
 
+# macOS
+.DS_Store
+
 # Claude Code — track skills/agents, ignore ephemeral
 .claude/settings.*
 .claude/statsig/
 .claude/todos/
 .claude/projects/
+
+# MCP / fctry caches — regeneratable, not source of truth
+.codebase-memory/
+.fctry/.cache/
