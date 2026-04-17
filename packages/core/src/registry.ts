@@ -38,7 +38,7 @@ export class Registry {
     type?: ProjectType;
     status: string;
     description?: string;
-    goals?: string;
+    goals?: string | string[];
     display_name?: string;
     paths?: string[];
     fields?: Record<string, unknown>;
@@ -88,7 +88,7 @@ export class Registry {
 
       const result = db.prepare(
         `INSERT INTO projects (name, display_name, type, status, description, goals, area_id, parent_project_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
-      ).run(opts.name, displayName, type, opts.status, opts.description ?? '', opts.goals ?? '', areaIdForInsert, parentIdForInsert);
+      ).run(opts.name, displayName, type, opts.status, opts.description ?? '', this._serializeGoals(opts.goals), areaIdForInsert, parentIdForInsert);
 
       const projectId = Number(result.lastInsertRowid);
 
@@ -303,7 +303,7 @@ export class Registry {
   updateCore(name: string, updates: {
     status?: string;
     description?: string;
-    goals?: string;
+    goals?: string | string[];
     display_name?: string;
     // spec 0.13: structural area + parent on update. Use null to clear.
     area?: AreaName | string | null;
@@ -327,7 +327,7 @@ export class Registry {
       if (updates.display_name !== undefined) { sets.push('display_name = ?'); params.push(updates.display_name); }
       if (updates.status !== undefined) { sets.push('status = ?'); params.push(updates.status); }
       if (updates.description !== undefined) { sets.push('description = ?'); params.push(updates.description); }
-      if (updates.goals !== undefined) { sets.push('goals = ?'); params.push(updates.goals); }
+      if (updates.goals !== undefined) { sets.push('goals = ?'); params.push(this._serializeGoals(updates.goals)); }
 
       // area/parent handled below via dedicated setters so we get validation + cycle check
       const touchedCore = sets.length > 0;
@@ -577,8 +577,20 @@ export class Registry {
     if (trimmed.startsWith('[')) {
       try { return JSON.parse(trimmed); } catch { /* fall through */ }
     }
-    // Legacy: comma-separated or newline-separated
-    return trimmed.split(/[,\n]/).map(g => g.replace(/^[-•*]\s*/, '').trim()).filter(Boolean);
+    // Legacy: newline-separated list (with or without bullet prefix) → split into items;
+    // single-line prose → single-element array (commas inside a sentence are not delimiters).
+    if (trimmed.includes('\n')) {
+      return trimmed.split('\n').map(g => g.replace(/^[-•*]\s*/, '').trim()).filter(Boolean);
+    }
+    return [trimmed];
+  }
+
+  /** Serialize goals to canonical JSON-array storage. Accepts string[], JSON-array string, or legacy prose. */
+  private _serializeGoals(goals: string | string[] | undefined): string {
+    if (goals === undefined) return '';
+    if (Array.isArray(goals)) return JSON.stringify(goals);
+    if (goals === '') return '';
+    return JSON.stringify(this._parseGoalsField(goals));
   }
 
   // ── Fields ────────────────────────────────────────────────────
@@ -615,7 +627,7 @@ export class Registry {
     area_filter?: string;
     status?: string;
     description?: string;
-    goals?: string;
+    goals?: string | string[];
     display_name?: string;
     dry_run?: boolean;
   }): { count: number; projects: string[]; dry_run: boolean } {
@@ -669,7 +681,7 @@ export class Registry {
           if (opts.display_name !== undefined) { sets.push('display_name = ?'); updateParams.push(opts.display_name); }
           if (opts.status !== undefined) { sets.push('status = ?'); updateParams.push(opts.status); }
           if (opts.description !== undefined) { sets.push('description = ?'); updateParams.push(opts.description); }
-          if (opts.goals !== undefined) { sets.push('goals = ?'); updateParams.push(opts.goals); }
+          if (opts.goals !== undefined) { sets.push('goals = ?'); updateParams.push(this._serializeGoals(opts.goals)); }
           sets.push("updated_at = datetime('now')");
           updateParams.push(m.id);
 

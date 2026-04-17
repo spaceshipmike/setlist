@@ -130,7 +130,7 @@ function extractFromFctrySpec(specPath: string, projectDir: string): MigrationPr
 
     const goalsList = synopsis.goals as string[] | undefined;
     if (goalsList && Array.isArray(goalsList)) {
-      goals = goalsList.map(g => `- ${g}`).join('\n');
+      goals = JSON.stringify(goalsList);
     }
   } else {
     // Bare frontmatter — extract first paragraph

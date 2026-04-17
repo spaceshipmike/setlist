@@ -33,7 +33,7 @@ export interface BootstrapProjectOpts {
   type: BootstrapType;
   status?: string;
   description?: string;
-  goals?: string;
+  goals?: string | string[];
   display_name?: string;
   path_override?: string;
   skip_git?: boolean;
