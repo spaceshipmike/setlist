@@ -1470,3 +1470,122 @@ Validates: `#auto-update` (2.14.x)
 - stderr logging of check activity continues for debugging purposes but is not surfaced in the UI beyond the status line — no telemetry leaves the machine
 
 Difficulty: medium
+
+---
+
+## S91: Wrong-ABI State Surfaces a Startup Warning {#s91}
+**Given** the desktop app was previously run and exited abnormally (hard-kill, OOM, power loss, or any path that prevented the normal exit cleanup), leaving the native SQLite binary in the Electron-ABI variant instead of the Node-ABI variant
+**When** the user opens a new Claude Desktop session and the setlist integration initializes
+**Then** the user sees a clear startup warning that the setlist integration is in a wrong-ABI state and that names the exact one-line command to recover.
+
+Validates: `#native-binding-hygiene` (5.4), `#testing-discipline` (4.5)
+
+**Satisfaction criteria:**
+- At Claude Desktop session open, an automated check detects the mismatch between the in-place native binary and the Node runtime the setlist integration expects
+- When a mismatch is detected, a warning is surfaced through a user-visible channel (session-open notice, stderr that Claude Desktop reports, or equivalent) — not silent
+- The warning message states plainly that the setlist integration will not work until recovery runs
+- The warning names the literal recovery command `npm run sqlite:node -w packages/app` so the user can copy-paste without hunting through docs
+- When the binary is in the correct Node-ABI variant, no warning fires — the check is quiet on healthy state
+- Running the named recovery command restores the Node-ABI binary, and the next session open shows no warning
+- The warning is the sole first-class signal carrying the "never silently breaks" invariant — removing or silencing it would weaken the contract
+
+Difficulty: medium
+
+---
+
+## S92: Release Build Refuses to Proceed on ABI Mismatch {#s92}
+**Given** a packaged release build is being produced (the production packaging pipeline, not a local dev build) and the native SQLite binary is in the wrong ABI variant for the release target
+**When** the packaging pipeline runs its pre-flight ABI check
+**Then** the pipeline halts with a hard failure — the same severity class as missing code-signing credentials — and no release artifact is produced.
+
+Validates: `#testing-discipline` (4.5), `#native-binding-hygiene` (5.4)
+
+**Satisfaction criteria:**
+- The packaging pipeline performs a pre-flight ABI check before producing any release artifact
+- On mismatch, the pipeline exits non-zero with a message identifying the ABI failure and naming the recovery command
+- The halt severity is equivalent to missing signing credentials — no partial artifact is written, no warning-only path, no silent skip
+- The failure message distinguishes ABI mismatch from other halt causes so an operator can act without reading full logs
+- A release build started with a correctly-aligned binary proceeds normally and produces the expected signed, notarized artifact
+- The pre-flight check runs once per release build and does not retry silently — a single mismatch fails the build
+- Release pipelines never ship an artifact whose bundled native binary does not match the runtime it will load under
+
+Difficulty: medium
+
+---
+
+## S93: Local Build Proceeds With Advisory Warning on ABI Mismatch {#s93}
+**Given** a developer runs a local, non-release build (e.g. `npm run build` during iteration) and the native SQLite binary is in a different ABI variant than the local runtime expects
+**When** the build runs its ABI check
+**Then** the build prints an advisory warning naming the mismatch and the recovery command, but proceeds to completion — it does not halt.
+
+Validates: `#testing-discipline` (4.5), `#native-binding-hygiene` (5.4)
+
+**Satisfaction criteria:**
+- During a local build, an ABI mismatch produces a visible advisory warning in the build output
+- The warning names the recovery command `npm run sqlite:node -w packages/app` so the developer can fix it at their convenience
+- Despite the warning, the build continues through to its normal completion and exits zero on an otherwise successful build — ABI is advisory in this context, not blocking
+- The advisory wording makes clear the setlist integration with Claude Desktop may not work until recovery runs, even though this build itself succeeded
+- A local build with a correctly-aligned binary produces no ABI warning — the advisory only fires on actual mismatch
+- The asymmetry between local (advisory) and release (blocking) is intentional and visible in behavior, not a configuration that could silently flip
+- No false positive on fresh checkouts where the binary has not yet been built — the check distinguishes "wrong variant" from "no binary yet"
+
+Difficulty: medium
+
+---
+
+## S94: Electron Security Check Rejects Unsafe Main-Process Edits {#s94}
+**Given** the app's main-process code currently constructs its browser window with `nodeIntegration: false` and `contextIsolation: true` — the secure defaults that the spec treats as non-negotiable
+**When** a developer or agent introduces an edit to the main-process or renderer configuration that sets `nodeIntegration: true` or `contextIsolation: false`
+**Then** the automated Electron security check fails on that change and the unsafe configuration does not reach a shipped build.
+
+Validates: `#testing-discipline` (4.5)
+
+**Satisfaction criteria:**
+- An automated check inspects the main-process browser-window construction whenever relevant files are edited
+- An edit that sets `nodeIntegration: true` anywhere in the main-process or renderer bootstrap is flagged as a failure by the check
+- An edit that sets `contextIsolation: false` anywhere in the main-process or renderer bootstrap is flagged as a failure by the check
+- The failure message names the specific violation (which flag, which file, which line) so it can be fixed without searching
+- An edit that preserves `nodeIntegration: false` and `contextIsolation: true` passes the check
+- The check runs automatically on edits to `packages/app/src/main/**` and related bootstrap files — a developer cannot merge or ship an unsafe change by bypassing the check accidentally
+- The guarantee is framed as a hard spec constraint — these two settings are not tunable knobs, and there is no documented path that allows shipping with them flipped
+
+Difficulty: easy
+
+---
+
+## S95: Normal App Exit Restores the Default Binary {#s95}
+**Given** the desktop app is running (the native binary was swapped to the Electron-ABI variant at launch so the app could load SQLite under Electron's runtime)
+**When** the user quits the app through any normal exit path — menu quit, Cmd-Q, window close on a quit-on-close configuration, or the app's own update-triggered relaunch
+**Then** the binary is automatically restored to the Node-ABI variant before the process fully exits, and the next Claude Desktop session opens without any ABI warning.
+
+Validates: `#native-binding-hygiene` (5.4)
+
+**Satisfaction criteria:**
+- After a normal app quit, the native SQLite binary in the expected on-disk location is the Node-ABI variant, not the Electron-ABI variant
+- Opening a new Claude Desktop session immediately after a normal quit produces no wrong-ABI startup warning
+- The restore happens unconditionally on normal exit — it does not depend on whether the app ran successfully, crashed during a user flow, or was quit mid-task
+- Repeated launch-and-quit cycles leave the system in a clean, Node-ABI state each time — no accumulation of residue
+- The Electron-ABI binary used during app runtime is preserved (cached) so the next launch does not have to rebuild it — only the active slot is restored to Node-ABI on exit
+- Abnormal termination (SIGKILL, OOM, power loss) is a known limitation — the restore is best-effort through normal exit paths, and S91's startup warning is the safety net when restore could not run
+
+Difficulty: medium
+
+---
+
+## S96: Continuous Integration Runs Only the Fast, Reliable Gates {#s96}
+**Given** a continuous-integration run is triggered (e.g. by a pull request or a push) against the setlist repository
+**When** the CI job executes
+**Then** it runs typecheck, unit tests, and the build, and it deliberately does not run the end-to-end suite or the ABI pre-flight check — this narrowness is intentional, not a gap.
+
+Validates: `#testing-discipline` (4.5)
+
+**Satisfaction criteria:**
+- A CI run executes the typecheck step across all workspaces and fails the run if typecheck fails
+- A CI run executes the unit test suite across all workspaces and fails the run if any unit test fails
+- A CI run executes the production build and fails the run if the build fails
+- A CI run does not launch Electron, does not execute the end-to-end suite, and does not invoke the pre-flight ABI check — these are local-only by design
+- The CI configuration frames the excluded checks as intentional (comment, documented rationale, or equivalent signal) so a future reader does not "fix" the supposed gap by adding them back
+- A pull request that passes CI but would fail local E2E or ABI pre-flight is still considered mergeable from CI's perspective — scenarios, not CI, are the behavioral contract
+- CI wall-clock time stays within the budget the narrow scope enables — adding E2E or Electron launch would inflate cost and flake, which is why they are excluded
+
+Difficulty: easy

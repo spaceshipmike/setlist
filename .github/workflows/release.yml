@@ -44,6 +44,14 @@ jobs:
       - run: npm ci
       - run: npm run build
 
+      # Pre-flight ABI check. Per spec §4.5 #testing-discipline: verify:mcp-abi
+      # is release-blocking for packaged builds (same severity class as missing
+      # signing credentials). Shipping with the wrong ABI in native-cache/
+      # silently breaks Claude Desktop's setlist integration for every user
+      # who opens the packaged app, so we refuse to package from a broken state.
+      - name: Pre-flight ABI check
+        run: npm run verify:mcp-abi
+
       - name: Package, sign, notarize, and publish
         working-directory: packages/app
         env:

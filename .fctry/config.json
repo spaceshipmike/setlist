@@ -12,7 +12,7 @@
     },
     "spec": {
       "type": "internal",
-      "current": "0.14",
+      "current": "0.18",
       "propagationTargets": [
         {
           "file": ".fctry/spec.md",
@@ -46,7 +46,7 @@
     "freshAudit": "codex",
     "localPrefilter": "oss"
   },
-  "formatVersion": "0.82.0",
+  "formatVersion": "0.84.0",
   "evaluation": {
     "trials": 3,
     "passThreshold": 2,

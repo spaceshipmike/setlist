@@ -1099,7 +1099,7 @@ class Registry {
         }
         parentIdForInsert = prow.id;
       }
-      const result = db.prepare(`INSERT INTO projects (name, display_name, type, status, description, goals, area_id, parent_project_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`).run(opts.name, displayName, type, opts.status, opts.description ?? "", opts.goals ?? "", areaIdForInsert, parentIdForInsert);
+      const result = db.prepare(`INSERT INTO projects (name, display_name, type, status, description, goals, area_id, parent_project_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`).run(opts.name, displayName, type, opts.status, opts.description ?? "", this._serializeGoals(opts.goals), areaIdForInsert, parentIdForInsert);
       const projectId = Number(result.lastInsertRowid);
       if (opts.paths) {
         const insertPath = db.prepare(`INSERT INTO project_paths (project_id, path, added_by) VALUES (?, ?, ?)`);
@@ -1299,7 +1299,7 @@ class Registry {
       }
       if (updates.goals !== void 0) {
         sets.push("goals = ?");
-        params.push(updates.goals);
+        params.push(this._serializeGoals(updates.goals));
       }
       const touchedCore = sets.length > 0;
       if (touchedCore) {
@@ -1474,7 +1474,20 @@ class Registry {
       } catch {
       }
     }
-    return trimmed.split(/[,\n]/).map((g) => g.replace(/^[-•*]\s*/, "").trim()).filter(Boolean);
+    if (trimmed.includes("\n")) {
+      return trimmed.split("\n").map((g) => g.replace(/^[-•*]\s*/, "").trim()).filter(Boolean);
+    }
+    return [trimmed];
+  }
+  /** Serialize goals to canonical JSON-array storage. Accepts string[], JSON-array string, or legacy prose. */
+  _serializeGoals(goals) {
+    if (goals === void 0)
+      return "";
+    if (Array.isArray(goals))
+      return JSON.stringify(goals);
+    if (goals === "")
+      return "";
+    return JSON.stringify(this._parseGoalsField(goals));
   }
   // ── Fields ────────────────────────────────────────────────────
   updateFields(name, fields, producer, paths) {
@@ -1556,7 +1569,7 @@ class Registry {
           }
           if (opts.goals !== void 0) {
             sets.push("goals = ?");
-            updateParams.push(opts.goals);
+            updateParams.push(this._serializeGoals(opts.goals));
           }
           sets.push("updated_at = datetime('now')");
           updateParams.push(m.id);

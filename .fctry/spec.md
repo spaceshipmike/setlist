@@ -3,8 +3,8 @@
 ```yaml
 ---
 title: Setlist
-spec-version: "0.14"
-date: 2026-04-16
+spec-version: "0.18"
+date: 2026-04-19
 status: active
 author: Mike (via fctry interview, experience-ported from project-registry-service)
 spec-format: nlspec-v2
@@ -12,17 +12,17 @@ experience-source: project-registry-service/.fctry/spec.md (v1.3)
 ---
 synopsis:
   short: "TypeScript project registry — intelligence hub with desktop control panel, auto-update with stable/beta channels, 36 MCP tools, canonical areas, sub-projects, unified memory"
-  medium: "TypeScript monorepo (@setlist/core, @setlist/mcp, @setlist/cli, @setlist/app) implementing the project registry as both invisible infrastructure and a directly operable desktop surface. Local SQLite (better-sqlite3) + MCP server + Electron control panel sharing Chorus's design system (Tailwind 4, Radix UI), distributed as signed and notarized release builds that auto-update over two user-selectable channels (stable, beta). Provides project identity, capability declarations, unified portfolio memory (10 types with hierarchical compaction, progressive retrieval, knowledge distillation, and graph gap detection), project bootstrap, port allocation, batch operations, cross-project intelligence, and composite project health assessment (activity + completeness + outcomes). Schema v11 (canonical areas table + projects.area_id + projects.parent_project_id; area_of_focus type retired), 36 MCP tools, importable as @setlist/core by Chorus and Ensemble."
-  readme: "Setlist is the TypeScript implementation of the Project Registry — both invisible infrastructure at the center of the user's personal ecosystem and a directly operable desktop control panel. As infrastructure, it provides structured, queryable identity for every project (organized under a closed set of seven canonical areas — Work, Family, Home, Health, Finance, Personal, Infrastructure — with optional parent-child sub-project relationships), with programmatic administration, capability declarations, unified portfolio memory (10 types with belief classification, temporal validity, entity extraction, and procedural versioning, scoped hierarchically so area-scoped memories flow to every project in that area), budget-controlled hybrid retrieval, port allocation, project bootstrap, batch operations, and cross-project intelligence via 36 MCP tools and direct library import. As a desktop application, it presents a card-grid dashboard of all projects with multiselect status filtering (archived hidden by default), tabbed project detail views (overview, memory, capabilities, ports), and full project CRUD — register, edit, archive, rename — through a native macOS Electron app sharing Chorus's design language (Tailwind CSS 4, Radix UI, terracotta accent, warm charcoal surfaces). The main process imports @setlist/core directly; no API layer sits between the UI and the registry. Distributed as four npm packages (@setlist/core, @setlist/mcp, @setlist/cli, @setlist/app), Setlist is directly consumable by Chorus, Ensemble, and any Node.js tool in the ecosystem, while also standing alone as a full-featured project management surface."
+  medium: "TypeScript monorepo (@setlist/core, @setlist/mcp, @setlist/cli, @setlist/app) implementing the project registry as both invisible infrastructure and a directly operable desktop surface. Local SQLite (better-sqlite3) + MCP server + Electron control panel sharing Chorus's design system (Tailwind 4, Radix UI), distributed as signed and notarized release builds that auto-update over two user-selectable channels (stable, beta). Provides project identity, capability declarations, unified portfolio memory (10 types with FTS5 full-text search, belief classification, temporal validity, entity storage, procedural versioning, four-level scoping with area bubble-up, and triple-gate stale-memory archival; vector retrieval, hybrid RRF fusion, hierarchical compaction, gap detection, and distillation are studied aspirations gated on an embedding-tier decision), project bootstrap, port allocation, batch operations, cross-project intelligence, and composite project health assessment (activity + completeness + outcomes). Schema v11 (canonical areas table + projects.area_id + projects.parent_project_id; area_of_focus type retired), 36 MCP tools, importable as @setlist/core by Chorus and Ensemble."
+  readme: "Setlist is the TypeScript implementation of the Project Registry — both invisible infrastructure at the center of the user's personal ecosystem and a directly operable desktop control panel. As infrastructure, it provides structured, queryable identity for every project (organized under a closed set of seven canonical areas — Work, Family, Home, Health, Finance, Personal, Infrastructure — with optional parent-child sub-project relationships), with programmatic administration, capability declarations, unified portfolio memory (10 types with belief classification, temporal validity, entity storage, procedural versioning, four-level scoping with area bubble-up, and triple-gate stale-memory archival; today recall runs over FTS5 full-text search with a composite score over reinforcement, recency, and outcome history — vector retrieval and RRF fusion are studied aspirations consolidated in §2.12.1 and gated on an unresolved embedding-tier decision), port allocation, project bootstrap, batch operations, and cross-project intelligence via 36 MCP tools and direct library import. As a desktop application, it presents a card-grid dashboard of all projects with multiselect status filtering (archived hidden by default), tabbed project detail views (overview, memory, capabilities, ports), and full project CRUD — register, edit, archive, rename — through a native macOS Electron app sharing Chorus's design language (Tailwind CSS 4, Radix UI, terracotta accent, warm charcoal surfaces). The main process imports @setlist/core directly; no API layer sits between the UI and the registry. Distributed as four npm packages (@setlist/core, @setlist/mcp, @setlist/cli, @setlist/app), Setlist is directly consumable by Chorus, Ensemble, and any Node.js tool in the ecosystem, while also standing alone as a full-featured project management surface."
   tech-stack: [typescript, better-sqlite3, "@modelcontextprotocol/sdk", node, npm-monorepo, electron, electron-updater, react, tailwindcss-v4, radix-ui]
-  patterns: [canonical-closed-set-areas, structural-parent-child, area-scoped-memory-inheritance, atomized-fields, progressive-disclosure, producer-consumer, registration-not-discovery, invisible-infrastructure, operable-surface, config-file-scanning, hub-and-spoke, capability-declaration, definition-is-truth, fuzzy-match-suggestions, archive-triggered-cleanup, producer-attribution, summary-compactness, freshness-importance-scoring, invocation-metadata, retain-recall-reflect, outcome-aware-reinforcement, content-hash-dedup, embedding-provider-abstraction, budget-controlled-recall, four-level-scoping, hybrid-retrieval, belief-classification, temporal-validity, entity-extraction, procedural-versioning, unified-memory-store, template-driven-bootstrap, configure-then-use, shared-design-system, ipc-bridge, native-vector-search, hierarchical-compaction, progressive-retrieval, knowledge-distillation, graph-gap-detection, mcp-startup-validation, progress-notification, worst-tier-wins, on-demand-assessment, qualitative-tiers, signed-notarized-builds, silent-download-prompt-before-install, two-channel-release]
+  patterns: [canonical-closed-set-areas, structural-parent-child, area-scoped-memory-inheritance, atomized-fields, progressive-disclosure, producer-consumer, registration-not-discovery, invisible-infrastructure, operable-surface, config-file-scanning, hub-and-spoke, capability-declaration, definition-is-truth, fuzzy-match-suggestions, archive-triggered-cleanup, producer-attribution, summary-compactness, freshness-importance-scoring, invocation-metadata, retain-recall-reflect, outcome-aware-reinforcement, content-hash-dedup, embedding-provider-abstraction, budget-controlled-recall, four-level-scoping, hybrid-retrieval, belief-classification, temporal-validity, entity-extraction, procedural-versioning, unified-memory-store, template-driven-bootstrap, configure-then-use, shared-design-system, ipc-bridge, native-vector-search, hierarchical-compaction, progressive-retrieval, knowledge-distillation, graph-gap-detection, mcp-startup-validation, progress-notification, worst-tier-wins, on-demand-assessment, qualitative-tiers, signed-notarized-builds, silent-download-prompt-before-install, two-channel-release, scenarios-as-contract, canaries-not-gates, narrow-ci-wide-local, edit-time-security-check, release-blocking-preflight, dual-abi-swap-and-restore, detect-and-recover-over-prevent]
   goals: [canonical-area-organization, sub-project-hierarchy, unified-project-identity, capability-discovery, programmatic-project-administration, batch-operations, cross-project-task-dispatch, conflict-free-port-allocation, automatic-port-discovery, async-task-execution, cross-project-intelligence, crash-resilient-worker, ranked-cross-project-results, capability-invocation-awareness, portfolio-memory, outcome-reinforcement, hybrid-retrieval, npm-packageable-distribution, canonical-memory-store, chorus-memory-unification, project-bootstrap-and-scaffolding, desktop-control-panel, project-dashboard, project-crud-ui, implicit-connection-surfacing, fast-first-pass-recall, synthesized-knowledge-from-memory-clusters, memory-graph-blind-spot-detection, project-health-assessment, composite-tier-surfacing, glanceable-portfolio-health, auto-update-with-channels]
 plugin-version: 0.81.0
 ```
 
 Setlist is the TypeScript implementation of the Project Registry — the active intelligence hub at the center of the user's personal ecosystem. Originally a direct port of the Python project-registry-service, it has since evolved beyond parity: schema v11 (canonical areas table, first-class `area_id` and `parent_project_id` columns on projects, `area_of_focus` type retired; builds on v10's unified memory types, belief classification, temporal validity, entity extraction, and procedural versioning), 36 MCP tools (the original 27 Python-compatible tools plus 9 Setlist additions: `enrich_project`, `write_fields`, `portfolio_brief`, `rename_project`, `bootstrap_project`, `configure_bootstrap`, `assess_health`, `set_project_area`, and `set_parent_project`), an expanded portfolio memory subsystem with area-scoped inheritance, a composite project health assessment, and a native desktop control panel for direct human interaction. The .db file is the shared contract — both implementations read and write the same database, though the Python implementation remains at schema v8.
 
-The rewrite exists because Chorus (Electron + React) and Ensemble need the registry as a direct npm dependency, not a subprocess or MCP-only integration. @setlist/core provides the library API importable from any Node.js process. @setlist/mcp wraps it as an MCP server. @setlist/cli exposes it from the terminal. @setlist/app provides a desktop control panel — an Electron app that imports @setlist/core directly, giving the user a visual surface for project management alongside the programmatic interfaces. The 786 Python tests define the behavioral contract to port against.
+The rewrite exists because Chorus (Electron + React) and Ensemble need the registry as a direct npm dependency, not a subprocess or MCP-only integration. @setlist/core provides the library API importable from any Node.js process. @setlist/mcp wraps it as an MCP server. @setlist/cli exposes it from the terminal. @setlist/app provides a desktop control panel — an Electron app that imports @setlist/core directly, giving the user a visual surface for project management alongside the programmatic interfaces. The behavioral contract is carried by the 96-scenario holdout set in `.fctry/scenarios.md` and evaluated by LLM-as-judge; vitest is available for targeted unit tests against @setlist/core but is not the truth signal.
 
 ---
 
@@ -37,6 +37,7 @@ The rewrite exists because Chorus (Electron + React) and Ensemble need the regis
    - 2.1 [First Run: Migration](#21-first-run-migration) `#first-run`
    - 2.2 [Registration](#22-registration) `#registration`
    - 2.3 [Querying: Progressive Disclosure](#23-querying-progressive-disclosure) `#querying`
+   - 2.4 [Structured Project Profile](#24-structured-project-profile) `#project-profile`
    - 2.5 [Field Enrichment](#25-field-enrichment) `#enrichment`
      - 2.5.1 [What Happens When Things Go Wrong](#251-what-happens-when-things-go-wrong) `#error-handling`
    - 2.6 [The Details That Matter](#26-the-details-that-matter) `#details`
@@ -46,6 +47,7 @@ The rewrite exists because Chorus (Electron + React) and Ensemble need the regis
    - 2.10 [Port Registry](#210-port-registry) `#port-registry`
    - 2.11 [Capability Declarations](#211-capability-declarations) `#capability-declarations`
    - 2.12 [Portfolio Memory](#212-portfolio-memory) `#portfolio-memory`
+     - 2.12.1 [Deferred Aspirations](#2121-deferred-aspirations) `#deferred-aspirations`
    - 2.13 [Project Bootstrap](#213-project-bootstrap) `#project-bootstrap`
    - 2.14 [Desktop Control Panel](#214-desktop-control-panel) `#desktop-app`
      - 2.14.1 [Auto-Update](#2141-auto-update) `#auto-update`
@@ -61,14 +63,16 @@ The rewrite exists because Chorus (Electron + React) and Ensemble need the regis
    - 4.2 [Platform and Environment](#42-platform-and-environment) `#platform`
    - 4.3 [Hard Constraints](#43-hard-constraints) `#hard-constraints`
    - 4.4 [Anti-Patterns](#44-anti-patterns) `#anti-patterns`
+   - 4.5 [Testing Discipline](#45-testing-discipline) `#testing-discipline`
 5. [Implementation Architecture](#5-implementation-architecture)
    - 5.1 [Monorepo Structure](#51-monorepo-structure) `#monorepo`
    - 5.2 [Schema Compatibility](#52-schema-compatibility) `#schema`
    - 5.3 [TypeScript-Specific Decisions](#53-typescript-specific-decisions) `#ts-decisions`
-   - 5.4 [Porting Strategy](#54-porting-strategy) `#porting`
+   - 5.4 [Native Binding Hygiene](#54-native-binding-hygiene) `#native-binding-hygiene`
 6. [Reference and Prior Art](#6-reference-and-prior-art)
    - 6.1 [Inspirations](#61-inspirations) `#inspirations`
    - 6.2 [Ecosystem Context](#62-ecosystem-context) `#ecosystem-context`
+   - 6.3 [Porting History](#63-porting-history) `#porting`
 7. [Satisfaction and Convergence](#7-satisfaction-and-convergence)
    - 7.1 [Satisfaction Definition](#71-satisfaction-definition) `#satisfaction`
    - 7.2 [Convergence Strategy](#72-convergence-strategy) `#convergence`
@@ -142,7 +146,7 @@ Everything from the Python spec's success criteria, plus:
 - The MCP server (`@setlist/mcp`) is a drop-in replacement for the Python MCP server -- same tool names, same parameters, same response shapes.
 - The CLI (`setlist`) provides the same commands as `project-registry`.
 - Both Python and TypeScript implementations can read and write the same .db file without migration or conversion.
-- TypeScript tests (vitest) cover all behavioral categories from the 786 Python tests, confirming equivalent parity against @setlist/core.
+- Behavioral parity with the Python predecessor is validated through the scenario holdout set (see §4.5 `#testing-discipline`), not through a mirrored test suite; vitest is available for targeted unit tests against @setlist/core where a fast, local signal is useful.
 - The desktop app launches as a standalone macOS .app and via `setlist ui`. It displays a card grid of all registered projects, allows navigating to project detail tabs, and supports registering, editing, archiving, and renaming projects through the UI.
 - Changes made through the desktop app are immediately visible to agents via MCP and library import. Changes made by agents are visible in the desktop app on next render.
 - The desktop app enforces single-instance: launching a second instance activates the existing window.
@@ -232,6 +236,8 @@ Consumers can filter queries by type (`project` is the only value in schema v11;
 **Pull model:**
 
 The registry does not push data to consumers. Consumers read on demand at their chosen depth. There are no notifications, no subscriptions, no webhooks.
+
+**Pattern study: wake-up context snapshot (mindbank).** `portfolio_brief` (see §2.12) is recomputed on every call — it re-reads the registry, re-runs an internal portfolio-scoped recall, and assembles the structured snapshot fresh each time. mindbank (see §6.1, https://github.com/spfcraze/mindbank) proposes pre-computing a small "what matters right now" bundle at session start — pinned items, recent decisions, active procedurals — cached and served cheaply to subsequent calls, rather than recomputing the full brief from scratch each time. Applied to setlist, this would let repeated `portfolio_brief` calls within a session (orchestrator wake-up, desktop app refresh, agent session start) hit a pre-baked snapshot rather than rerunning the full assembly. Open question: what triggers invalidation — on every `retain` (safest but noisy), on a scheduled interval (simple but potentially stale), on an explicit `refresh` flag (pushes the decision to the caller), or some combination. The cache-invalidation answer is load-bearing for whether this pattern is worth adopting at all; until it is resolved, this is a pattern study only, with a natural cross-reference to §3.5 `#performance` where `portfolio_brief` latency targets live. Not adopted.
 
 ### 2.4 Structured Project Profile {#project-profile}
 
@@ -374,6 +380,8 @@ On every worker cycle, the first action is emitting a startup log line with the 
 
 The worker is visible via `launchctl list | grep setlist`. It can be stopped via the system service management commands. It is self-managing.
 
+**Pattern study: sync / maintain / ask as a worker job catalog (lerim-cli).** The current async worker has one first-class background operation (reflection) and a generic task queue that executes whatever the caller puts on it. lerim-cli (see §6.1, https://github.com/lerim-dev/lerim-cli) proposes a more structured split of the background agent into three named flows: **sync** — extract memory from fresh session transcripts as they land; **maintain** — consolidate, dedupe, summarize, and archive memory on idle cycles; **ask** — serve queries and recall for the foreground agent. Applied to setlist, this would give the worker a concrete job catalog beyond reflection — `sync` as the explicit home for transcript-driven retain, `maintain` as the explicit home for dedup/compaction/archival cycles (today diffused across `reflect` and implicit cleanup), and `ask` as a recall-serving path if the worker ever hosts a long-lived query surface. Open question: how this maps onto setlist's existing `queue_task` / `list_tasks` / `reflect` surface — in particular, whether `sync` meaningfully overlaps with the already-specified pattern of Chorus populating entities / memories from live transcripts (§2.12), and whether carving out `maintain` as its own lane adds clarity or just relabels what reflection already does. Scope TBD; not adopted. Retained as a shaping lens for the next evolve that touches the worker, not as a commitment to rename or restructure anything today.
+
 ### 2.9 Cross-Project Queries {#cross-project}
 
 The registry can synthesize answers across all projects, drawing from structured registry data, portfolio memories, and Claude Code's per-project auto-memory files.
@@ -501,9 +509,11 @@ Capability declarations optionally include invocation metadata:
 
 All three fields are optional. Capabilities without invocation metadata remain valid and discoverable.
 
+**Known gap: setlist does not self-register.** Setlist's own 36 MCP tools are not currently declared via `register_capabilities` — there is no `capabilities.json` seed shipped with the package, no bootstrap call in the MCP server entrypoint, and no post-build hook that writes setlist's own capabilities into the registry it hosts. Other projects are discoverable through `query_capabilities`; setlist itself is not. This is a recognized gap, not a commitment to close it — resolution is deferred to a future evolve.
+
 ### 2.12 Portfolio Memory {#portfolio-memory}
 
-The registry maintains a structured memory store that transforms it from a static project phone book into a learning system. Agents retain decisions, outcomes, patterns, preferences, dependencies, corrections, and skills as typed memories. These memories are recalled via budget-controlled hybrid retrieval, reinforced by build outcomes, and consolidated through background reflection.
+The registry maintains a structured memory store that transforms it from a static project phone book into a learning system. Agents retain decisions, outcomes, patterns, preferences, dependencies, corrections, learnings, observations, and procedural memories as typed entries. These memories are recalled via budget-controlled FTS5 full-text search today (with vector / graph / RRF-fusion retrieval studied as aspirations in §2.12.1), reinforced by build outcomes, and consolidated through background reflection.
 
 **The three-verb API:**
 
@@ -562,30 +572,29 @@ Scope determines retrieval behavior: a recall for a specific project returns tha
 
 **Recall: retrieving knowledge.**
 
-An agent calls `recall` with a query (natural language or structured), an optional project scope, and a token budget. The memory system searches across three parallel retrieval legs -- FTS5 keyword matching, vector similarity (when embeddings are available), and graph traversal (following memory edges) -- and fuses the results using Reciprocal Rank Fusion. The fused results are then reranked by a composite score that balances similarity, reinforcement strength, temporal recency, and outcome history.
+An agent calls `recall` with a query (natural language or structured), an optional project scope, and a token budget. Today the memory system searches FTS5 keyword matching against the memory corpus and ranks by a composite score that balances reinforcement strength, temporal recency, and outcome history. The fuller retrieval picture — vector similarity as a second leg, graph traversal as a third, and Reciprocal Rank Fusion across the three — is studied as the end-state for hybrid retrieval; see `#deferred-aspirations` (2.12.1).
 
-**Progressive delivery:** Recall supports a two-pass retrieval model. FTS5 keyword results are returned immediately as the first pass, providing usable results with minimal latency. Vector similarity re-ranking proceeds asynchronously and produces a refined, fully fused ranking in the second pass. Callers that need fast answers work from the first pass; the full fused ranking arrives shortly after. This is especially valuable for bootstrap mode, where agents need to start working quickly and can absorb improved rankings as they arrive.
-
-The recall response fills the caller's token budget with the highest-scored memories, using tiered content: L0 summaries (one-sentence abstracts) first, expanding to L1 overviews and then full L2 content as budget allows. An adaptive cutoff stops retrieval when scores drop sharply (a "score cliff").
+The recall response fills the caller's token budget with the highest-scored memories, using tiered content: L0 summaries (one-sentence abstracts) first, expanding to L1 overviews and then full L2 content as budget allows. An adaptive cutoff stops retrieval when scores drop sharply (a "score cliff"). A two-pass progressive-delivery model (fast FTS5 first pass, vector-refined second pass) is studied but not built — see `#deferred-aspirations` (2.12.1) below.
 
 **Bootstrap mode:** An agent starting a new session calls recall with no query and a project scope. This returns the project's memory profile -- its key decisions, active patterns, preferences, and recent outcomes -- suitable for injection into the agent's context at session start. Pinned memories (memories with `is_pinned` set) always surface at the top of bootstrap recall regardless of score.
 
-**Query intent classification:** The recall system classifies incoming queries by intent -- temporal, relational, factual, or exploratory -- and adjusts retrieval weights accordingly. Each intent maps to a weight profile that shifts emphasis across retrieval legs: temporal queries boost recency weight, factual queries boost FTS5/exact-match weight, relational queries boost graph traversal weight, exploratory queries use balanced weights. This ensures that "what did we decide last week?" emphasizes time while "do we use Postgres or MySQL?" emphasizes precision.
+**Query intent classification (no-op):** The recall system's `classifyIntent()` function is wired into the retrieval path, but the weight-fusion it feeds into requires multiple retrieval legs (vector + graph) that do not exist in the current FTS5-only implementation. Until those legs exist, the classifier runs as a no-op: it categorizes the query (temporal, relational, factual, exploratory) but does not adjust retrieval weights. The studied end-state — per-intent weight profiles across fused legs — is captured in `#deferred-aspirations` (2.12.1) below.
 
-**Type-priority budget allocation:** When filling a caller's token budget, the recall system allocates in priority order across memory types: corrections and preferences claim budget first (they directly shape agent behavior), then recent outcomes and learnings (they prevent repeated mistakes and surface discoveries), then patterns and procedural memories (they save time), then decisions, dependencies, and observations (they provide context). Context-type memories are lowest priority -- they fill remaining budget only. Within each priority tier, memories expand from L0 to L2 as budget allows. This ensures that a tight budget always contains the knowledge most likely to affect the agent's next action.
+Type-priority budget allocation across memory types (corrections first, then outcomes/learnings, etc.) is studied but not built — see `#deferred-aspirations` (2.12.1).
 
 **Reflect: background consolidation.**
 
 Reflection is a background process that maintains the health and quality of the memory store. It runs on its own schedule -- triggered when cumulative new memory importance exceeds a threshold, on a periodic schedule, or via explicit admin invocation.
 
-Reflection performs six operations:
+Reflection performs the following operations today:
 
-1. **Semantic dedup** -- Finds memories with cosine similarity above 0.95 and merges them.
-2. **Entity and relationship extraction** -- Identifies entities mentioned in memories and creates or updates graph edges. Also performs **gap detection** -- identifying structural holes in the memory graph where topic clusters exist in isolation without connecting edges. Gaps represent potential blind spots: knowledge areas that should relate but lack documented connections. Gap findings are surfaced as observations (memory type `observation`) so portfolio intelligence can act on them.
-3. **Summary block rewriting** -- Maintains hierarchical compaction trees for each scope level. Rather than flat per-scope summaries, reflection produces multi-level topic hierarchies that capture cross-topic relationships. These compaction trees enable proactive surfacing of relevant context even when a recall query has zero keyword overlap with the stored memory -- the hierarchy bridges topics that search alone cannot connect. Compaction trees are consumed by recall's bootstrap mode as the "holistic view" of a project's or portfolio's accumulated knowledge.
-4. **Stale memory archival** -- Archives memories that pass the triple gate: low quality score (below 0.3) AND low access count (fewer than 2 retrievals) AND old age (more than 90 days). All three conditions must be true.
-5. **Knowledge distillation** -- Examines clusters of related memories (outcomes, decisions, learnings) and extracts higher-order knowledge. Recurring outcomes become patterns, repeated decisions become preferences, sequences of corrections become procedural memories. Distillation is distinct from dedup (which merges near-identical content) -- it synthesizes new knowledge from related but distinct memories. Distilled memories link back to their source memories via edges, preserving provenance.
-6. **Enrichment log update** -- Records what reflection did.
+1. **Semantic dedup** -- Finds memories with cosine similarity above 0.95 and merges them. Active only when embeddings are available; otherwise a no-op.
+2. **Entity and relationship extraction** -- Identifies entities mentioned in memories and creates or updates graph edges. (Gap detection — finding structural holes where topic clusters sit in isolation — is studied but not built; see `#deferred-aspirations` (2.12.1).)
+3. **Summary block rewriting** -- Maintains per-scope summary blocks. (Multi-level hierarchical compaction trees across topic hierarchies are studied but not built; see `#deferred-aspirations` (2.12.1).)
+4. **Stale memory archival** -- Archives memories that pass the triple gate: low quality score (below 0.3) AND low access count (fewer than 2 retrievals) AND old age (more than 90 days). All three conditions must be true. This is the operative shipping behavior today.
+5. **Enrichment log update** -- Records what reflection did.
+
+(Knowledge distillation — synthesizing new patterns/preferences/procedurals from clusters of related memories — is studied but not built; see `#deferred-aspirations` (2.12.1).)
 
 **Outcome-aware reinforcement:**
 
@@ -607,11 +616,15 @@ The memory system supports three tiers of embedding generation:
 - **Local/Ollama** (nomic-embed-text, 768 dimensions) -- Local generation via Ollama. No internet required.
 - **None (FTS5-only)** -- No embedding generation. The system works entirely on FTS5 keyword matching and graph traversal. This is the zero-config baseline.
 
-A fourth tier -- **native vector search** -- accelerates similarity queries when available. When the sqlite-vec extension is loaded, vector similarity queries execute entirely within SQLite as KNN operations on a virtual table, rather than requiring application-level cosine computation. This is faster and more memory-efficient for large memory stores. The three embedding generation tiers (OpenAI, Ollama, FTS5-only) remain unchanged -- sqlite-vec optimizes how vectors are stored and queried, not how they are produced. When sqlite-vec is unavailable, the system falls back to application-level similarity computation with no loss of functionality.
+A fourth tier — **native vector search via sqlite-vec** — is studied but not built; see `#deferred-aspirations` (2.12.1). The current implementation ships the three generation tiers above (OpenAI, Ollama, FTS5-only) with application-level cosine computation on stored embedding blobs when a generation provider is active.
 
 The embedding provider is a runtime configuration. Changing providers does not invalidate existing memories. The dual-column pattern (embedding + embedding_new) supports gradual migration between providers. When the provider is set to "none", recall degrades to FTS5-only. When a provider is re-enabled, vector similarity resumes immediately.
 
 **Pattern study: tiered recall and activation-based reinforcement (Engram Memory).** Setlist's current recall scoring already blends importance, similarity, recency, and access count. Engram Memory (see §6.1) formalizes a closely related idea using the ACT-R cognitive-architecture activation equation: each memory carries an activation strength that grows on access and decays exponentially with elapsed time, and the system is structured as a three-tier pipeline where an in-memory hot-tier cache answers repeat queries in sub-millisecond time without touching vector search or disk, multi-head LSH on a Matryoshka prefix of the embedding prunes candidates in O(1) for near-miss queries, and full hybrid vector + BM25 re-ranking runs only on novel queries — with top results self-promoting into the hot tier. This is retained as a pattern study rather than a commitment: setlist remains a project registry with memory, not a general-purpose memory engine. The specific open questions this pattern informs are (a) whether setlist's access-count and reinforcement terms should be re-expressed as an ACT-R activation curve with explicit exponential time decay, so that frequently-accessed memories rise and idle memories fall in a principled rather than ad-hoc way; (b) whether the recall path should acquire a hot-tier activation cache in front of the sqlite-vec / FTS5 layer, so that repeated bootstrap recalls and dashboard refreshes short-circuit the full retrieval pipeline; and (c) whether candidate pre-filtering via LSH on a Matryoshka prefix of the embedding is worth adopting as the memory corpus grows beyond what brute-force cosine comparison handles comfortably. These are evaluations, not decisions — none of them expand setlist's scope, and any adoption would be validated against setlist's existing scenario set before being promoted out of this pattern-study note.
+
+**Pattern study: contradiction detection across the committed corpus (Engram Memory).** Setlist already distinguishes committed beliefs from observations (belief classification) and records explicit corrections that archive the contradicted memory via a `contradicts` edge (see the correction flow above). Engram Memory (see §6.1, https://github.com/agentscreator/engram-memory) extends that model by surfacing conflicts *proactively* — when a new observation or retained fact semantically contradicts an existing committed belief, the conflict is flagged before an agent acts on the stale side of the disagreement. The pattern is not about a new memory type; it is about a new signal on top of the existing corpus: recall and retain can detect and report "these two committed memories disagree" without the user having to call `correct` first. Open question: robust semantic contradiction detection requires embeddings — keyword/FTS5 overlap is insufficient to catch paraphrased contradictions, and the cases where contradiction detection pays off are exactly the ones where the two memories share few literal tokens. This pattern is therefore **gated on the same embedding-tier decision as the existing vector / RRF / progressive-delivery work in this section** — deferred pending resolution of whether setlist ships with OpenAI, Ollama, or FTS5-only as the default embedding posture. Not adopted; no implementation scope committed.
+
+**Pattern study: temporal versioning with soft-delete and an explicit history endpoint (mindbank).** Setlist's schema already carries `valid_from` / `valid_until` columns (temporal validity, schema v10) but does not yet commit to a concrete endpoint shape for accessing prior versions. mindbank (see §6.1, https://github.com/spfcraze/mindbank) models every update as a new version row: the previous version is not mutated; `valid_to` on the superseded row is set to the update timestamp (soft-delete, never destructive); and a dedicated history endpoint returns the full version chain for a given memory ID. This gives setlist a concrete endpoint-shape pattern to study for the temporal-validity work it has already declared. Open question: whether setlist should expose a dedicated `memory_history` MCP tool, or fold the same functionality into `inspect_memory` as an additional parameter (e.g., `inspect_memory(id, includeHistory=true)`). The scope decision — new surface vs. extended surface — is TBD and not committed by this pattern study. Not adopted; pattern catalog entry only.
 
 **Agent and admin tool surfaces:**
 
@@ -641,6 +654,26 @@ The response is structured data, not synthesized prose. The calling agent (e.g.,
 - `forget` -- Archive a specific memory by ID. Soft delete, not destruction.
 - `inspect_memory` -- View a specific memory's full details.
 - `configure_memory` -- Set memory configuration: embedding provider, reflect schedule, reflect threshold.
+
+#### 2.12.1 Deferred Aspirations {#deferred-aspirations}
+
+The following memory behaviors have accumulated across spec evolutions as studied designs. None of them are built today. Each is gated on the same upstream resolution: **the embedding-tier decision** (see "Embedding provider model" above) — whether setlist's default posture is OpenAI, Ollama, or FTS5-only. That choice governs which retrieval legs exist, which in turn governs which of these behaviors are feasible. Framing follows the EngramMemory / OpenKL pattern-study style established in §6.1 `#inspirations` and earlier evolve cycles: catalog entries that inform design, not commitments to build.
+
+- **Progressive delivery (two-pass FTS5-first / vector-refined recall).** Recall returns FTS5 keyword hits immediately as a first pass, then an asynchronous vector-similarity re-ranking arrives as a refined second pass. Valuable for bootstrap mode where agents need to start working quickly and can absorb improved rankings as they arrive. Status: studied, not built. Gated on: embedding-tier decision.
+
+- **Query intent classifier weight-fusion across legs.** The classifier categorizes queries (temporal, relational, factual, exploratory) and routes weight profiles across fused retrieval legs — temporal boosts recency, factual boosts FTS5, relational boosts graph traversal, exploratory uses balanced weights. The classifier is implemented as a no-op in code (it categorizes but does not fuse), because the vector and graph legs required for fusion do not exist. Status: studied, not built. Gated on: embedding-tier decision (weight fusion is meaningless with a single leg).
+
+- **Type-priority budget allocation.** When filling a caller's token budget, the recall system allocates in priority order across memory types: corrections/preferences first, then outcomes/learnings, then patterns/procedural, then decisions/dependencies/observations, with context lowest. Within each tier, L0 → L1 → L2 expansion. Status: studied, not built. Gated on: embedding-tier decision (the scoring pipeline this sits on top of is itself aspirational).
+
+- **sqlite-vec fourth tier (native in-SQLite vector search).** When the sqlite-vec extension is loaded, vector similarity queries execute entirely within SQLite as KNN operations on a `vec0` virtual table rather than requiring application-level cosine computation. Faster and more memory-efficient as the corpus grows. Status: studied, not built. Gated on: embedding-tier decision (native KNN is moot when no vectors are produced).
+
+- **Gap detection (memory-graph blind spots).** Reflection's entity/relationship extraction additionally identifies structural holes — topic clusters that sit in isolation without connecting edges — and surfaces them as `observation`-type memories for portfolio intelligence to act on. Status: studied, not built. Gated on: embedding-tier decision (detecting semantic clusters that should relate but don't requires a similarity signal stronger than keyword overlap).
+
+- **Hierarchical compaction trees / multi-level topic hierarchies.** Reflection's summary block rewriting produces multi-level topic hierarchies rather than flat per-scope summaries, bridging topics that keyword search alone cannot connect. Consumed by recall's bootstrap mode as the "holistic view" of accumulated knowledge. Status: studied, not built. Gated on: embedding-tier decision (topic clustering requires embeddings; hierarchical structure on top of FTS5 alone is not a meaningful improvement over the flat summary_blocks already present).
+
+- **Knowledge distillation (clusters → patterns / preferences / procedurals).** Reflection examines clusters of related memories (outcomes, decisions, learnings) and extracts higher-order knowledge: recurring outcomes become patterns, repeated decisions become preferences, sequences of corrections become procedural memories. Distilled memories link back to source memories via edges, preserving provenance. Distinct from dedup (which merges near-identical content). Status: studied, not built. Gated on: embedding-tier decision (clustering related-but-distinct memories requires semantic similarity).
+
+**What ships today.** The main §2.12 body above describes the current behavior: FTS5 full-text search over the memory corpus, `retain` / `recall` / `feedback` as the three-verb API, reflection's triple-gate stale-memory archival (score < 0.3 AND access < 2 AND age > 90 days), belief classification (`fact` / `opinion` / `hypothesis`), temporal validity fields (`valid_from` / `valid_until`), entity storage as denormalized JSON on the memory row, procedural versioning via `parent_version_id` + `is_current`, and four-level scoping (project / area / portfolio / global) with area-based bubble-up. `classifyIntent()` is wired but inert. No vector retrieval, no graph traversal, no RRF fusion, no compaction trees, no distillation, no gap detection, no sqlite-vec. The dual-column embedding schema (`embedding` / `embedding_new`) is in place so that adopting any of the above does not require re-migration; the columns are unpopulated pending the embedding-tier decision.
 
 ### 2.13 Project Bootstrap {#project-bootstrap}
 
@@ -1093,8 +1126,8 @@ See [Appendix D](#appendix-d-mcp-tool-reference) for the complete tool reference
 - Entity field is optional JSON. When provided, must be an array of objects with `name` (string) and `type` (string, one of: person, organization, project, topic). Stored denormalized for fast reads.
 - Procedural versioning: parent_version_id must reference an existing memory of type `procedural`. When set, the referenced memory's is_current is set to false. Recall filters to is_current=true by default for procedural types. inspect_memory shows the full version chain.
 - Context-type memories are exempt from pinning (is_pinned is always false for context type). They exist for cross-session bridging, not permanent reference.
-- Query intent classification maps to retrieval weight profiles: temporal boosts recency, factual boosts FTS5/exact-match, relational boosts graph traversal, exploratory uses balanced weights.
-- Type-priority budget allocation fills in order: corrections/preferences first, then outcomes/learnings, then patterns/procedural, then decisions/dependencies/observations, then context. Within each tier, L0 → L1 → L2 expansion.
+- Query intent classification is implemented as a no-op pending the retrieval legs (vector, graph) required for weight fusion. See §2.12 `#deferred-aspirations`.
+- Type-priority budget allocation across memory types is a studied future behavior, not a current rule. See §2.12 `#deferred-aspirations`.
 - Proactive contradiction detection runs during retain for preference, correction, and learning types. Auto-resolves when embeddings available (similarity > 0.85 with different conclusion). Flags for review in FTS5-only mode.
 - Every memory must have content and type. Project, scope, tags, session_id, agent_role are optional. Scope defaults to "project" when project provided, "global" when not.
 
@@ -1147,6 +1180,8 @@ better-sqlite3 is typically faster than Python's sqlite3 module due to synchrono
 - Memory reflection has no latency target. Typical cycle under 60 seconds for several thousand memories.
 - Memory feedback completes near-instantly.
 
+**Pattern study (deferred): wake-up context snapshot.** A pre-computed `portfolio_brief` bundle (pinned + recent decisions + active procedurals), cached and served cheaply rather than recomputed per call, is under study as a latency optimization for session-start flows. Cross-referenced from §2.3 `#querying` where the behavioral framing lives. Open question — cache-invalidation trigger — is load-bearing for whether this pattern is adopted. No current latency target is committed, and today's `portfolio_brief` remains a from-scratch assembly. Source: mindbank (§6.1).
+
 ---
 
 ## 4. Boundaries and Constraints
@@ -1162,8 +1197,8 @@ Everything the Python spec covers (project identity, fields, queries, migration,
 - better-sqlite3 synchronous API patterns
 - @modelcontextprotocol/sdk integration for the MCP server
 - npm distribution and package.json configuration
-- Schema evolution from Python's v8 through v9 (observation) to v10 (unified memory types + chorus-compatible fields)
-- Porting strategy from the 786 Python tests
+- Schema evolution from Python's v8 through v9 (observation), v10 (unified memory types + chorus-compatible fields), and v11 (canonical areas table + projects.area_id + projects.parent_project_id, area_of_focus retired)
+- Porting strategy from the Python implementation's behavioral surface (scenarios as contract; vitest as optional unit-level canary — see §4.5 `#testing-discipline`)
 - Portfolio intelligence support: the `observation` memory type and `portfolio_brief` tool that enable external agents (orchestrator) to retain and recall cross-project findings
 - Unified memory store: setlist as the canonical memory backend for Chorus (10 memory types, belief classification, temporal validity, entity extraction, procedural versioning). Chorus imports @setlist/core directly for in-process memory operations.
 - Project bootstrap: end-to-end project creation (registration + folder scaffolding + template population + git init for code projects) with configurable path roots per type and template directory. Subsumes the manual `new-project.sh` script.
@@ -1222,9 +1257,33 @@ All Python spec anti-patterns apply, plus:
 
 - **Setlist must not add async where sync suffices.** better-sqlite3 is synchronous. Wrapping every call in async/await adds complexity without benefit for a local database. Use async only where genuinely needed (embedding API calls, file system operations, worker process management).
 
-- **Schema evolution must be incremental and non-destructive.** Each version upgrade (v8→v9→v10) must handle the full migration path. Existing data must never be lost during upgrades. New columns use nullable defaults or sensible initial values. The `skill` → `procedural` type migration in v10 is a data migration within the table-recreate pattern.
+- **Schema evolution must be incremental and non-destructive.** Each version upgrade (v8→v9→v10→v11) must handle the full migration path. Existing data must never be lost during upgrades. New columns use nullable defaults or sensible initial values. The `skill` → `procedural` type migration in v10 and the `area_of_focus` → `project` + canonical-area reclassification in v11 are data migrations within the table-recreate pattern.
 
 - **Setlist must not re-invent MCP tool semantics.** The 36 tools have defined parameter names, types, and response shapes. Setlist implements them; it does not redesign them.
+
+### 4.5 Testing Discipline {#testing-discipline}
+
+**Load-bearing invariant.** Scenarios are the contract. The holdout set in `.fctry/scenarios.md` (96 scenarios as of spec 0.17), evaluated by LLM-as-judge, is the only true signal that the system is correct. Every other check in the test stack — type checking, unit tests (vitest), end-to-end tests (Playwright), the pre-flight ABI check, and the automated Electron security check — is a canary: an early-warning system that catches drift before it reaches the scenario evaluator. Canaries are necessary, but none of them is sufficient. A passing PR signals "the canaries sing." Scenario satisfaction signals "the system is actually correct." The reader should feel the difference.
+
+**CI scope is narrow by design.** Continuous integration runs exactly three gates on every pull request: type checking, unit tests, and build. Nothing else. The end-to-end Playwright suite and the pre-flight ABI check are deliberately local-only — both are too expensive and too flaky to run reliably in a hosted CI environment, and their failure modes are more informative when a human or an Observer agent is watching the local output. This asymmetry is an intentional design decision, not a coverage gap. The spec commits to keeping CI fast and high-signal; the heavier checks run where they work well, which is on the user's own machine.
+
+**Electron security posture is a hard guarantee.** The renderer process must never have direct access to Node.js APIs. Two settings enforce this: `nodeIntegration: false` and `contextIsolation: true`, both configured in the Electron `BrowserWindow` constructor in the main-process entry file. These values are non-negotiable. An automated check fires at edit time against any file in `packages/app/src/main/` or the renderer tree — an edit that attempts to introduce `nodeIntegration: true` or `contextIsolation: false` is refused before it can land. The check is enforced by a local hook; its refusal surface is the edit tool itself. This is the enforcement mechanism that makes the security rule in §4.3 `#hard-constraints` ("Electron security: no nodeIntegration in renderer") observable — without it, the constraint is only a promise.
+
+**Pre-flight ABI check is release-blocking for packaged builds.** Before the Electron app is packaged into a distributable `.app` bundle, the build pipeline verifies that the `better-sqlite3` native binding on disk matches the Electron ABI (not the standalone Node ABI used by the Claude Desktop integration). A wrong-ABI state at package time halts the release in the same severity class as a missing Developer ID certificate or a missing Apple notarization credential (§4.3 `#hard-constraints`) — the release does not proceed, and the failure names the recovery command. During local development, the same check is advisory: a wrong-ABI state produces a visible warning but the local build continues, because developers routinely swap the binary back and forth and a hard fail would be noisy and wrong. The asymmetry — advisory during dev, blocking at packaging — is the point: local development tolerates drift; release builds do not. See §5.4 `#native-binding-hygiene` for why dual ABIs exist and how the swap mechanism works.
+
+**What each layer protects against.**
+
+| Layer | Runs where | Catches |
+|------|-----------|---------|
+| Scenarios (truth) | LLM judge (local or scheduled) | Behavioral drift against the spec |
+| Type checking | CI + local | Type-level contract violations across @setlist/core, @setlist/mcp, @setlist/cli, @setlist/app |
+| Unit tests (vitest) | CI + local | Regressions in targeted @setlist/core logic |
+| Build | CI + local | Packaging or module-resolution failures |
+| E2E (Playwright) | Local only | Desktop UI regressions end-to-end |
+| Pre-flight ABI check | Local only — advisory in dev, blocking at packaging | Wrong-ABI `better-sqlite3` binding in the packaged app (see §5.4 `#native-binding-hygiene`) |
+| Electron security check | Edit time (local hook) | `nodeIntegration: true` or `contextIsolation: false` introduced into main-process or renderer files |
+
+Everything above the scenario row is a canary. Everything below needs to be readable and actionable — when a canary fails, a human or agent should be able to tell, in one glance, which layer caught it and what to do.
 
 ---
 
@@ -1270,8 +1329,12 @@ setlist/
 │   └── app/                         # @setlist/app
 │       ├── src/
 │       │   ├── main/                # Electron main process
-│       │   │   ├── index.ts         # App entry point, window management
-│       │   │   └── ipc.ts           # IPC handlers (bridges @setlist/core to renderer)
+│       │   │   ├── index.ts         # App entry point, window management, single-instance enforcement
+│       │   │   ├── ipc.ts           # IPC handlers (bridges @setlist/core to renderer)
+│       │   │   ├── auto-update.ts   # electron-updater integration (stable/beta channels)
+│       │   │   ├── menu.ts          # Application menu (includes "Check for Updates…" item)
+│       │   │   ├── prefs.ts         # User preferences persistence (channel, lane collapse, etc.)
+│       │   │   └── quit-prompt.ts   # "Install update on quit?" confirmation flow
 │       │   ├── preload/
 │       │   │   └── index.ts         # contextBridge API exposure
 │       │   └── renderer/            # React application
@@ -1281,6 +1344,11 @@ setlist/
 │       │       ├── hooks/            # Custom React hooks
 │       │       ├── lib/              # Renderer utilities and helpers
 │       │       └── styles/           # Tailwind config, design tokens
+│       ├── build/                    # Build-time assets (icons, entitlements)
+│       ├── e2e/                      # End-to-end tests (Playwright harness)
+│       ├── scripts/                  # Helper scripts (e.g. with-electron-abi.sh)
+│       ├── native-cache/             # Local cache of Node vs Electron better-sqlite3 binaries (gitignored)
+│       ├── electron-builder.yml      # Packaging + signing + notarization + update-channel config
 │       ├── package.json
 │       └── tsconfig.json
 ├── package.json                     # Workspace root
@@ -1391,11 +1459,87 @@ await server.connect(transport);
 
 **Auto-update via electron-updater against GitHub Releases.** The auto-update experience in `#auto-update` (2.14.1) is delivered by `electron-updater` (the updater shipped with electron-builder) consuming GitHub Releases as the update feed. The two user-visible channels map to release tag prerelease flags — `stable` serves non-prerelease tags, `beta` serves prerelease tags. Polling cadence, download staging, and on-disk update paths are electron-updater defaults unless a specific scenario overrides them.
 
-**Testing.** Tests cover all behavioral categories from the 786 Python tests using vitest. Coverage is measured by behavioral surface (every scenario S01-S30 has corresponding tests), not raw test count. Python-specific patterns (pytest fixtures, parametrize) are translated to vitest equivalents (beforeEach, test.each).
+**Testing.** Correctness is carried by the scenario holdout set in `.fctry/scenarios.md` (96 scenarios as of spec 0.17), evaluated by LLM-as-judge — see §4.5 `#testing-discipline` for the full testing invariant and CI posture. Vitest is available as a unit-test canary for @setlist/core where a targeted, fast signal helps during development; it is not a parity suite, not a coverage gate, and not the truth about whether the system is correct. Python-specific test patterns (pytest fixtures, parametrize) translate to vitest equivalents (beforeEach, test.each) when unit tests are written, but no mirrored 1:1 port is required or implied.
 
-### 5.4 Porting Strategy {#porting}
+### 5.4 Native Binding Hygiene {#native-binding-hygiene}
 
-The port follows a strict behavioral contract: every Python test, translated to TypeScript, must pass against @setlist/core.
+**Load-bearing invariant.** Claude Desktop's integration with setlist never silently breaks. When it does break — through an abnormal exit or a native-module rebuild gone sideways — the next session opens with a visible warning that names the one-line recovery command. The guarantee is not "nothing ever breaks." It is "when it breaks, you see it immediately and fix it in a second."
+
+**Why dual ABIs exist.** `better-sqlite3` is a native module — it compiles against exactly one Node/V8 ABI at a time. Setlist needs it to work in two different runtimes: standalone Node 22 (how the Claude Desktop integration runs `@setlist/mcp`) and Electron's embedded Node (how `@setlist/app` runs). Because the monorepo hoists dependencies to a single root `node_modules` (see §5.1 `#monorepo`), only one compiled binary of `better-sqlite3` exists on disk at any moment. Whichever ABI it was last rebuilt against is the only runtime it can serve. If the binary is in Electron-ABI state and Claude Desktop tries to load it, the load fails and the integration goes dark. If it is in Node-ABI state and the desktop app tries to load it, the app crashes at startup. The two runtimes cannot share a single compiled copy.
+
+**The swap-and-restore mechanism.** A helper script (`packages/app/scripts/with-electron-abi.sh`) wraps every app-side npm script — `dev`, `build`, `preview`, `start` — and every command that exercises the Electron ABI end-to-end. On entry, the script swaps the on-disk `better-sqlite3` binary to the Electron-compiled copy. When the wrapped command finishes — whether by success, failure, SIGINT (Ctrl-C), or SIGTERM — a trap handler swaps the Node-compiled copy back into place. Both compiled binaries live in `packages/app/native-cache/` (gitignored); the swap is a file copy, not a rebuild, so it takes milliseconds. Between sessions the Claude Desktop integration sees the Node-ABI binary and works; during an app session the Electron ABI is in place and the app works. Under normal conditions the user never notices.
+
+**Codesign re-signing on every swap.** macOS's hardened runtime rejects the ad-hoc linker signatures that `@electron/rebuild` and `npm rebuild` produce by default. Without re-signing, the app crashes with `EXC_BAD_ACCESS` on first database call, and vitest workers that load `better-sqlite3` exit with `ERR_IPC_CHANNEL_CLOSED` or a bare exit code 137. The swap script therefore re-signs the swapped binary with `codesign --force -s -` on each entry. This is a hard requirement on current macOS versions, not optional hardening.
+
+**The startup warning is a first-class guarantee.** When the user opens a session — a terminal, a Claude Desktop conversation, any context where the integration matters — a startup check verifies that the `better-sqlite3` binary on disk matches the Node ABI. If it does not, the user sees a warning at session open that states the problem in plain language and names the recovery command `npm run sqlite:node -w packages/app`. The warning is not buried in a log file and it is not skippable. Without the warning, the "never silently breaks" invariant reduces to "usually doesn't break"; removing or suppressing the warning would weaken the contract. The warning is what makes the invariant observable. It is implemented by a `SessionStart` hook (`.claude/hooks/mcp-abi-session-warn.sh`), and an Observer or human can invoke the same check on demand via `npm run verify:mcp-abi` — recommended after any build step that touches `packages/app/**` or the native dependency tree.
+
+**Recovery is one command.** When the warning fires, the fix is `npm run sqlite:node -w packages/app`. This restores the Node-ABI binary to the hoisted `node_modules` location and the integration works on next session open. The command is documented in the warning message itself, in `packages/app/CLAUDE.md`, and cross-referenced from this section. No further configuration, rebuild, or restart is required. The recovery path was validated in the 2026-04-19 session: the integration broke mid-conversation (details below under "Known limitation"), the startup warning surfaced the broken state, and a single invocation of the recovery command restored normal operation. The invariant held because detection plus recovery existed, not because automatic restoration was in place.
+
+**Known limitation: SIGKILL, OOM, and power loss.** The restore-on-exit trap fires on graceful termination paths — SIGINT, SIGTERM, normal completion. It does not fire on SIGKILL (`kill -9`), out-of-memory kills by the kernel, or hard power loss. In those cases the Electron-ABI binary is left in place and the Claude Desktop integration opens its next session against the wrong ABI. The spec names this explicitly rather than hiding behind the swap mechanism: automatic restore is not guaranteed, and a sufficiently abnormal exit will leave the system in a broken state. The invariant still holds because the next session will detect the wrong-ABI state and surface the warning, and the user will fix it in one command. Detection and recovery together carry the guarantee. Automatic restoration across all possible exit paths is explicitly out of scope — the engineering effort to cover kernel-level terminations is not worth the incremental reliability given that detection plus recovery already handle these cases cleanly.
+
+**Cross-references.** §5.3 `#ts-decisions` names the two choices that make dual ABIs necessary (better-sqlite3 as the SQLite binding, Electron as the desktop shell). §5.1 `#monorepo` describes the hoist behavior that forces single-binary exclusivity. §4.5 `#testing-discipline` describes the pre-flight ABI check that makes this invariant release-blocking at packaging time and advisory during local development. §4.3 `#hard-constraints` describes the signed-and-notarized release requirement that the Electron build depends on — the swap and re-sign mechanisms here keep the packaged output signable.
+
+---
+
+## 6. Reference and Prior Art
+
+### 6.1 Inspirations {#inspirations}
+
+All inspirations from the Python spec apply. Additional TypeScript-specific references:
+
+- **better-sqlite3** — The chosen SQLite binding. Synchronous API, native compilation, FTS5 support out of the box. The synchronous model matches SQLite's nature as a local, embedded database — async wrappers add complexity without benefit.
+
+- **@modelcontextprotocol/sdk** — The official MCP SDK for TypeScript. Provides Server, StdioServerTransport, and tool registration patterns. The Setlist MCP server follows the SDK's conventions.
+
+- **vitest** — Test runner. Fast, native ESM support, compatible with the test patterns needed to port pytest-style tests.
+
+- **npm workspaces** — Monorepo management. Simple, no additional tooling (no Turborepo, no Nx). `npm install` at the root links all packages.
+
+- **ghostwright/phantom** — Autonomous AI agent platform with three-tier vector memory (episodic/semantic/procedural). Informed Setlist's per-type decay rates, type-priority budget allocation, query-intent weight profiles, and proactive contradiction detection patterns. Phantom uses Qdrant for vector storage; Setlist adapts the conceptual patterns to its SQLite/FTS5 architecture. Not adopted as a dependency.
+
+- **sqlite-vec** — Pure C SQLite extension for native in-database vector search via `vec0` virtual tables. Informed the fourth embedding storage tier -- native KNN queries within SQLite rather than application-level cosine computation.
+
+- **hipocampus** — Hierarchical compaction tree for proactive agent memory. Informed reflect's multi-level topic tree summarization and the insight that search-based recall misses implicit connections when there is zero keyword overlap between query and stored memory.
+
+- **frankensearch** — Two-tier progressive hybrid search with Reciprocal Rank Fusion. Informed recall's progressive delivery model -- fast FTS5 results first, refined vector re-ranking second.
+
+- **hindsight** — Agent memory system distinguishing storage/retrieval from knowledge extraction/generalization. Informed reflect's knowledge distillation operation -- synthesizing higher-order patterns and preferences from clusters of related memories.
+
+- **infranodus** — Knowledge graph with structural gap detection via network science. Informed reflect's gap detection in entity/relationship extraction -- identifying isolated topic clusters that lack connecting edges.
+
+- **mcp-ts-core** — TypeScript MCP framework with startup tool validation and long-running operation lifecycle management. Informed the MCP server's self-validation at startup and progress reporting for long-running operations.
+
+- **EngramMemory/engram-memory-community** (https://github.com/engrammemory/engram-memory-community) — Self-hosted three-tiered memory pipeline for AI agents (Qdrant + FastEmbed + MCP, MIT). Tier 1 is an in-memory hot cache driven by ACT-R activation math (strength grows on access, decays exponentially with elapsed time); tier 2 runs multi-head LSH over the first 64 dimensions of a Matryoshka-trained embedding for O(1) candidate lookup; tier 3 performs hybrid 768-dim cosine + BM25 re-ranking in Qdrant with Reciprocal Rank Fusion, and top results self-promote into the hot tier. Reported latencies on Apple Silicon: ~25ms for repeat queries (embedding floor), ~30ms for similar queries, ~190ms for novel queries with graph expansion. **Tier 2 pattern study, not adopted.** Informs setlist's open questions about expressing recall scoring as an explicit ACT-R activation curve, adding a hot-tier cache in front of the sqlite-vec / FTS5 layer, and using LSH-on-Matryoshka-prefix for candidate pre-filtering as the corpus grows. Cited inline in §2.12 Portfolio Memory.
+
+- **nowledge-co/OpenKL** (https://github.com/nowledge-co/openkl) — Local-first open-source knowledge and memory layer for personal AI agents (Python + Kùzu DB, Apache 2.0; early-stage, knowmark 14312). Exposes a unified `ok` CLI over four surfaces: (1) a **memory store** for distilled insights, facts, and user notes with temporal organization; (2) a **grounding store** — a separate raw-corpus surface for external docs, media, logs, and transcripts with automatic chunking — explicitly distinct from memory; (3) a Kùzu-backed **knowledge graph** with provenance; and (4) **citations** as first-class objects with transient and persisted modes, retention classes, and `cite verify` / `cite open` operations. Hybrid search runs across memory and grounding store in a single call. Agent-facing **memory distillation prompts** are a first-class primitive (`ok distill get-prompt memory-synthesis`), letting agents share a standardized synthesis contract instead of each crafting its own retain content. **Tier 2 pattern study, not adopted.** Informs setlist's open questions about: (a) whether a separate raw-ingest grounding surface is warranted alongside the current flat memory model (10 types, all treated as distilled knowledge), or whether setlist's flatter model is intentional; (b) shipping a standardized distillation-prompt library alongside `retain` to reduce variance in retained content quality across agents; (c) introducing explicit retention-class tiers on citations/sources as a complement to the existing `reinforcement_count` / `importance` / decay model; and (d) extending recall's hybrid FTS5+vector search from single-surface (memory-only) to multi-surface if a grounding store is ever added. No spec behavior changes; pattern catalog entry only.
+
+- **agentscreator/engram-memory** (https://github.com/agentscreator/engram-memory) — A second Engram-Memory-line project surfaced in this reference pass, companion to the `engrammemory/engram-memory-community` entry above. Source for the **contradiction-detection** pattern study cited inline in §2.12: surfacing conflicts proactively when two committed memories semantically disagree, extending the belief-classification / correction model with a pre-action detection signal. **Pattern study, not adopted as a dependency.** The contradiction-detection pattern is gated on the same unresolved embedding-tier decision that governs the rest of setlist's vector/RRF/progressive-delivery work — keyword/FTS5 overlap is insufficient to catch paraphrased contradictions. The related **workspace-shared memory model** (every agent in a workspace sees the same verified facts) was evaluated and **rejected** for setlist: setlist is single-user local-first, and multi-user workspace semantics are out of scope. No spec behavior changes; pattern catalog entry only.
+
+- **lerim-dev/lerim-cli** (https://github.com/lerim-dev/lerim-cli) — Memory-agent CLI that structures the background worker as three named flows: **sync** (extract memory from session transcripts), **maintain** (consolidate, dedupe, summarize, archive on idle), **ask** (serve queries). Source for the **sync/maintain/ask job-catalog** pattern study cited inline in §2.8 — applied to setlist, a candidate shaping lens for the next evolve that touches the async worker, giving it a concrete job catalog beyond reflection. **Pattern study, not adopted.** The related **session-adapter abstraction** (pluggable adapters for Claude Code / Codex / Cursor / OpenCode that auto-extract memory from transcripts) was evaluated and **deferred** — speculative until the sync/maintain/ask worker shape is itself spec'd. The related **plain-markdown local storage with file-based fallback** pattern was evaluated and **rejected** — setlist's SQLite + FTS5 choice is deliberate in §5.3 `#ts-decisions`, and markdown-only storage contradicts the architecture. Scope TBD; no restructuring of the worker committed by this entry.
+
+- **spfcraze/mindbank** (https://github.com/spfcraze/mindbank) — Memory/knowledge project that models every update as a new version row with `valid_from` / `valid_to` (soft-delete, non-destructive) and exposes an explicit history endpoint returning the full version chain, plus a **wake-up context snapshot** pattern: pre-compute a small "what matters right now" bundle (pinned + recent decisions + active procedurals) at session start, cached and served cheaply rather than recomputed per call. Source for two pattern studies cited inline in this spec: (a) **temporal versioning + history endpoint** in §2.12 — hardens setlist's already-declared `valid_from`/`valid_until` fields with a concrete endpoint-shape pattern (open question: dedicated `memory_history` MCP tool vs. extending `inspect_memory`); and (b) **wake-up context snapshot** in §2.3, cross-referenced from §3.5 — pre-baking `portfolio_brief` for session-start flows (open question: cache-invalidation trigger). **Both are pattern studies, not adopted.** Scope TBD for each.
+
+### 6.2 Ecosystem Context {#ecosystem-context}
+
+Same ecosystem as the Python spec (Archibald, ctx, Chorus, fctry, McPoyle, Knowmarks), with updated integration model:
+
+**Direct library consumers (new with Setlist):**
+- **Chorus** — Imports @setlist/core for project identity at launch. No MCP server needed.
+- **Ensemble** — Imports @setlist/core for memory retain/recall during agent orchestration.
+
+**MCP consumers (unchanged):**
+- **Claude Code** — Uses @setlist/mcp for all 36 tools.
+
+**Producers (unchanged):**
+- **fctry** — Writes project identity and capabilities via MCP or library import.
+- **Chorus** — Writes non-code project identity.
+- **Migration scripts** — One-time bootstrap.
+
+### 6.3 Porting History {#porting}
+
+This section documents how the TypeScript module layout evolved from the Python `project-registry-service` original. It is reference material, not an active gate. The Python → TypeScript port is complete and has since evolved beyond parity (schema v11, 36 MCP tools, area-scoped memory inheritance, project health assessment, desktop control panel — none of which exist in the Python implementation). The behavioral contract is carried by the scenario holdout set in `.fctry/scenarios.md` evaluated by LLM-as-judge, per §4.5 `#testing-discipline`; there is no requirement that every Python test pass against @setlist/core.
+
+The tables below remain useful as code-organization reference for anyone tracing where a given Python module's behavior lives in the TypeScript tree, or reading the Python implementation to understand TypeScript layout decisions.
 
 **Module mapping:**
 
@@ -1435,55 +1579,7 @@ The port follows a strict behavioral contract: every Python test, translated to 
 | test_worker.py | worker.test.ts |
 | (etc. — 30 test files total) | (etc.) |
 
----
-
-## 6. Reference and Prior Art
-
-### 6.1 Inspirations {#inspirations}
-
-All inspirations from the Python spec apply. Additional TypeScript-specific references:
-
-- **better-sqlite3** — The chosen SQLite binding. Synchronous API, native compilation, FTS5 support out of the box. The synchronous model matches SQLite's nature as a local, embedded database — async wrappers add complexity without benefit.
-
-- **@modelcontextprotocol/sdk** — The official MCP SDK for TypeScript. Provides Server, StdioServerTransport, and tool registration patterns. The Setlist MCP server follows the SDK's conventions.
-
-- **vitest** — Test runner. Fast, native ESM support, compatible with the test patterns needed to port pytest-style tests.
-
-- **npm workspaces** — Monorepo management. Simple, no additional tooling (no Turborepo, no Nx). `npm install` at the root links all packages.
-
-- **ghostwright/phantom** — Autonomous AI agent platform with three-tier vector memory (episodic/semantic/procedural). Informed Setlist's per-type decay rates, type-priority budget allocation, query-intent weight profiles, and proactive contradiction detection patterns. Phantom uses Qdrant for vector storage; Setlist adapts the conceptual patterns to its SQLite/FTS5 architecture. Not adopted as a dependency.
-
-- **sqlite-vec** — Pure C SQLite extension for native in-database vector search via `vec0` virtual tables. Informed the fourth embedding storage tier -- native KNN queries within SQLite rather than application-level cosine computation.
-
-- **hipocampus** — Hierarchical compaction tree for proactive agent memory. Informed reflect's multi-level topic tree summarization and the insight that search-based recall misses implicit connections when there is zero keyword overlap between query and stored memory.
-
-- **frankensearch** — Two-tier progressive hybrid search with Reciprocal Rank Fusion. Informed recall's progressive delivery model -- fast FTS5 results first, refined vector re-ranking second.
-
-- **hindsight** — Agent memory system distinguishing storage/retrieval from knowledge extraction/generalization. Informed reflect's knowledge distillation operation -- synthesizing higher-order patterns and preferences from clusters of related memories.
-
-- **infranodus** — Knowledge graph with structural gap detection via network science. Informed reflect's gap detection in entity/relationship extraction -- identifying isolated topic clusters that lack connecting edges.
-
-- **mcp-ts-core** — TypeScript MCP framework with startup tool validation and long-running operation lifecycle management. Informed the MCP server's self-validation at startup and progress reporting for long-running operations.
-
-- **EngramMemory/engram-memory-community** (https://github.com/engrammemory/engram-memory-community) — Self-hosted three-tiered memory pipeline for AI agents (Qdrant + FastEmbed + MCP, MIT). Tier 1 is an in-memory hot cache driven by ACT-R activation math (strength grows on access, decays exponentially with elapsed time); tier 2 runs multi-head LSH over the first 64 dimensions of a Matryoshka-trained embedding for O(1) candidate lookup; tier 3 performs hybrid 768-dim cosine + BM25 re-ranking in Qdrant with Reciprocal Rank Fusion, and top results self-promote into the hot tier. Reported latencies on Apple Silicon: ~25ms for repeat queries (embedding floor), ~30ms for similar queries, ~190ms for novel queries with graph expansion. **Tier 2 pattern study, not adopted.** Informs setlist's open questions about expressing recall scoring as an explicit ACT-R activation curve, adding a hot-tier cache in front of the sqlite-vec / FTS5 layer, and using LSH-on-Matryoshka-prefix for candidate pre-filtering as the corpus grows. Cited inline in §2.12 Portfolio Memory.
-
-- **nowledge-co/OpenKL** (https://github.com/nowledge-co/openkl) — Local-first open-source knowledge and memory layer for personal AI agents (Python + Kùzu DB, Apache 2.0; early-stage, knowmark 14312). Exposes a unified `ok` CLI over four surfaces: (1) a **memory store** for distilled insights, facts, and user notes with temporal organization; (2) a **grounding store** — a separate raw-corpus surface for external docs, media, logs, and transcripts with automatic chunking — explicitly distinct from memory; (3) a Kùzu-backed **knowledge graph** with provenance; and (4) **citations** as first-class objects with transient and persisted modes, retention classes, and `cite verify` / `cite open` operations. Hybrid search runs across memory and grounding store in a single call. Agent-facing **memory distillation prompts** are a first-class primitive (`ok distill get-prompt memory-synthesis`), letting agents share a standardized synthesis contract instead of each crafting its own retain content. **Tier 2 pattern study, not adopted.** Informs setlist's open questions about: (a) whether a separate raw-ingest grounding surface is warranted alongside the current flat memory model (10 types, all treated as distilled knowledge), or whether setlist's flatter model is intentional; (b) shipping a standardized distillation-prompt library alongside `retain` to reduce variance in retained content quality across agents; (c) introducing explicit retention-class tiers on citations/sources as a complement to the existing `reinforcement_count` / `importance` / decay model; and (d) extending recall's hybrid FTS5+vector search from single-surface (memory-only) to multi-surface if a grounding store is ever added. No spec behavior changes; pattern catalog entry only.
-
-### 6.2 Ecosystem Context {#ecosystem-context}
-
-Same ecosystem as the Python spec (Archibald, ctx, Chorus, fctry, McPoyle, Knowmarks), with updated integration model:
-
-**Direct library consumers (new with Setlist):**
-- **Chorus** — Imports @setlist/core for project identity at launch. No MCP server needed.
-- **Ensemble** — Imports @setlist/core for memory retain/recall during agent orchestration.
-
-**MCP consumers (unchanged):**
-- **Claude Code** — Uses @setlist/mcp for all 36 tools.
-
-**Producers (unchanged):**
-- **fctry** — Writes project identity and capabilities via MCP or library import.
-- **Chorus** — Writes non-code project identity.
-- **Migration scripts** — One-time bootstrap.
+The test mapping is a translation reference only — it does not define a passing-tests contract. See §4.5 `#testing-discipline` for the actual correctness contract.
 
 ---
 
@@ -1499,7 +1595,7 @@ All satisfaction criteria from the Python spec (section 6.1) apply identically, 
 - Chorus can import @setlist/core and call `listProjects()`, `getProject()`, `switchProject()` directly.
 - Ensemble can import @setlist/core and call `retain()`, `recall()`, `feedback()` directly.
 - Both Python and TypeScript implementations read and write the same .db file without conflict.
-- TypeScript tests (vitest) cover all behavioral categories from the 786 Python tests, with every scenario S01-S30 having corresponding test coverage.
+- Satisfaction is measured by scenario pass rate against `.fctry/scenarios.md` (see §4.5 `#testing-discipline`); vitest coverage of @setlist/core is optional, not a satisfaction criterion.
 - The npm packages build cleanly with `npm run build` from the workspace root.
 - The monorepo installs with `npm install` — no special setup beyond Node.js LTS.
 - The desktop app launches, displays all registered projects in a card grid, and supports navigating to project detail views with tabbed content.
@@ -1619,7 +1715,7 @@ All deferred futures from the Python spec apply. The TypeScript implementation i
 
 Additional TypeScript-specific deferred future:
 
-- **Python implementation deprecation.** Once Setlist reaches full parity (all 786 tests passing, all 34 MCP tools operational, migration tested), the Python implementation can be deprecated. The .db file continues as the shared contract during the transition period. Deprecation means: new features are added to Setlist first, the Python MCP server is replaced by @setlist/mcp in Claude Code config, and the Python package is archived. The database is never migrated or converted — both implementations read the same file.
+- **Python implementation deprecation.** Once Setlist reaches full behavioral parity (scenario holdout set passing per §4.5 `#testing-discipline`, all 36 MCP tools operational, migration tested), the Python implementation can be deprecated. The .db file continues as the shared contract during the transition period. Deprecation means: new features are added to Setlist first, the Python MCP server is replaced by @setlist/mcp in Claude Code config, and the Python package is archived. The database is never migrated or converted — both implementations read the same file.
 
 - **Desktop app: memory write operations.** The Memory tab is read-only in v1. Future versions may allow creating memories, correcting memories, and triggering reflection from the UI.
 

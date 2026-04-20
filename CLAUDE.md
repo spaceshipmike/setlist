@@ -11,8 +11,8 @@ Originally a direct port of `project-registry-service` (Python), now evolved bey
 This project is built and maintained using the fctry spec-driven workflow.
 
 - **Spec:** `.fctry/spec.md` — the complete natural-language specification
-- **Scenarios:** `.fctry/scenarios.md` — 80 end-to-end scenarios defining behavioral satisfaction
-- **Config:** `.fctry/config.json` — version registry (external 0.1.0, spec 0.1)
+- **Scenarios:** `.fctry/scenarios.md` — 96 end-to-end scenarios defining behavioral satisfaction
+- **Config:** `.fctry/config.json` — version registry (external 0.1.32, spec 0.18)
 - **State:** `.fctry/state.json` — current workflow state
 
 Code is validated solely through scenario satisfaction. No human reviews the code.
@@ -116,7 +116,7 @@ Every project in the registry should be discoverable and understandable by agent
 | File | Purpose |
 |------|---------|
 | spec.md | NLSpec v2 — the complete specification |
-| scenarios.md | Holdout scenario set (80 scenarios) |
+| scenarios.md | Holdout scenario set (96 scenarios) |
 | config.json | Version registry |
 | state.json | Current workflow state |
 | interview-state.md | Interview completion record |
@@ -151,12 +151,14 @@ Scenarios in `.fctry/scenarios.md` define the behavioral contract. Key categorie
 - **S45-S64:** Desktop app (window management, IPC bridge, card grid, filtering/sorting, detail tabs, CRUD operations, design system, CLI launcher, empty state, error feedback, data refresh, packaging)
 - **S65-S70:** Project health assessment (composite tier, activity/completeness/outcomes dimensions, assess_health MCP tool, Home view health dot and Overview Health section)
 - **S71-S80:** Canonical areas and sub-projects (areas seed, area_of_focus retirement, knowmarks soft-link migration, set_project_area, set_parent_project + cycle prevention, invalid area rejection, memory scope bubble-up through area, parent archive non-cascade, get_project returns area+parent+children)
+- **S81-S90:** Auto-update (dev-disabled, signed+notarized release, channel persistence, stable vs beta feeds, Check For Updates menu, About dialog version, silent background download, update-downloaded toast, install-on-quit prompt, Settings status line)
+- **S91-S96:** Testing discipline and native-binding hygiene (CI gates, Electron security, ABI safety net)
 
 <!-- compact-instructions
 Preserve during auto-compaction:
 - Spec: .fctry/spec.md (Setlist NLSpec, experience-ported from project-registry-service)
-- Scenarios: .fctry/scenarios.md (80 scenarios, S01-S80)
-- Config: .fctry/config.json (external 0.1.24, spec 0.13)
+- Scenarios: .fctry/scenarios.md (96 scenarios, S01-S96)
+- Config: .fctry/config.json (external 0.1.32, spec 0.18)
 - State: .fctry/state.json (current workflow step)
 - Key constraint: Schema v11 with canonical areas + sub-projects, 19 tables
 - Key constraint: 27 Python-compatible MCP tools + 9 Setlist additions (enrich_project, write_fields, portfolio_brief, rename_project, bootstrap_project, configure_bootstrap, assess_health, set_project_area, set_parent_project)
