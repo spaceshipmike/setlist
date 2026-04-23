@@ -74,7 +74,7 @@ Append-only structured lessons from builds. The State Owner manages maturation.
 
 ### 2026-04-16T18:50:00Z | #auto-update (2.14.1)
 
-**Status:** candidate | **Confidence:** 1
+**Status:** active | **Confidence:** 1
 **Helpful:** 0 | **Harmful:** 0
 **Agent:** executor
 **Trigger:** tech-stack-pattern
@@ -91,7 +91,7 @@ Append-only structured lessons from builds. The State Owner manages maturation.
 
 ### 2026-04-16T18:51:00Z | #auto-update (2.14.1)
 
-**Status:** candidate | **Confidence:** 1
+**Status:** active | **Confidence:** 1
 **Helpful:** 0 | **Harmful:** 0
 **Agent:** executor
 **Trigger:** tech-stack-pattern
@@ -108,7 +108,7 @@ Append-only structured lessons from builds. The State Owner manages maturation.
 
 ### 2026-04-16T18:52:00Z | #auto-update (2.14.1)
 
-**Status:** candidate | **Confidence:** 1
+**Status:** active | **Confidence:** 1
 **Helpful:** 0 | **Harmful:** 0
 **Agent:** executor
 **Trigger:** tech-stack-pattern
@@ -120,3 +120,33 @@ Append-only structured lessons from builds. The State Owner manages maturation.
 **Anti-pattern:** Keeping `autoInstallOnAppQuit = true` and showing a prompt — the library will silently install once the app exits regardless of user choice.
 **Context:** Satisfying S89 where the user must be given a real choice to skip a staged install.
 **Outcome:** Disabling auto-install, using `event.preventDefault()` in before-quit, and calling `quitAndInstall()` only on confirm gives a clean install-or-skip UX; skip uses `app.exit(0)` so the staged update remains on disk for the next prompt cycle.
+
+### 2026-04-23T21:20:00Z | #capability-declarations (2.11)
+
+**Status:** candidate | **Confidence:** 1
+**Helpful:** 0 | **Harmful:** 0
+**Agent:** executor
+**Trigger:** tech-stack-pattern
+**Component:** cli + mcp
+**Severity:** medium
+**Tags:** npm-workspaces, subpath-exports, side-effecting-entrypoint, esm, nodenext
+**Rule:** When a workspace package has a side-effecting entrypoint (like a CLI with top-level `switch(process.argv[2])`), cross-package consumers must import via a **subpath export** that points at a pure-data or pure-function module — not the main entrypoint. Declare the subpath in the producer's `package.json` exports map (e.g. `"./introspect": { "import": "./dist/introspect-commands.js" }`) and import as `@setlist/cli/introspect`. Importing the main entrypoint would run the CLI dispatcher.
+**Evidence:** Setlist capability self-registration build 2026-04-23, chunk 3 (CLI command introspection).
+**Anti-pattern:** Adding `@setlist/cli` to mcp's dependencies and importing from `@setlist/cli` directly — node will execute the shebang-prefixed index.js and trigger process.exit paths inside createServer() when it sees no command argument.
+**Context:** The MCP server's startup orchestrator needs to introspect the CLI's command list from inside createServer(). Option (a) from the build plan was "have @setlist/cli export the introspector" — this works cleanly only because the CLI already separates commands.ts (data) from index.ts (dispatcher).
+**Outcome:** Introducing packages/cli/src/commands.ts + introspect-commands.ts + subpath exports "./introspect" and "./commands" lets MCP consume the CLI's surface without side effects. Node16 module resolution in the root tsconfig honors the exports map natively.
+
+### 2026-04-23T21:20:00Z | #capability-declarations (2.11)
+
+**Status:** candidate | **Confidence:** 1
+**Helpful:** 0 | **Harmful:** 0
+**Agent:** executor
+**Trigger:** retry-success
+**Component:** test
+**Severity:** low
+**Tags:** vitest, spyOn, prototype-patching, bound-method
+**Rule:** When using `vi.spyOn(Class.prototype, 'method').mockImplementation(fn)` and `fn` needs to call through to the real method for some code paths, capture `const real = Class.prototype.method` BEFORE calling `spyOn` and invoke it via `real.call(this, ...)` inside the mock. The spy replaces the prototype method in place, so trying to read `Class.prototype.method` inside the impl returns the mock (infinite loop).
+**Evidence:** Setlist capability self-registration build 2026-04-23, chunk 6 (S117 integration test).
+**Anti-pattern:** Relying on `spy.wrappedMethod` or `spy.getMockImplementation()` to recover the original — these are not part of vitest's stable API and return undefined in vitest 3.x.
+**Context:** S117 integration test simulates a write failure for `capability_type === 'cli-command'` while letting the other two types go through. Needs both mock behavior (throw) and passthrough (call real).
+**Outcome:** Capturing `const realMethod = Registry.prototype.registerCapabilitiesForType` before `spyOn` and using `realMethod.call(this, ...)` inside the mock impl works reliably.
