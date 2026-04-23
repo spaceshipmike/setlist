@@ -179,6 +179,24 @@ export interface Task {
   completed_at: string | null;
 }
 
+export type DigestKind = 'essence';
+
+export interface ProjectDigest {
+  project_name: string;
+  digest_kind: DigestKind;
+  digest_text: string;
+  spec_version: string;
+  producer: string;
+  generated_at: string;
+  token_count: number | null;
+  stale: boolean;
+}
+
+/** Per-digest-kind size config. Keys are DigestKind values. */
+export const DIGEST_KIND_CONFIG: Record<DigestKind, { target_min: number; target_max: number; ceiling: number }> = {
+  essence: { target_min: 500, target_max: 800, ceiling: 1200 },
+};
+
 export function validateStatus(projectType: string, status: string): void {
   const allowed = STATUS_BY_TYPE[projectType];
   if (!allowed) {

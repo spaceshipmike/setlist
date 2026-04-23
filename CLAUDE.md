@@ -4,7 +4,7 @@
 
 Setlist is the TypeScript implementation of the Project Registry — the active intelligence hub for the user's personal ecosystem. It provides project identity, capability declarations, portfolio memory, port allocation, task routing, batch operations, cross-project intelligence, and a desktop control panel via a local SQLite database, MCP server, and Electron app.
 
-Originally a direct port of `project-registry-service` (Python), now evolved beyond parity. Schema v11 (canonical areas table, first-class area_id/parent_project_id columns on projects, area_of_focus type retired; builds on v10's unified memory types, belief classification, temporal validity, entity extraction, procedural versioning), 36 MCP tools, desktop UI sharing Chorus's design system with multiselect status filtering and archived project visibility. Different language (TypeScript), different packaging (npm monorepo).
+Schema v11 (canonical areas table, first-class area_id/parent_project_id columns on projects, area_of_focus type retired; builds on v10's unified memory types, belief classification, temporal validity, entity extraction, procedural versioning), 39 MCP tools, desktop UI sharing Chorus's design system with multiselect status filtering and archived project visibility. For origin and port history, see spec §1.5.
 
 ## Factory Contract
 
@@ -12,7 +12,7 @@ This project is built and maintained using the fctry spec-driven workflow.
 
 - **Spec:** `.fctry/spec.md` — the complete natural-language specification
 - **Scenarios:** `.fctry/scenarios.md` — 96 end-to-end scenarios defining behavioral satisfaction
-- **Config:** `.fctry/config.json` — version registry (external 0.1.32, spec 0.18)
+- **Config:** `.fctry/config.json` — version registry (external 0.1.32, spec 0.20)
 - **State:** `.fctry/state.json` — current workflow state
 
 Code is validated solely through scenario satisfaction. No human reviews the code.
@@ -40,7 +40,7 @@ npm run typecheck
 ```
 packages/
 ├── core/    # @setlist/core — library (all registry logic)
-├── mcp/     # @setlist/mcp — MCP server (36 tools, stdio)
+├── mcp/     # @setlist/mcp — MCP server (39 tools, stdio)
 ├── cli/     # @setlist/cli — CLI commands + async worker
 └── app/     # @setlist/app — desktop control panel (Electron + React)
 ```
@@ -52,15 +52,15 @@ packages/
 - **Electron** — Desktop shell for @setlist/app. Main process imports @setlist/core via IPC bridge.
 - **React + Tailwind CSS 4 + Radix UI** — Renderer stack, shared design system with Chorus.
 - **ESM-only** — All packages produce ESM output. No CJS.
-- **Schema v11** — Evolved from Python's v8 through v9 (observation memory type), v10 (unified memory types + belief/temporal/entity/procedural-versioning fields), and v11 (canonical areas, first-class area_id and parent_project_id, area_of_focus retired). The .db file is the contract.
+- **Schema v12** — Current schema: adds `project_digests` table for free-form per-project essence summaries (one row per `(project, digest_kind)`, versioned by spec version, cascaded on archive). Builds on v11's canonical areas, first-class area_id and parent_project_id columns on projects, area_of_focus type retired. Migration history from v8 (port origin) through v9 (observation memory type) and v10 (unified memory types + belief/temporal/entity/procedural-versioning fields) is preserved in spec §5.2.
 - **Library-first** — @setlist/core is the primary interface. MCP, CLI, and desktop app are thin wrappers.
 
 ### Database
 
 Location: `~/.local/share/project-registry/registry.db`
-19 tables, schema v11, WAL mode, FTS5 for memory search.
+20 tables, schema v12, WAL mode, FTS5 for memory search.
 
-### 36 MCP Tools
+### 39 MCP Tools
 
 **Identity (14):** list_projects, get_project, switch_project, search_projects, get_registry_stats, register_project, update_project, archive_project, rename_project, batch_update, write_fields, enrich_project, set_project_area, set_parent_project
 
@@ -77,6 +77,8 @@ Location: `~/.local/share/project-registry/registry.db`
 **Bootstrap (2):** bootstrap_project, configure_bootstrap
 
 **Health (1):** assess_health
+
+**Digests (3):** get_project_digest, get_project_digests, refresh_project_digest
 
 ## Project Enrichment
 
@@ -133,7 +135,7 @@ Every project in the registry should be discoverable and understandable by agent
 
 Scenarios in `.fctry/scenarios.md` define the behavioral contract. Key categories:
 
-- **S01-S02:** Schema initialization and Python compatibility
+- **S01-S02:** Schema initialization and port-era compatibility (see spec §1.5)
 - **S03-S06:** Project identity (registration, querying, fields, errors)
 - **S07:** Migration
 - **S08-S09:** Port management and discovery
@@ -142,7 +144,7 @@ Scenarios in `.fctry/scenarios.md` define the behavioral contract. Key categorie
 - **S17-S18:** Batch operations and task dispatch
 - **S19:** Cross-project queries
 - **S20:** Archive cleanup
-- **S21-S24:** TypeScript-specific (MCP drop-in, library import, npm build, test parity)
+- **S21-S24:** Library and packaging (library import, npm build, test scaffolding)
 - **S25:** Async worker
 - **S26-S30:** Administration, context switching, search, task lifecycle, stats
 - **S31:** Rename project
@@ -156,11 +158,11 @@ Scenarios in `.fctry/scenarios.md` define the behavioral contract. Key categorie
 
 <!-- compact-instructions
 Preserve during auto-compaction:
-- Spec: .fctry/spec.md (Setlist NLSpec, experience-ported from project-registry-service)
+- Spec: .fctry/spec.md (Setlist NLSpec; port history in §1.5)
 - Scenarios: .fctry/scenarios.md (96 scenarios, S01-S96)
-- Config: .fctry/config.json (external 0.1.32, spec 0.18)
+- Config: .fctry/config.json (external 0.1.32, spec 0.19)
 - State: .fctry/state.json (current workflow step)
 - Key constraint: Schema v11 with canonical areas + sub-projects, 19 tables
-- Key constraint: 27 Python-compatible MCP tools + 9 Setlist additions (enrich_project, write_fields, portfolio_brief, rename_project, bootstrap_project, configure_bootstrap, assess_health, set_project_area, set_parent_project)
+- Key constraint: 39 MCP tools covering identity, capabilities, memory, ports, tasks, bootstrap, health
 - Key constraint: Library-first (@setlist/core), ESM-only, better-sqlite3
 -->

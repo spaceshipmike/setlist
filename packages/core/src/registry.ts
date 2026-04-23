@@ -921,6 +921,183 @@ export class Registry {
     }
   }
 
+  // ── Project Digests ──────────────────────────────────────────
+
+  /**
+   * Read a single project's digest of the given kind. Returns null if no digest
+   * exists. Staleness is computed against `current_spec_version` when provided;
+   * when omitted, stale defaults to false (caller can't distinguish fresh from
+   * stale without knowing the current version).
+   */
+  getProjectDigest(project_name: string, opts?: { digest_kind?: string; current_spec_version?: string }): {
+    project_name: string;
+    digest_kind: string;
+    digest_text: string;
+    spec_version: string;
+    producer: string;
+    generated_at: string;
+    token_count: number | null;
+    stale: boolean;
+  } | null {
+    const kind = opts?.digest_kind ?? 'essence';
+    const db = this.open();
+    try {
+      const row = db.prepare(`
+        SELECT pd.digest_kind, pd.digest_text, pd.spec_version, pd.producer, pd.generated_at, pd.token_count
+        FROM project_digests pd
+        JOIN projects p ON p.id = pd.project_id
+        WHERE p.name = ? AND pd.digest_kind = ?
+      `).get(project_name, kind) as
+        | { digest_kind: string; digest_text: string; spec_version: string; producer: string; generated_at: string; token_count: number | null }
+        | undefined;
+      if (!row) return null;
+      const stale = opts?.current_spec_version != null ? row.spec_version !== opts.current_spec_version : false;
+      return {
+        project_name,
+        digest_kind: row.digest_kind,
+        digest_text: row.digest_text,
+        spec_version: row.spec_version,
+        producer: row.producer,
+        generated_at: row.generated_at,
+        token_count: row.token_count,
+        stale,
+      };
+    } finally {
+      db.close();
+    }
+  }
+
+  /**
+   * Batch read digests. Returns a map keyed by project name. Missing projects
+   * are omitted unless `include_missing: true`, in which case they appear with
+   * `digest_text: null`. `include_stale` defaults to true; set to false to
+   * exclude stale digests (requires `current_spec_versions` to compute).
+   */
+  getProjectDigests(opts?: {
+    project_names?: string[];
+    digest_kind?: string;
+    include_missing?: boolean;
+    include_stale?: boolean;
+    current_spec_versions?: Record<string, string>;
+  }): Record<string, {
+    digest_text: string | null;
+    spec_version: string | null;
+    producer: string | null;
+    generated_at: string | null;
+    token_count: number | null;
+    stale: boolean;
+  }> {
+    const kind = opts?.digest_kind ?? 'essence';
+    const includeMissing = opts?.include_missing ?? false;
+    const includeStale = opts?.include_stale ?? true;
+    const currentVersions = opts?.current_spec_versions ?? {};
+    const db = this.open();
+    try {
+      let sql = `
+        SELECT p.name AS project_name, pd.digest_text, pd.spec_version, pd.producer, pd.generated_at, pd.token_count
+        FROM projects p
+        LEFT JOIN project_digests pd ON pd.project_id = p.id AND pd.digest_kind = ?
+      `;
+      const params: unknown[] = [kind];
+      if (opts?.project_names && opts.project_names.length > 0) {
+        const placeholders = opts.project_names.map(() => '?').join(', ');
+        sql += ` WHERE p.name IN (${placeholders})`;
+        params.push(...opts.project_names);
+      }
+      sql += ' ORDER BY p.name';
+      const rows = db.prepare(sql).all(...params) as {
+        project_name: string;
+        digest_text: string | null;
+        spec_version: string | null;
+        producer: string | null;
+        generated_at: string | null;
+        token_count: number | null;
+      }[];
+      const result: Record<string, {
+        digest_text: string | null;
+        spec_version: string | null;
+        producer: string | null;
+        generated_at: string | null;
+        token_count: number | null;
+        stale: boolean;
+      }> = {};
+      for (const r of rows) {
+        const hasDigest = r.digest_text != null;
+        if (!hasDigest && !includeMissing) continue;
+        const current = currentVersions[r.project_name];
+        const stale = hasDigest && current != null ? r.spec_version !== current : false;
+        if (stale && !includeStale) continue;
+        result[r.project_name] = {
+          digest_text: r.digest_text,
+          spec_version: r.spec_version,
+          producer: r.producer,
+          generated_at: r.generated_at,
+          token_count: r.token_count,
+          stale,
+        };
+      }
+      return result;
+    } finally {
+      db.close();
+    }
+  }
+
+  /**
+   * Write (replace) a project's digest. Per-kind token ceilings enforce a hard
+   * upper bound; callers should trim to the target range (see DIGEST_KIND_CONFIG
+   * in models.ts). Returns the prior spec_version if one existed, so the
+   * caller can log drift.
+   */
+  refreshProjectDigest(opts: {
+    project_name: string;
+    digest_kind?: string;
+    digest_text: string;
+    spec_version: string;
+    producer: string;
+    token_count?: number;
+  }): { project_name: string; digest_kind: string; written: true; prior_spec_version: string | null } {
+    const kind = opts.digest_kind ?? 'essence';
+    const DIGEST_CEILINGS: Record<string, number> = { essence: 1200 };
+    const ceiling = DIGEST_CEILINGS[kind];
+    if (ceiling != null && opts.token_count != null && opts.token_count > ceiling) {
+      throw new Error(`Digest exceeds ceiling for kind '${kind}' (${opts.token_count} > ${ceiling} tokens). Trim and retry.`);
+    }
+    const db = this.open();
+    try {
+      const project = db.prepare('SELECT id FROM projects WHERE name = ?').get(opts.project_name) as { id: number } | undefined;
+      if (!project) throw new NotFoundError(opts.project_name);
+      const prior = db.prepare(`
+        SELECT spec_version FROM project_digests WHERE project_id = ? AND digest_kind = ?
+      `).get(project.id, kind) as { spec_version: string } | undefined;
+      db.prepare(`
+        INSERT INTO project_digests (project_id, digest_kind, digest_text, spec_version, producer, generated_at, token_count)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT (project_id, digest_kind) DO UPDATE SET
+          digest_text = excluded.digest_text,
+          spec_version = excluded.spec_version,
+          producer = excluded.producer,
+          generated_at = excluded.generated_at,
+          token_count = excluded.token_count
+      `).run(
+        project.id,
+        kind,
+        opts.digest_text,
+        opts.spec_version,
+        opts.producer,
+        new Date().toISOString(),
+        opts.token_count ?? null,
+      );
+      return {
+        project_name: opts.project_name,
+        digest_kind: kind,
+        written: true,
+        prior_spec_version: prior?.spec_version ?? null,
+      };
+    } finally {
+      db.close();
+    }
+  }
+
   // ── Tasks ─────────────────────────────────────────────────────
 
   queueTask(opts: {

@@ -3,7 +3,7 @@ import { existsSync, mkdirSync, copyFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { homedir } from 'node:os';
 
-export const SCHEMA_VERSION = 11;
+export const SCHEMA_VERSION = 12;
 
 /** Canonical seven areas (spec 0.13, schema v11). System-owned; no tool may mutate. */
 export const CANONICAL_AREAS: { name: string; display_name: string; description: string; color: string }[] = [
@@ -238,6 +238,17 @@ CREATE VIRTUAL TABLE IF NOT EXISTS memory_fts USING fts5(
     content_l1
 );
 
+CREATE TABLE IF NOT EXISTS project_digests (
+    project_id INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+    digest_kind TEXT NOT NULL DEFAULT 'essence',
+    digest_text TEXT NOT NULL,
+    spec_version TEXT NOT NULL,
+    producer TEXT NOT NULL,
+    generated_at TEXT NOT NULL,
+    token_count INTEGER,
+    PRIMARY KEY (project_id, digest_kind)
+);
+
 -- Indexes
 CREATE INDEX IF NOT EXISTS idx_projects_type ON projects(type);
 CREATE INDEX IF NOT EXISTS idx_projects_status ON projects(status);
@@ -266,6 +277,7 @@ CREATE INDEX IF NOT EXISTS idx_edges_type ON memory_edges(relationship_type);
 CREATE INDEX IF NOT EXISTS idx_sources_memory ON memory_sources(memory_id);
 CREATE INDEX IF NOT EXISTS idx_enrichment_memory ON enrichment_log(memory_id, engine_kind);
 CREATE INDEX IF NOT EXISTS idx_memories_pinned ON memories(is_pinned, status);
+CREATE INDEX IF NOT EXISTS idx_project_digests_project ON project_digests(project_id);
 `;
 
 // FTS5 triggers for keeping the index in sync
@@ -621,6 +633,25 @@ function upgradeSchema(db: Database.Database): void {
     } finally {
       db.pragma('foreign_keys = ON');
     }
+  }
+
+  if (currentVersion >= 11 && currentVersion < 12) {
+    // v11 → v12: add project_digests table for free-form per-project essence
+    // summaries. No data migration; the table starts empty and is populated
+    // on demand via `setlist digest refresh`.
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS project_digests (
+          project_id INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+          digest_kind TEXT NOT NULL DEFAULT 'essence',
+          digest_text TEXT NOT NULL,
+          spec_version TEXT NOT NULL,
+          producer TEXT NOT NULL,
+          generated_at TEXT NOT NULL,
+          token_count INTEGER,
+          PRIMARY KEY (project_id, digest_kind)
+      );
+    `);
+    db.exec(`CREATE INDEX IF NOT EXISTS idx_project_digests_project ON project_digests(project_id)`);
   }
 
   db.prepare("INSERT OR REPLACE INTO schema_meta (key, value) VALUES ('schema_version', ?)").run(String(SCHEMA_VERSION));

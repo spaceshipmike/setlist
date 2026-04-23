@@ -68,6 +68,10 @@ export function createServer(dbPath?: string): Server {
       { name: 'configure_bootstrap', description: 'Configure bootstrap: set path roots per project type and template directory. Call with no arguments to view current config.', inputSchema: { type: 'object' as const, properties: { path_roots: { type: 'object', description: 'Mapping of project type to default path root (e.g., {"project": "~/Code", "non_code_project": "~/Projects"})' }, template_dir: { type: 'string', description: 'Path to the template directory' }, archive_path_root: { type: 'string', description: 'Filesystem root where archived projects are moved (e.g., "~/Archive")' } } } },
       // Health (1)
       { name: 'assess_health', description: 'Assess project health. With a name, returns overall tier, per-dimension tiers (activity/completeness/outcomes), and reasons. Without a name, returns a portfolio-wide snapshot ordered worst-to-best plus summary counts. Cached briefly; pass fresh=true to bypass.', inputSchema: { type: 'object' as const, properties: { name: { type: 'string' }, fresh: { type: 'boolean', default: false } } } },
+      // Digests (3) — v12
+      { name: 'get_project_digest', description: 'Read one project\'s essence digest. Returns { digest_text, spec_version, producer, generated_at, token_count?, stale } or null if no digest exists. Pass current_spec_version to compute staleness (omit to skip stale check).', inputSchema: { type: 'object' as const, properties: { project_name: { type: 'string' }, digest_kind: { type: 'string', default: 'essence' }, current_spec_version: { type: 'string', description: 'Optional: the project\'s current spec version. When provided, stale=true iff stored spec_version differs.' } }, required: ['project_name'] } },
+      { name: 'get_project_digests', description: 'Batch read project essence digests. Returns a map keyed by project name. Missing projects are omitted unless include_missing=true. include_stale=false filters out digests whose spec_version differs from current_spec_versions[project_name].', inputSchema: { type: 'object' as const, properties: { project_names: { type: 'array', items: { type: 'string' }, description: 'Optional: limit to these projects. Omit for all projects with digests.' }, digest_kind: { type: 'string', default: 'essence' }, include_missing: { type: 'boolean', default: false }, include_stale: { type: 'boolean', default: true }, current_spec_versions: { type: 'object', description: 'Optional: map of project_name to its current spec version, for staleness computation.' } } } },
+      { name: 'refresh_project_digest', description: 'Write a project\'s essence digest (replace semantics). Invoked by the CLI generator or any other writer. Rejects writes exceeding the per-kind token ceiling (1200 for essence) with a trim-and-retry error. Returns prior_spec_version when a digest already existed.', inputSchema: { type: 'object' as const, properties: { project_name: { type: 'string' }, digest_kind: { type: 'string', default: 'essence' }, digest_text: { type: 'string' }, spec_version: { type: 'string' }, producer: { type: 'string', description: 'Free-form identifier for what produced the digest (e.g., "local-qwen3.6-35b-a3b-8bit", "manual").' }, token_count: { type: 'number' } }, required: ['project_name', 'digest_text', 'spec_version', 'producer'] } },
     ],
   }));
 
@@ -360,6 +364,33 @@ export function createServer(dbPath?: string): Server {
           }
           break;
         }
+
+        // Digests (v12)
+        case 'get_project_digest':
+          result = registry.getProjectDigest(a.project_name as string, {
+            digest_kind: a.digest_kind as string | undefined,
+            current_spec_version: a.current_spec_version as string | undefined,
+          });
+          break;
+        case 'get_project_digests':
+          result = registry.getProjectDigests({
+            project_names: a.project_names as string[] | undefined,
+            digest_kind: a.digest_kind as string | undefined,
+            include_missing: a.include_missing as boolean | undefined,
+            include_stale: a.include_stale as boolean | undefined,
+            current_spec_versions: a.current_spec_versions as Record<string, string> | undefined,
+          });
+          break;
+        case 'refresh_project_digest':
+          result = registry.refreshProjectDigest({
+            project_name: a.project_name as string,
+            digest_kind: a.digest_kind as string | undefined,
+            digest_text: a.digest_text as string,
+            spec_version: a.spec_version as string,
+            producer: a.producer as string,
+            token_count: a.token_count as number | undefined,
+          });
+          break;
 
         default:
           return { content: [{ type: 'text', text: `Error [INVALID_INPUT]: Unknown tool '${name}'.` }] };

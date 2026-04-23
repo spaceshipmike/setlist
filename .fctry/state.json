@@ -1,12 +1,1 @@
-{
-  "upgradeApplied": {
-    "from": "0.83.6",
-    "to": "0.84.0"
-  },
-  "completedSteps": [
-    "state-owner-scan",
-    "spec-writer"
-  ],
-  "currentCommand": "review",
-  "digestWritten": true
-}
+{}

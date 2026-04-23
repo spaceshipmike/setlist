@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import { Registry, initDb, scanLocations, applyProposals, scanMemories, applyMemoryMigration } from '@setlist/core';
 import { runWorker, installWorker, uninstallWorker, workerStatus } from './worker.js';
+import { runDigestRefresh } from './digest.js';
 
 const args = process.argv.slice(2);
 const command = args[0];
@@ -135,6 +136,33 @@ switch (command) {
     break;
   }
 
+  case 'digest': {
+    if (subcommand !== 'refresh') {
+      console.error('Usage: setlist digest refresh [--all | --stale | <project>]');
+      process.exit(1);
+    }
+    const all = hasFlag('all');
+    const stale = hasFlag('stale');
+    const positional = args.slice(2).filter(a => !a.startsWith('--'));
+    const projectName = positional[0];
+    if (!all && !stale && !projectName) {
+      console.error('Usage: setlist digest refresh [--all | --stale | <project>]');
+      process.exit(1);
+    }
+    if (all) console.log('Refreshing digests for all active projects…');
+    else if (stale) console.log('Refreshing stale digests…');
+    else console.log(`Refreshing digest for ${projectName}…`);
+
+    const results = await runDigestRefresh({ projectName, all, stale });
+
+    const refreshed = results.filter(r => r.status === 'refreshed').length;
+    const skipped = results.filter(r => r.status.startsWith('skipped')).length;
+    const errored = results.filter(r => r.status === 'error').length;
+    console.log(`\nDone: ${refreshed} refreshed, ${skipped} skipped, ${errored} failed (of ${results.length} total).`);
+    if (errored > 0) process.exit(1);
+    break;
+  }
+
   case 'ui': {
     // Launch or focus the Setlist desktop app
     const { execSync } = await import('node:child_process');
@@ -182,6 +210,9 @@ Commands:
   migrate-memories [--apply]     Import CC auto-memory and fctry memory into registry
   update <name> [--status ...]   Update a project's core fields
   archive <name>                 Archive a project
+  digest refresh <project>       Generate and store the project's essence digest
+  digest refresh --all           Refresh digests for every active project
+  digest refresh --stale         Refresh only projects whose digest lags current spec
   ui                             Launch the Setlist desktop app
   worker run [--dry-run]         Run one worker cycle
   worker install [--interval N]  Install launchd periodic job
