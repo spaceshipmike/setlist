@@ -4,9 +4,9 @@ These scenarios define the behavioral contract for Setlist. Each scenario is an 
 user story with LLM-evaluable satisfaction criteria. Scenarios are evaluated against the
 running system, not the code — they test experience, not implementation.
 
-All scenarios preserve the identical experience defined by the Python project-registry-service.
-TypeScript-specific scenarios (marked with `[TS]`) test packaging, import, and compatibility
-concerns unique to the Setlist implementation.
+Setlist is a TypeScript project; the Python project-registry-service was retired as a runtime
+in spec 0.19 and remains only as historical provenance for the scenario set itself. Scenarios
+marked `[TS]` cover packaging, import, and native-binding concerns specific to this implementation.
 
 ---
 
@@ -1589,3 +1589,301 @@ Validates: `#testing-discipline` (4.5)
 - CI wall-clock time stays within the budget the narrow scope enables — adding E2E or Electron launch would inflate cost and flake, which is why they are excluded
 
 Difficulty: easy
+
+---
+
+## S97: First Digest Write Round-Trips With Full Provenance {#s97}
+**Given** a registered code project at a known spec version (e.g. `chorus-app` at spec 0.22) with no row in `project_digests`
+**When** the CLI generator writes an essence digest via `refresh_project_digest`, then a consumer reads it back with `get_project_digest`
+**Then** the consumer receives the digest text the generator produced, tagged with the spec version it was generated against, the producer that wrote it, and a generation timestamp — and the staleness flag is `false` because the project's spec has not advanced.
+
+Validates: `#rules` (3.3) Project digest rules, `#entities` (3.2) Project digests, Appendix D (Project digests)
+
+**Satisfaction criteria:**
+- After the write, `get_project_digest({ project_name: 'chorus-app' })` returns a non-null result (not `null`)
+- The returned `digest_text` matches what the generator wrote byte-for-byte
+- The returned `spec_version` matches the spec version the generator read from the project's `.fctry/spec.md` frontmatter at write time
+- The returned `producer` is a non-empty string encoding the generation path (e.g. `openrouter-google/gemini-2.5-flash-lite`) — not a blank or `"unknown"` sentinel
+- The returned `generated_at` is an ISO 8601 timestamp within a few seconds of when the write occurred
+- The returned `stale` flag is `false` — the consumer knows this digest reflects the project's current source version
+- The write's response payload includes `written: true` and no `prior_spec_version` field (there was no prior row)
+- `digest_kind` defaults to `"essence"` when not specified by either the writer or the reader
+
+Difficulty: easy
+
+---
+
+## S98: Refresh Replaces the Prior Row and Surfaces the Prior Spec Version {#s98}
+**Given** a code project with an essence digest already stored at spec version `0.20`, and the project's spec has since evolved to `0.22`
+**When** the CLI generator refreshes the digest against the new spec source
+**Then** the new digest replaces the prior row in place (one row per `(project, essence)` remains), and the write response hands the prior version back to the generator so drift can be logged.
+
+Validates: `#rules` (3.3) Project digest rules (replace semantics, prior_spec_version return)
+
+**Satisfaction criteria:**
+- After refresh, exactly one essence digest exists for the project (not two rows, no duplicate history row)
+- The stored `digest_text` is the newly written prose, not the prior version
+- The stored `spec_version` is the new version (`0.22`), not the prior one
+- The `refresh_project_digest` response includes `prior_spec_version: "0.20"` so the caller can log the drift
+- A subsequent `get_project_digest` read returns the new row with `stale: false`
+- A first-time refresh on a project with no existing digest (covered in S97) does not include a `prior_spec_version` field in the response — prior_spec_version is present only on true replacement
+- The replacement is atomic — a reader cannot observe an in-between state where the row is missing or partially written
+
+Difficulty: easy
+
+---
+
+## S99: Staleness Flag Flips When the Project's Source Version Advances {#s99}
+**Given** a code project with a fresh essence digest stored at spec version `0.21`
+**When** the project's `.fctry/spec.md` is evolved to `0.22` without refreshing the digest, and a consumer reads the digest via `get_project_digest` or `get_project_digests`
+**Then** the digest is still returned, but it carries `stale: true` so the consumer knows the text predates the project's current source.
+
+Validates: `#rules` (3.3) Project digest rules (deterministic stale flag computed at read time)
+
+**Satisfaction criteria:**
+- Before the spec bump, `get_project_digest` returns `stale: false`
+- Immediately after the spec bump and before any refresh, `get_project_digest` returns `stale: true` on the same digest row with no other field changed
+- The returned `digest_text` is the unchanged stored prose — stale digests are not withheld, they are flagged
+- The returned `spec_version` still reflects the version the digest was written against (`0.21`), not the project's current version — the stamp on the row is the proof of drift
+- `get_project_digests({ project_names: ['this-project'], include_stale: false })` omits the project from the result map when the digest is stale
+- `get_project_digests({ project_names: ['this-project'] })` with default arguments includes the stale digest (stale included by default)
+- Running `refresh_project_digest` against the new spec version flips the flag back to `false` on the next read
+
+Difficulty: medium
+
+---
+
+## S100: Archiving a Project Cascades to Its Digest Rows {#s100}
+**Given** a registered project with an essence digest stored in `project_digests`
+**When** the project is archived via `archive_project`
+**Then** the digest row is removed via the `ON DELETE CASCADE` foreign key, and a later re-registration of a project with the same name starts with a clean digest slot.
+
+Validates: `#rules` (3.3) Project digest rules (cascade on archive), `#schema` (5.2) project_digests FK
+
+**Satisfaction criteria:**
+- Before archive, `get_project_digest({ project_name })` returns a non-null digest
+- After archive, `get_project_digest({ project_name })` returns `null` — the row is gone, not just marked stale or hidden
+- Port claims and capability declarations are also cleared (existing S20 behavior) — archive remains the single sweeping cleanup hook, now extended to digests
+- If the project is later re-registered under the same name, its digest slot starts empty — a stale digest from the prior incarnation cannot leak through
+- The cascade happens through the schema-level foreign key, not through ad-hoc application-layer cleanup — removing or disabling the `ON DELETE CASCADE` clause would make this scenario fail
+- No other project's digest is affected by archiving one project — cascade is scoped to the archived project's `project_id`
+
+Difficulty: medium
+
+---
+
+## S101: Token-Ceiling Breach Rejects the Write With Trim-and-Retry Guidance {#s101}
+**Given** a digest generator that has produced prose for a project that is unusually long — more than 1200 tokens for the `essence` kind
+**When** it calls `refresh_project_digest` with the oversized text
+**Then** the write is rejected with an error that names the ceiling and tells the caller to trim and retry, and no partial row is left in the store.
+
+Validates: `#rules` (3.3) Project digest rules (bounded size, hard ceiling 1200 tokens, trim-and-retry error), Appendix D (refresh_project_digest)
+
+**Satisfaction criteria:**
+- A write with `digest_text` whose token count exceeds 1200 for `digest_kind: "essence"` fails — no row is created or updated
+- The error message names the ceiling (1200 tokens for `essence`) and the observed size so the caller can decide how aggressively to trim
+- The error explicitly tells the caller to trim the text and retry — not a generic "validation failed" string
+- A subsequent `refresh_project_digest` call with a trimmed `digest_text` within the ceiling succeeds and the response carries `written: true`
+- If an earlier successful digest already existed, it remains untouched after the failed write — the ceiling breach must not silently delete or replace the prior digest
+- A write at the exact target band (500–800 tokens) succeeds normally — the ceiling is 1200, not 800
+- A write between 800 and 1200 tokens succeeds (advisory target is not a hard limit; the ceiling is)
+
+Difficulty: easy
+
+---
+
+## S102: Default Generator Path Uses OpenRouter Flash-Lite With Cost Attribution {#s102}
+**Given** a workstation where `SETLIST_OPENROUTER_API_KEY` is configured and `SETLIST_DIGEST_PROVIDER` is unset (defaulting to `openrouter-flash-lite`)
+**When** the user runs `setlist digest refresh <code-project>` on a normal-sized code project
+**Then** the generator sends the project's spec source to Gemini 2.5 Flash-Lite over OpenRouter with setlist-identifying cost attribution, and the resulting digest records Flash-Lite as its producer.
+
+Validates: `#rules` (3.3) Digest generator rules v0.21 (provider selection, cost attribution), `#connections` (3.4) OpenRouter row
+
+**Satisfaction criteria:**
+- The HTTP request to OpenRouter carries an `HTTP-Referer` header identifying setlist as the calling app
+- The HTTP request carries an `X-Title: setlist-digest-generator` header so spend appears attributed on the OpenRouter dashboard under a single, obvious title
+- The API key used is the setlist-dedicated OpenRouter key, not a key belonging to any other portfolio project — a single billing row on OpenRouter reflects generator spend
+- The `producer` written into `project_digests` contains the hosted-provider tag (e.g. `openrouter-google/gemini-2.5-flash-lite`) so a consumer can see which model produced the text
+- No local MLX call is made on the happy path — the hosted provider is the default, not a last-resort
+- Console output names the provider used per project (e.g. `… via openrouter-google/gemini-2.5-flash-lite`) so the user can confirm the happy path was taken
+- Only `@setlist/cli` makes the OpenRouter call — `@setlist/core`, `@setlist/mcp`, and `@setlist/app` never issue outbound requests to OpenRouter during a refresh or a read
+
+Difficulty: medium
+
+---
+
+## S103: Missing API Key Transparently Falls Back to Local MLX {#s103}
+**Given** a workstation where `SETLIST_OPENROUTER_API_KEY` is unset or empty, `SETLIST_DIGEST_PROVIDER` is unset (would default to `openrouter-flash-lite`), and the local MLX endpoint (`http://m4-pro.local:8000/v1`) is reachable
+**When** the user runs `setlist digest refresh <project>`
+**Then** the generator silently falls through to the local MLX path, logs one INFO line naming the fallback, and produces a digest tagged with the local-MLX producer string — the run does not abort and does not prompt.
+
+Validates: `#rules` (3.3) Digest generator rules v0.21 (missing-key transparent fallback), `#connections` (3.4) Local MLX row
+
+**Satisfaction criteria:**
+- The refresh completes successfully and writes a digest even though no OpenRouter key is present
+- Exactly one INFO-level log line names the fallback reason (e.g. `No SETLIST_OPENROUTER_API_KEY set; falling back to local-mlx`) — not a silent swap, not a loud warning every line
+- The stored `producer` for the written digest starts with `local-mlx-` (e.g. `local-mlx-community/Qwen3.6-35B-A3B-8bit`) so a consumer can see this digest came from the fallback path
+- No OpenRouter HTTP request is attempted — the generator recognizes the missing key before opening a connection
+- The same fallback path fires when OpenRouter returns two consecutive 5xx responses on a single project mid-run — that project completes via local MLX while later projects in the same batch retry OpenRouter first
+- If both OpenRouter and local MLX are unreachable, the project is skipped with a clear per-project message, not a crash, and any existing digest row is left untouched
+
+Difficulty: medium
+
+---
+
+## S104: Non-Code Project Digest Extracts From PDF and Office Documents {#s104}
+**Given** a registered non-code project (e.g. `fam-estate-planning`) whose project root contains a mix of supported documents — `.md` notes, a `.pdf` will draft, a `.docx` meeting summary, no `.fctry/spec.md` and no `CLAUDE.md`
+**When** the user runs `setlist digest refresh fam-estate-planning`
+**Then** the generator walks the project root, extracts markdown from the PDF and DOCX via the docling subprocess helper, concatenates everything with the native-read `.md` in alphabetical order, and produces a digest whose text reflects the combined source material.
+
+Validates: `#rules` (3.3) Digest generator rules v0.21 (source cascade, supported document types, non-code detection), `#connections` (3.4) Docling row
+
+**Satisfaction criteria:**
+- The resulting digest text references content drawn from at least one of the extracted documents — a human reading the digest can tell the PDF and the DOCX were actually read, not just the `.md` notes
+- The stored `producer` tag encodes the extractor as well as the provider (e.g. `openrouter-google/gemini-2.5-flash-lite+docling-<version>`) so a consumer can tell extraction ran
+- The stored `spec_version` is a 16-character hex file-tree hash, not a spec-version string — the generator correctly inferred this as a non-code project because no spec frontmatter was found anywhere in the source cascade
+- Extraction happens in alphabetical filename order — a renamed file that changes its sort position produces a detectably different concatenated input on the next refresh
+- Files outside the supported document set (`.zip`, `.mov`, etc.) are ignored — the file-tree hash and the concatenated source both reflect only the supported set
+- A re-run of the refresh on the same files (no content changes) produces the same file-tree hash, keeping the prior digest `stale: false` on read
+
+Difficulty: hard
+
+---
+
+## S105: Docling Not Installed Degrades Gracefully for Non-Code Projects {#s105}
+**Given** a non-code project whose project root contains both plain-text sources (`.md`, `.txt`) and Office/PDF sources (`.pdf`, `.docx`), running on a workstation where docling is not installed (the Python subprocess cannot be spawned or fails with an import error)
+**When** the user runs `setlist digest refresh <project>`
+**Then** the run does not crash — the generator falls back to using only the natively-readable plain-text sources, surfaces a clear message that the Office/PDF files were skipped, and still produces a digest.
+
+Validates: `#rules` (3.3) Digest generator rules v0.21 (supported document types), `#connections` (3.4) Docling row (graceful skip when unavailable)
+
+**Satisfaction criteria:**
+- The refresh completes and writes a digest even though docling is unavailable
+- The console output names which files were skipped and why, at a granularity a user can act on (e.g. "Skipped 2 files (docling not installed): will.pdf, meeting.docx")
+- The `producer` tag does NOT include a `+docling-...` suffix on this run — the extractor only appears in the tag when it actually ran
+- The file-tree hash on this digest covers only the files that were actually read, so installing docling later and re-running produces a different hash and refreshes the digest automatically
+- If a non-code project has only Office/PDF sources and docling is unavailable, the project is skipped with a clear message — no empty-content digest is written, and any existing digest is left untouched
+- The absence of docling is detected once per run (or once per project), not repeatedly per file — the user is not spammed with identical errors
+
+Difficulty: medium
+
+---
+
+## S106: File-Tree Hash Flips When a Non-Code Project's Documents Change {#s106}
+**Given** a non-code project with an essence digest stored at a known file-tree hash (version stamp = 16-character hex)
+**When** one of the source documents is edited (content change), renamed, added, removed, or resized — and a consumer reads the digest without re-running refresh
+**Then** the staleness flag flips to `true` because the current file-tree hash no longer matches the stored stamp, and running refresh recomputes the hash and clears the flag.
+
+Validates: `#rules` (3.3) Digest generator rules v0.21 (file-tree hash definition and staleness trigger)
+
+**Satisfaction criteria:**
+- Immediately after a document's content is edited, `get_project_digest` returns `stale: true` on the next read — no explicit invalidation call is required
+- Adding a new supported document at the project root flips the hash even if no existing file changed
+- Removing a supported document flips the hash even if remaining files are untouched
+- Renaming a supported document (same content, different path) flips the hash — the hash is over `path:mtime:size`, so paths matter
+- Editing an unsupported file type (e.g. a `.zip` or a `.mov`) does NOT flip the hash — the walker only considers supported document types
+- Running `setlist digest refresh <project>` recomputes the hash from the current file set, writes the new stamp, and the next read returns `stale: false`
+- The hash remains exactly 16 hex characters across all these transitions — a truncated sha256, not a full 64-char digest
+
+Difficulty: medium
+
+---
+
+## S107: Portfolio-Wide Refresh Processes Every Active Project Serially {#s107}
+**Given** a registry containing a mix of active code projects, active non-code projects, and archived projects
+**When** the user runs `setlist digest refresh --all`
+**Then** every active project is processed once serially, with per-project progress visible, and a single summary line at the end reporting totals — archived projects are skipped.
+
+Validates: `#rules` (3.3) Digest generator rules v0.22 (portfolio-wide refresh), Appendix D (refresh_project_digest)
+
+**Satisfaction criteria:**
+- Every active project (code and non-code) appears in the progress output exactly once, with a "Refreshing <name> …" line as it starts and a completion or failure line when it finishes
+- Archived projects are not touched — no digest write, no progress line for them
+- A final summary line reports `Done: N refreshed, M failed (of N total)` where N equals the number of active projects considered
+- Processing is serial — at no point do two project refreshes overlap — the contract is serial processing in v0.22
+- A failure on one project (e.g. unreachable LLM, missing source) is logged and counted into `M failed` but does not halt the run — later projects still process
+- `--all` and positional project arguments are not combinable — invoking them together is rejected with a clear usage error, not a silent merge
+- The exit code reflects overall success: zero if every project succeeded, non-zero if any project failed, so a scripted wrapper can detect portfolio drift
+
+Difficulty: medium
+
+---
+
+## S108: Multi-Project Refresh Processes Every Named Project With No Silent Drop {#s108}
+**Given** a user who runs `setlist digest refresh project-a project-b project-c` naming three existing, active projects as positional arguments
+**When** the command runs
+**Then** all three projects are refreshed serially — the third positional argument is processed exactly as thoroughly as the first, not silently dropped — and the summary line reports the total.
+
+Validates: `#rules` (3.3) Digest generator rules v0.22 (multi-project refresh, silent-drop prohibition)
+
+**Satisfaction criteria:**
+- Each of the three named projects receives a "Refreshing <name> …" progress line in the order given, followed by a completion or failure line
+- After the run, `get_project_digest` on each of the three projects returns a digest whose `generated_at` is within the command's execution window — confirming the third project was actually touched, not skipped
+- The final summary line reads `Done: 3 refreshed, 0 failed (of 3 total)` on the happy path — the denominator matches the number of positional arguments
+- A typo or unknown project name among the positional arguments produces a clear per-project error in the run and is counted into the `failed` tally — not silently dropped before the run begins
+- Extra positional arguments beyond the first are NEVER silently ignored — a regression where only the first project is refreshed while later ones are treated as no-ops fails this scenario
+- The prior single-project form (`setlist digest refresh <project>`) is a natural subset — supplying one positional argument still works and reports `Done: 1 refreshed, 0 failed (of 1 total)`
+- Processing is strictly serial across the three projects — the contract in v0.22 is serial, and parallelism is explicitly out of scope
+
+Difficulty: medium
+
+---
+
+## S109: Document Walker Skips Underscore-Prefixed Subdirectories By Default {#s109}
+**Given** a non-code project whose project root contains a canonical set of documents alongside an `_Duplicates/` subdirectory holding older copies and a `_archive/` subdirectory holding superseded material — neither has any explicit configuration
+**When** the user runs `setlist digest refresh <project>`
+**Then** the document walker skips both underscore-prefixed subdirectories entirely — their contents are neither extracted, concatenated into the generator input, nor included in the file-tree hash.
+
+Validates: `#rules` (3.3) Digest generator rules v0.22 (walker ignore defaults)
+
+**Satisfaction criteria:**
+- The resulting digest text shows no evidence of material unique to the `_Duplicates/` or `_archive/` folders — identifying phrases present only in those files do not appear in the digest
+- The stored file-tree hash is computed over the post-ignore file set only — adding a new file inside `_Duplicates/` does NOT flip the hash on the next refresh
+- The skip applies without any configuration — no `.digestignore` is required for the common underscore convention to work
+- The walker skips any underscore-prefixed subdirectory at the project root — `_drafts/`, `_old/`, `_anything/` all behave the same way as `_Duplicates/`
+- Underscore-prefixed FILES (not directories) at the root are NOT skipped by default — the convention is directory-level, and a file named `_notes.md` is still read
+- Code projects are unaffected by this rule — the code-project walker remains depth-1 only, so `node_modules/`, `.venv/`, and similar are unreachable by construction without any underscore logic
+- A user who wants `_Duplicates/` to be included despite the default can re-enable it via `.digestignore` (covered in S110) — the default is a convention, not a hard block
+
+Difficulty: medium
+
+---
+
+## S110: `.digestignore` Composes With the Underscore Default as a Union {#s110}
+**Given** a non-code project whose root contains a `.digestignore` file declaring `drafts/` and `scratch-*.md` to be skipped, alongside a default-skipped `_Duplicates/` subdirectory
+**When** the user runs `setlist digest refresh <project>`
+**Then** the walker excludes files matched by EITHER the default underscore rule OR the `.digestignore` patterns — the rules compose as a union — and `.digestignore`'s gitignore-style syntax supports comments and re-include (`!`) patterns.
+
+Validates: `#rules` (3.3) Digest generator rules v0.22 (walker ignore, `.digestignore` override composition)
+
+**Satisfaction criteria:**
+- Content from `_Duplicates/` is absent from the digest (default underscore rule still fires)
+- Content from `drafts/` and any `scratch-*.md` file is absent from the digest (`.digestignore` rule fires)
+- A file that neither rule matches (e.g. a top-level `notes.md`) IS included — the ignore rules are additive skips, not a whitelist
+- Gitignore-style syntax is honored: `#`-prefixed lines are treated as comments, blank lines are tolerated, leading `!` re-includes a file that a prior pattern would skip
+- A leading `!` rule can override the default underscore skip (e.g. `!_Duplicates/canonical.md` re-includes that one file) — the default is a convention the project can override explicitly
+- Adding a new entry to `.digestignore` that matches an existing file flips the file-tree hash on the next refresh, because the hash is computed over the post-ignore file set — a consumer reading the digest before refresh sees `stale: true`
+- The `.digestignore` file itself is not part of the digest source and is not hashed into the file-tree stamp — editing only the ignore file while no actual sources change still flips the hash (because the post-ignore set changes) but does not pollute the digest text with `.digestignore` contents
+- A project with no `.digestignore` behaves exactly as S109 describes — the underscore default alone applies
+
+Difficulty: hard
+
+---
+
+## S111: Generator Handles a Very Large Code Spec Without Context Overflow {#s111}
+**Given** a code project whose `.fctry/spec.md` is more than 100 KB (roughly 25–30k tokens), running through the default hosted-provider path (OpenRouter Flash-Lite), and a separate run of the same project forced through the local MLX fallback
+**When** the user runs `setlist digest refresh <project>` in each mode
+**Then** the hosted path succeeds without truncating the spec (Flash-Lite's 1M-token context absorbs it), and the local fallback head-truncates the input at 400 000 characters, logs one truncation line, and still produces a digest — neither path crashes on input size.
+
+Validates: `#rules` (3.3) Digest generator rules v0.21 (provider-aware input-size handling)
+
+**Satisfaction criteria:**
+- On the hosted path, the full spec is sent to OpenRouter without client-side truncation — a spec that is under the model's context window is not pre-emptively chopped
+- On the hosted path, no "input truncated" log line fires — the generator distinguishes "didn't need to truncate" from "truncated silently"
+- On the local-MLX path, inputs over ~400 000 characters are head-truncated and exactly one INFO-level line names the truncation (e.g. `Input exceeded 400000 chars; head-truncated for local-mlx`)
+- The digest produced on either path is a coherent summary of the spec — a human reader can tell the generator successfully ingested the large input, not just the opening section
+- The `producer` tag on each write distinguishes which path ran — a consumer comparing two digests can see one came from OpenRouter and one from local MLX even when the project is the same
+- A spec comfortably under the limits (e.g. 20 KB) produces no truncation log line on either path — the truncation signal only fires on actual truncation
+- If the hosted path would estimate a per-invocation cost above the client-side ceiling ($1.00 default), the remainder of the batch skips the hosted path and goes straight to local-mlx — the ceiling is enforced even for a single large project
+
+Difficulty: hard

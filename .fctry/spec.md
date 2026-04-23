@@ -3,7 +3,7 @@
 ```yaml
 ---
 title: Setlist
-spec-version: "0.21"
+spec-version: "0.22"
 date: 2026-04-23
 status: active
 author: Mike
@@ -1164,6 +1164,11 @@ See [Appendix D](#appendix-d-mcp-tool-reference) for the complete tool reference
 - Input size handling is provider-aware. The hosted providers (Flash-Lite, Flash) accept the full source without truncation — their 1M-token context window is larger than any realistic spec. The local MLX branch head-truncates at 400 000 characters (~100k tokens) before sending and logs one line when truncation fires.
 - The `producer` tag encodes the full generation path as `<provider-tag>[+<extractor-tag>]`. Examples: `openrouter-google/gemini-2.5-flash-lite`, `openrouter-google/gemini-2.5-flash-lite+docling-2.18`, `local-mlx-community/Qwen3.6-35B-A3B-8bit`. Consumers that care about provenance have enough signal; consumers that only care about text ignore the tag.
 - The generator enforces a client-side per-invocation cost ceiling (default $1.00 of estimated OpenRouter spend, counted from input + output token estimates at the current model's published rates). On breach, remaining projects in the batch skip the hosted path and go straight to `local-mlx` or skip entirely if local is unreachable.
+
+**Digest generator rules (v0.22):**
+
+- Multi-project refresh command. `setlist digest refresh <project-a> <project-b> ...` accepts one or more positional project names and processes every named project serially. The user sees per-project progress as each project begins and finishes (e.g., `Refreshing fam-estate-planning …`), and a single summary line at the end: `Done: N refreshed, M failed (of N total)`. `--all` continues to cover portfolio-wide refresh and is not combinable with positional arguments. The prior single-project form (`setlist digest refresh <project>`) is a natural subset of the N-project form and continues to work unchanged. **Silent drop of extra positional arguments is prohibited** — the user must never walk away believing three projects were refreshed when only one was touched. Parallelism across projects is out of scope in v0.22; serial processing is the contract.
+- Document walker ignore patterns. For non-code projects, the document walker skips underscore-prefixed subdirectories (`_Duplicates/`, `_archive/`, `_old/`, `_drafts/`, etc.) by default. This is the baseline convention — zero configuration, catches the common case where a human has set folders aside to signal "not part of the canonical set." Projects may add a `.digestignore` file at the project root using gitignore-style syntax (line-based patterns, `#` for comments, leading `!` to re-include) for additional skip patterns or to override the underscore default. When both rules apply, the default underscore skip and `.digestignore` compose as a union — any file matched by either rule is excluded. Code projects are unaffected: the walker for code projects remains depth-1 only, so `node_modules/`, `.venv/`, `dist/`, and similar build-artifact directories are unreachable by construction and need no explicit rule. The file-tree hash (defined above) is computed over the post-ignore file set — adding a `.digestignore` entry for an existing file flips the hash on the next refresh, which is the intended staleness signal.
 
 **TypeScript-specific rules:**
 

@@ -4,15 +4,15 @@
 
 Setlist is the TypeScript implementation of the Project Registry — the active intelligence hub for the user's personal ecosystem. It provides project identity, capability declarations, portfolio memory, port allocation, task routing, batch operations, cross-project intelligence, and a desktop control panel via a local SQLite database, MCP server, and Electron app.
 
-Schema v11 (canonical areas table, first-class area_id/parent_project_id columns on projects, area_of_focus type retired; builds on v10's unified memory types, belief classification, temporal validity, entity extraction, procedural versioning), 39 MCP tools, desktop UI sharing Chorus's design system with multiselect status filtering and archived project visibility. For origin and port history, see spec §1.5.
+Schema v12 (adds `project_digests` table for free-form per-project essence summaries, versioned by spec version, cascaded on archive; builds on v11's canonical areas table, first-class area_id/parent_project_id columns on projects, area_of_focus type retired, and v10's unified memory types, belief classification, temporal validity, entity extraction, procedural versioning), 39 MCP tools, desktop UI sharing Chorus's design system with multiselect status filtering and archived project visibility. For origin and port history, see spec §1.5.
 
 ## Factory Contract
 
 This project is built and maintained using the fctry spec-driven workflow.
 
 - **Spec:** `.fctry/spec.md` — the complete natural-language specification
-- **Scenarios:** `.fctry/scenarios.md` — 96 end-to-end scenarios defining behavioral satisfaction
-- **Config:** `.fctry/config.json` — version registry (external 0.1.32, spec 0.20)
+- **Scenarios:** `.fctry/scenarios.md` — 111 end-to-end scenarios defining behavioral satisfaction
+- **Config:** `.fctry/config.json` — version registry (external 0.1.32, spec 0.22)
 - **State:** `.fctry/state.json` — current workflow state
 
 Code is validated solely through scenario satisfaction. No human reviews the code.
@@ -118,7 +118,7 @@ Every project in the registry should be discoverable and understandable by agent
 | File | Purpose |
 |------|---------|
 | spec.md | NLSpec v2 — the complete specification |
-| scenarios.md | Holdout scenario set (96 scenarios) |
+| scenarios.md | Holdout scenario set (111 scenarios) |
 | config.json | Version registry |
 | state.json | Current workflow state |
 | interview-state.md | Interview completion record |
@@ -155,14 +155,15 @@ Scenarios in `.fctry/scenarios.md` define the behavioral contract. Key categorie
 - **S71-S80:** Canonical areas and sub-projects (areas seed, area_of_focus retirement, knowmarks soft-link migration, set_project_area, set_parent_project + cycle prevention, invalid area rejection, memory scope bubble-up through area, parent archive non-cascade, get_project returns area+parent+children)
 - **S81-S90:** Auto-update (dev-disabled, signed+notarized release, channel persistence, stable vs beta feeds, Check For Updates menu, About dialog version, silent background download, update-downloaded toast, install-on-quit prompt, Settings status line)
 - **S91-S96:** Testing discipline and native-binding hygiene (CI gates, Electron security, ABI safety net)
+- **S97-S111:** Project digests (write/replace/staleness/archive-cascade/ceiling; generator v2 provider + fallback, non-code docling extraction, docling-unavailable, file-tree-hash staleness, --all portfolio refresh, multi-project no-silent-drop, underscore-dir walker skip, `.digestignore` composition, large-spec handling)
 
 <!-- compact-instructions
 Preserve during auto-compaction:
 - Spec: .fctry/spec.md (Setlist NLSpec; port history in §1.5)
-- Scenarios: .fctry/scenarios.md (96 scenarios, S01-S96)
-- Config: .fctry/config.json (external 0.1.32, spec 0.19)
+- Scenarios: .fctry/scenarios.md (111 scenarios, S01-S111)
+- Config: .fctry/config.json (external 0.1.32, spec 0.22)
 - State: .fctry/state.json (current workflow step)
-- Key constraint: Schema v11 with canonical areas + sub-projects, 19 tables
+- Key constraint: Schema v12 with canonical areas + sub-projects + project digests, 20 tables
 - Key constraint: 39 MCP tools covering identity, capabilities, memory, ports, tasks, bootstrap, health
 - Key constraint: Library-first (@setlist/core), ESM-only, better-sqlite3
 -->
