@@ -410,11 +410,11 @@ function writeAndReturn(
   };
 }
 
-export async function runDigestRefresh(opts: { projectName?: string; all?: boolean; stale?: boolean }): Promise<RefreshResult[]> {
+export async function runDigestRefresh(opts: { projectNames?: string[]; all?: boolean; stale?: boolean }): Promise<RefreshResult[]> {
   const registry = new Registry();
   const targets: string[] = [];
-  if (opts.projectName) {
-    targets.push(opts.projectName);
+  if (opts.projectNames && opts.projectNames.length > 0) {
+    targets.push(...opts.projectNames);
   } else if (opts.all || opts.stale) {
     const projects = registry.listProjects({ depth: 'minimal', status_filter: 'active' }) as { name: string }[];
     targets.push(...projects.map(p => p.name));

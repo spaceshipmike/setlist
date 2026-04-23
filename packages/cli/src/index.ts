@@ -138,22 +138,26 @@ switch (command) {
 
   case 'digest': {
     if (subcommand !== 'refresh') {
-      console.error('Usage: setlist digest refresh [--all | --stale | <project>]');
+      console.error('Usage: setlist digest refresh [--all | --stale | <project> [<project> …]]');
       process.exit(1);
     }
     const all = hasFlag('all');
     const stale = hasFlag('stale');
-    const positional = args.slice(2).filter(a => !a.startsWith('--'));
-    const projectName = positional[0];
-    if (!all && !stale && !projectName) {
-      console.error('Usage: setlist digest refresh [--all | --stale | <project>]');
+    const projectNames = args.slice(2).filter(a => !a.startsWith('--'));
+    if (!all && !stale && projectNames.length === 0) {
+      console.error('Usage: setlist digest refresh [--all | --stale | <project> [<project> …]]');
+      process.exit(1);
+    }
+    if ((all || stale) && projectNames.length > 0) {
+      console.error('Error: positional project names cannot be combined with --all or --stale.');
       process.exit(1);
     }
     if (all) console.log('Refreshing digests for all active projects…');
     else if (stale) console.log('Refreshing stale digests…');
-    else console.log(`Refreshing digest for ${projectName}…`);
+    else if (projectNames.length === 1) console.log(`Refreshing digest for ${projectNames[0]}…`);
+    else console.log(`Refreshing digests for ${projectNames.length} projects: ${projectNames.join(', ')}…`);
 
-    const results = await runDigestRefresh({ projectName, all, stale });
+    const results = await runDigestRefresh({ projectNames, all, stale });
 
     const refreshed = results.filter(r => r.status === 'refreshed').length;
     const skipped = results.filter(r => r.status.startsWith('skipped')).length;
