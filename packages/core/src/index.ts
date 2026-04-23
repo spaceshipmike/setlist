@@ -13,3 +13,4 @@ export { scanMemories, applyMemoryMigration, type MemoryMigrationProposal, type 
 export { Bootstrap, BootstrapNotConfiguredError, BootstrapFolderExistsError, type BootstrapConfig, type BootstrapProjectOpts, type BootstrapResult } from './bootstrap.js';
 export { HealthAssessor, HEALTH_CACHE_TTL_MS, type HealthTier, type HealthDimension, type DimensionResult, type HealthAssessment, type PortfolioHealth } from './health.js';
 export { computeProjectVersion, listProjectDocuments, type ProjectVersion } from './project-version.js';
+export { introspectLibraryExports } from './introspect-exports.js';
