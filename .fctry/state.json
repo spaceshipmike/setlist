@@ -1,5 +1,144 @@
 {
   "currentCommand": "execute",
-  "completedSteps": [],
-  "digestWritten": true
+  "completedSteps": ["state-owner-scan", "executor-plan", "executor-build"],
+  "workflowStep": null,
+  "buildRun": {
+    "status": "completed",
+    "approvedAt": "2026-04-23T20:00:00Z",
+    "completedAt": "2026-04-23T21:20:00Z",
+    "plan": {
+      "specVersion": "0.23",
+      "chunks": [
+        {"step": 1, "featureName": "Per-surface capability replace", "scenarios": ["S117", "S114"], "status": "completed", "deps": [], "completedAt": "2026-04-23T20:30:00Z", "specVersionAtBuild": "0.23"},
+        {"step": 2, "featureName": "Tool-surface introspection", "scenarios": ["S112", "S114", "S116"], "status": "completed", "deps": [1], "completedAt": "2026-04-23T20:40:00Z", "specVersionAtBuild": "0.23"},
+        {"step": 3, "featureName": "CLI command introspection", "scenarios": ["S112", "S116"], "status": "completed", "deps": [1], "completedAt": "2026-04-23T20:50:00Z", "specVersionAtBuild": "0.23"},
+        {"step": 4, "featureName": "Library-exports introspection", "scenarios": ["S112", "S116"], "status": "completed", "deps": [1], "completedAt": "2026-04-23T21:00:00Z", "specVersionAtBuild": "0.23"},
+        {"step": 5, "featureName": "Self-registration orchestrator", "scenarios": ["S112", "S113", "S117"], "status": "completed", "deps": [1, 2, 3, 4], "completedAt": "2026-04-23T21:10:00Z", "specVersionAtBuild": "0.23"},
+        {"step": 6, "featureName": "Wire into server startup + first-run auto-create", "scenarios": ["S112", "S113", "S114", "S115", "S116", "S117"], "status": "completed", "deps": [5], "goalGate": true, "completedAt": "2026-04-23T21:20:00Z", "specVersionAtBuild": "0.23"}
+      ]
+    },
+    "chunkProgress": {"completed": 6, "total": 6},
+    "lastCheckpoint": "2026-04-23T21:20:00Z",
+    "scenariosSatisfied": ["S112", "S113", "S114", "S115", "S116", "S117"],
+    "externalVersionAtStart": "0.1.34",
+    "externalVersionAtEnd": "0.1.40"
+  },
+  "digestWritten": false,
+  "specVersion": "0.23",
+  "evolveTarget": {
+    "section": "capability-declarations",
+    "number": "2.11",
+    "dependencies": [
+      "capabilities",
+      "rules"
+    ]
+  },
+  "evolveDecisions": {
+    "when": "on MCP server startup, idempotent",
+    "scope": "MCP tools + CLI commands + @setlist/core library functions",
+    "source": "introspected from code",
+    "firstRun": "auto-register setlist project row if missing"
+  },
+  "scanContext": {
+    "mode": "post-review-orientation",
+    "scannedAt": "2026-04-23T17:05:00Z",
+    "priorReview": {
+      "completedAt": "2026-04-23T18:00:00Z",
+      "outcome": "no-unsatisfied-scenarios; no-boundary-violations; no-missing-implementations; no-spec-orphans",
+      "specVersionUnchanged": true,
+      "appliedFindings": [
+        "editorial drift x3",
+        "code fix x1 (cli/index.ts digest summary)"
+      ]
+    }
+  },
+  "readinessSummary": {
+    "totalSections": 41,
+    "buckets": {
+      "aligned": 27,
+      "ready-to-execute": 0,
+      "ready-to-build": 1,
+      "partial": 0,
+      "draft": 0,
+      "undocumented": 0,
+      "meta": 13
+    },
+    "overall": "fully-built",
+    "narrative": "All buildable sections (28) classify as `aligned`. The remaining 13 sections are meta — vision, principles, boundaries-as-policy, history, and convergence narrative — not directly executable. No section shows signal of unbuilt or partially-built code. The prior review's finding (zero unsatisfied scenarios across 111) holds.",
+    "potentiallyUnbuilt": []
+  },
+  "sectionReadiness": {
+    "problem-statement": "meta",
+    "what-this-is": "meta",
+    "design-principles": "meta",
+    "success": "meta",
+    "origin": "meta",
+    "first-run": "aligned",
+    "registration": "aligned",
+    "querying": "aligned",
+    "project-profile": "aligned",
+    "enrichment": "aligned",
+    "details": "meta",
+    "task-queue": "aligned",
+    "async-worker": "aligned",
+    "cross-project": "aligned",
+    "port-registry": "aligned",
+    "capability-declarations": "ready-to-build",
+    "portfolio-memory": "aligned",
+    "deferred-aspirations": "meta",
+    "project-bootstrap": "aligned",
+    "desktop-app": "aligned",
+    "health-assessment": "aligned",
+    "capabilities": "aligned",
+    "entities": "aligned",
+    "rules": "aligned",
+    "connections": "aligned",
+    "performance": "aligned",
+    "scope": "meta",
+    "platform": "meta",
+    "hard-constraints": "meta",
+    "anti-patterns": "meta",
+    "testing-discipline": "aligned",
+    "monorepo": "aligned",
+    "schema": "aligned",
+    "ts-decisions": "aligned",
+    "native-binding-hygiene": "aligned",
+    "inspirations": "meta",
+    "ecosystem-context": "meta",
+    "porting": "meta",
+    "satisfaction": "aligned",
+    "convergence": "meta",
+    "observability": "aligned",
+    "agent-decides": "meta"
+  },
+  "agentOutputs": {
+    "state-owner": {
+      "briefingDigest": "Setlist is fully built against spec 0.22. The /fctry:review pass minutes ago verified zero unsatisfied scenarios (111/111), no boundary violations, no missing implementations, no spec orphans. Three editorial drifts and one code fix (cli/index.ts digest summary line) were applied; spec version unchanged. Spot-verified the most recently evolved surfaces — schema v12 project_digests + v11→v12 migration in core/db.ts, 3 digest MCP tools in mcp/server.ts, CLI multi-project + `.digestignore` walker in cli/digest.ts + cli/index.ts, python/extract.py present, scripts/verify-mcp-abi.sh present — all consistent with §3.3 digest-generator-v0.21/v0.22 rules and §5.2 schema v12 contract. Recommendation: Executor produces a 'nothing to build' plan and pivots to next-action suggestions (run scenario judge, refresh portfolio digests, or move on to a new evolve).",
+      "relevanceManifest": {
+        "spec-sections-touched-recently": [
+          "#rules (3.3) v0.22 generator block",
+          "#monorepo (5.1) tree refresh",
+          "#what-this-is (1.2) holdout count",
+          "#testing-discipline (4.5)",
+          "#ts-decisions (5.3)"
+        ],
+        "code-files-touched-recently": [
+          "packages/cli/src/index.ts",
+          "packages/cli/src/digest.ts",
+          "packages/cli/python/extract.py"
+        ],
+        "verifiedSurfaces": [
+          "schema v12 / project_digests table + v11→v12 migration (core/db.ts:241,280,639-654)",
+          "3 digest MCP tools (mcp/server.ts:73,370-385)",
+          "registry digest methods (core/registry.ts:932,976,1051)",
+          "CLI multi-project guard (cli/index.ts:152)"
+        ]
+      },
+      "lessonsRelevantToBuild": [],
+      "knownGaps": [
+        "Capability self-registration: setlist's own 36→39 MCP tools are not declared via `register_capabilities` (D14, documented in §2.11 as known gap, deferred — NOT a build target)."
+      ]
+    }
+  },
+  "_specVersionBumped": true
 }
