@@ -1,4 +1,5 @@
 import { readFile, access } from 'node:fs/promises';
+import { existsSync } from 'node:fs';
 import { join, dirname, resolve as pathResolve } from 'node:path';
 import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
@@ -155,6 +156,12 @@ function getExtractorScriptPath(): string {
   return pathResolve(here, '..', 'python', 'extract.py');
 }
 
+function getExtractorPythonPath(): string {
+  const here = dirname(fileURLToPath(import.meta.url));
+  const venvPython = pathResolve(here, '..', 'python', '.venv', 'bin', 'python');
+  return existsSync(venvPython) ? venvPython : 'python3';
+}
+
 interface ExtractionOutcome {
   text: string;
   extractorTag: string | null;
@@ -184,7 +191,7 @@ async function extractFileToMarkdown(filePath: string): Promise<{ text: string; 
   }
   const script = getExtractorScriptPath();
   return new Promise((resolve) => {
-    const proc = spawn('python3', [script, filePath]);
+    const proc = spawn(getExtractorPythonPath(), [script, filePath]);
     let stdout = '';
     let stderr = '';
     proc.stdout.on('data', (chunk: Buffer) => { stdout += chunk.toString('utf-8'); });
