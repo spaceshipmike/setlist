@@ -95,7 +95,12 @@ interface LlmResponse {
   tokenCount: number;
 }
 
-async function callLLM(call: ProviderCall, sourceText: string, projectName: string): Promise<LlmResponse> {
+async function callLLM(
+  call: ProviderCall,
+  sourceText: string,
+  projectName: string,
+  retryInstruction?: string,
+): Promise<LlmResponse> {
   let effectiveSource = sourceText;
   if (call.truncateSource && effectiveSource.length > LOCAL_MAX_SOURCE_CHARS) {
     console.error(
@@ -103,10 +108,11 @@ async function callLLM(call: ProviderCall, sourceText: string, projectName: stri
     );
     effectiveSource = effectiveSource.slice(0, LOCAL_MAX_SOURCE_CHARS);
   }
+  const system = retryInstruction ? `${SYSTEM_PROMPT}\n\n${retryInstruction}` : SYSTEM_PROMPT;
   const body = {
     model: call.model,
     messages: [
-      { role: 'system', content: SYSTEM_PROMPT },
+      { role: 'system', content: system },
       { role: 'user', content: `Project: ${projectName}\n\nSource:\n\n${effectiveSource}` },
     ],
     temperature: 0.2,
@@ -138,6 +144,8 @@ async function callLLM(call: ProviderCall, sourceText: string, projectName: stri
   const tokenCount = approxTokenCount(digest);
   return { digest, tokenCount };
 }
+
+const OVERSHOOT_RETRY_INSTRUCTION = `IMPORTANT RETRY: Your previous response exceeded the ${CEILING}-token hard ceiling. This time, produce a strictly shorter digest — aim for ${TARGET_MIN}-${TARGET_MAX} tokens, absolute maximum ${CEILING - 100}. Trim boilerplate, collapse similar paragraphs, drop tangential details. Quality still matters, but length compliance is non-negotiable on this retry.`;
 
 const EXTRACTOR_RESULT_CACHE = new Map<string, string>();
 let extractorStatus: 'unknown' | 'available' | 'missing' = 'unknown';
@@ -331,15 +339,32 @@ export async function refreshProjectDigest(registry: Registry, projectName: stri
   }
 
   if (result.tokenCount > CEILING) {
-    return {
-      project_name: projectName,
-      status: 'error',
-      source: sourceDescriptor,
-      version_kind: versionInfo.kind === 'spec' ? 'spec' : 'filetree',
-      spec_version: versionInfo.version ?? undefined,
-      token_count: result.tokenCount,
-      error: `Generated digest exceeds ceiling (${result.tokenCount} > ${CEILING} tokens). Retry — the model overshot.`,
-    };
+    console.error(
+      `  [digest] ${projectName}: first attempt overshot ceiling (${result.tokenCount} > ${CEILING}); retrying with stricter length instruction`,
+    );
+    try {
+      result = await callLLM(call, sourceText, projectName, OVERSHOOT_RETRY_INSTRUCTION);
+    } catch (retryErr) {
+      return {
+        project_name: projectName,
+        status: 'error',
+        source: sourceDescriptor,
+        version_kind: versionInfo.kind === 'spec' ? 'spec' : 'filetree',
+        spec_version: versionInfo.version ?? undefined,
+        error: `Ceiling-overshoot retry failed: ${(retryErr as Error).message}`,
+      };
+    }
+    if (result.tokenCount > CEILING) {
+      return {
+        project_name: projectName,
+        status: 'error',
+        source: sourceDescriptor,
+        version_kind: versionInfo.kind === 'spec' ? 'spec' : 'filetree',
+        spec_version: versionInfo.version ?? undefined,
+        token_count: result.tokenCount,
+        error: `Generated digest still exceeds ceiling after retry (${result.tokenCount} > ${CEILING} tokens).`,
+      };
+    }
   }
 
   const producerTag = composeProducer(call.provider, call.model, extractorTag);
