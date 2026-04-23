@@ -869,6 +869,78 @@ export class Registry {
     }
   }
 
+  /**
+   * Replace capability rows for a specific (project, capability_type) pair.
+   *
+   * Unlike `registerCapabilities`, which replaces the project's entire capability
+   * set, this scopes the replace to one `capability_type` at a time. Used by
+   * setlist's startup self-registration (§2.11) so that a failure introspecting
+   * one surface (e.g. CLI commands) does not wipe the other surfaces.
+   *
+   * Contract:
+   * - All rows with (project_id, capability_type) are deleted and replaced.
+   * - Rows of other types for the same project are untouched.
+   * - An empty `capabilities` array clears the (project, type) set.
+   * - Every incoming capability must have `capability_type === capabilityType`;
+   *   the method does not accept mixed types (guard against caller error).
+   * - Unknown project throws NotFoundError.
+   */
+  registerCapabilitiesForType(
+    projectName: string,
+    capabilityType: string,
+    capabilities: CapabilityDeclaration[],
+    producer: string = 'fctry',
+  ): number {
+    if (!capabilityType) {
+      throw new Error('registerCapabilitiesForType: capabilityType is required');
+    }
+    for (const cap of capabilities) {
+      if (cap.capability_type !== capabilityType) {
+        throw new Error(
+          `registerCapabilitiesForType: mixed types not allowed — expected '${capabilityType}' but got '${cap.capability_type}' on capability '${cap.name}'`,
+        );
+      }
+    }
+
+    const db = this.open();
+    try {
+      const project = db.prepare('SELECT id FROM projects WHERE name = ?').get(projectName) as { id: number } | undefined;
+      if (!project) throw new NotFoundError(projectName);
+
+      const doReplace = db.transaction(() => {
+        db.prepare(
+          'DELETE FROM project_capabilities WHERE project_id = ? AND capability_type = ?',
+        ).run(project.id, capabilityType);
+
+        const insert = db.prepare(`
+          INSERT INTO project_capabilities
+          (project_id, name, capability_type, description, inputs, outputs, producer, requires_auth, invocation_model, audience)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `);
+
+        for (const cap of capabilities) {
+          insert.run(
+            project.id,
+            cap.name,
+            cap.capability_type,
+            cap.description ?? '',
+            cap.inputs ?? '',
+            cap.outputs ?? '',
+            producer,
+            cap.requires_auth != null ? (cap.requires_auth ? 1 : 0) : null,
+            cap.invocation_model ?? '',
+            cap.audience ?? '',
+          );
+        }
+      });
+
+      doReplace();
+      return capabilities.length;
+    } finally {
+      db.close();
+    }
+  }
+
   queryCapabilities(opts?: {
     project_name?: string;
     capability_type?: string;

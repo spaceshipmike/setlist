@@ -458,6 +458,99 @@ describe('Registry', () => {
     });
   });
 
+  // ── S117: Per-surface capability replace ───────────────────
+
+  describe('registerCapabilitiesForType (S117)', () => {
+    beforeEach(() => {
+      registry.register({ name: 'surf-proj', type: 'project', status: 'active' });
+    });
+
+    it('replaces only the named capability_type, leaving others untouched', () => {
+      // Seed: 2 tools + 1 cli-command + 1 library
+      registry.registerCapabilities('surf-proj', [
+        { name: 'tool_a', capability_type: 'tool', description: 'A' },
+        { name: 'tool_b', capability_type: 'tool', description: 'B' },
+        { name: 'cmd_x', capability_type: 'cli-command', description: 'X' },
+        { name: 'Lib1', capability_type: 'library', description: 'Lib1' },
+      ]);
+
+      // Replace only the tool surface with a new set
+      registry.registerCapabilitiesForType('surf-proj', 'tool', [
+        { name: 'tool_c', capability_type: 'tool', description: 'C' },
+      ]);
+
+      const all = registry.queryCapabilities({ project_name: 'surf-proj' });
+      const byType: Record<string, string[]> = {};
+      for (const row of all) {
+        const t = row.type as string;
+        (byType[t] ??= []).push(row.name as string);
+      }
+      expect(byType.tool).toEqual(['tool_c']);
+      expect(byType['cli-command']).toEqual(['cmd_x']);
+      expect(byType.library).toEqual(['Lib1']);
+    });
+
+    it('empty array clears that type only', () => {
+      registry.registerCapabilities('surf-proj', [
+        { name: 'tool_a', capability_type: 'tool', description: 'A' },
+        { name: 'cmd_x', capability_type: 'cli-command', description: 'X' },
+      ]);
+
+      registry.registerCapabilitiesForType('surf-proj', 'tool', []);
+
+      const remaining = registry.queryCapabilities({ project_name: 'surf-proj' });
+      expect(remaining.length).toBe(1);
+      expect(remaining[0].type).toBe('cli-command');
+      expect(remaining[0].name).toBe('cmd_x');
+    });
+
+    it('replace within type — second call for same type replaces, does not append', () => {
+      registry.registerCapabilitiesForType('surf-proj', 'tool', [
+        { name: 'tool_a', capability_type: 'tool', description: 'A' },
+        { name: 'tool_b', capability_type: 'tool', description: 'B' },
+      ]);
+      registry.registerCapabilitiesForType('surf-proj', 'tool', [
+        { name: 'tool_c', capability_type: 'tool', description: 'C' },
+      ]);
+
+      const tools = registry.queryCapabilities({ project_name: 'surf-proj', capability_type: 'tool' });
+      expect(tools.length).toBe(1);
+      expect(tools[0].name).toBe('tool_c');
+    });
+
+    it('throws NotFoundError for unknown project', () => {
+      expect(() =>
+        registry.registerCapabilitiesForType('nope-proj', 'tool', [
+          { name: 'tool_a', capability_type: 'tool', description: 'A' },
+        ]),
+      ).toThrow(/nope-proj/);
+    });
+
+    it('rejects mixed types within one call', () => {
+      expect(() =>
+        registry.registerCapabilitiesForType('surf-proj', 'tool', [
+          { name: 'tool_a', capability_type: 'tool', description: 'A' },
+          { name: 'cmd_x', capability_type: 'cli-command', description: 'X' },
+        ]),
+      ).toThrow(/mixed types/);
+    });
+
+    it('preserves prior-type rows when a later call for a different type is made', () => {
+      // Step 1: register tool surface
+      registry.registerCapabilitiesForType('surf-proj', 'tool', [
+        { name: 'tool_a', capability_type: 'tool', description: 'A' },
+      ]);
+      // Step 2: register cli-command surface — tool surface unchanged
+      registry.registerCapabilitiesForType('surf-proj', 'cli-command', [
+        { name: 'cmd_x', capability_type: 'cli-command', description: 'X' },
+      ]);
+
+      const tools = registry.queryCapabilities({ project_name: 'surf-proj', capability_type: 'tool' });
+      expect(tools.length).toBe(1);
+      expect(tools[0].name).toBe('tool_a');
+    });
+  });
+
   // ── S20: Archive Cleanup ───────────────────────────────────
 
   describe('archiveProject (S20)', () => {
