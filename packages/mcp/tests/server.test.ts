@@ -39,10 +39,10 @@ describe('MCP Server (S21)', () => {
 
   // ── Tool Registration ──────────────────────────────────────
 
-  // spec 0.13: +2 tools (set_project_area, set_parent_project) = 36 total
-  it('registers exactly 36 tools', async () => {
+  // spec 0.22: 36 identity/memory/ports/tasks/bootstrap/health + 3 digests = 39 total
+  it('registers exactly 39 tools', async () => {
     const tools = await listTools(server);
-    expect(tools).toHaveLength(36);
+    expect(tools).toHaveLength(39);
   });
 
   it('registers all expected tool names', async () => {
@@ -51,9 +51,9 @@ describe('MCP Server (S21)', () => {
     expect(names).toEqual([
       'archive_project', 'assess_health', 'batch_update', 'bootstrap_project', 'check_port', 'claim_port',
       'configure_bootstrap', 'configure_memory', 'correct', 'cross_query', 'discover_ports',
-      'enrich_project', 'feedback', 'forget', 'get_project', 'get_registry_stats',
-      'inspect_memory', 'list_projects', 'list_tasks', 'memory_status',
-      'portfolio_brief', 'queue_task', 'recall', 'reflect', 'register_capabilities',
+      'enrich_project', 'feedback', 'forget', 'get_project', 'get_project_digest', 'get_project_digests',
+      'get_registry_stats', 'inspect_memory', 'list_projects', 'list_tasks', 'memory_status',
+      'portfolio_brief', 'queue_task', 'recall', 'reflect', 'refresh_project_digest', 'register_capabilities',
       'register_project', 'release_port', 'rename_project', 'retain',
       'search_projects', 'set_parent_project', 'set_project_area', 'switch_project',
       'update_project', 'query_capabilities', 'write_fields',

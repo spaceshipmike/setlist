@@ -6,26 +6,26 @@ import {
   type CapabilityDeclaration, type QueryDepth,
 } from '@setlist/core';
 
-export function createServer(dbPath?: string): Server {
-  const registry = new Registry(dbPath);
-  const memoryStore = new MemoryStore(dbPath);
-  const memoryRetrieval = new MemoryRetrieval(dbPath);
-  const crossQuery = new CrossQuery(dbPath);
-  const memoryReflection = new MemoryReflection(dbPath);
-  const bootstrapManager = new Bootstrap(dbPath);
-  const healthAssessor = new HealthAssessor(dbPath);
+/**
+ * Shape of one MCP tool registration — a name, human description, and JSON
+ * Schema for its inputs. Exported so the introspector can consume the same
+ * structure the server dispatches from (single source of truth).
+ */
+export interface McpToolDefinition {
+  name: string;
+  description: string;
+  inputSchema: Record<string, unknown>;
+}
 
-  const server = new Server(
-    { name: 'setlist', version: '0.1.0' },
-    { capabilities: { tools: {} } },
-  );
-
-  // ── Tool Definitions ──────────────────────────────────────
-
-  server.setRequestHandler(ListToolsRequestSchema, async () => ({
-    tools: [
-      // Project Identity (14)
-      { name: 'list_projects', description: 'List all projects at a given depth, with optional type/status/area filters. Suggestion: use get_project() for full details on any project.', inputSchema: { type: 'object' as const, properties: { detail: { type: 'string', enum: ['minimal', 'summary', 'standard', 'full'], default: 'summary' }, type_filter: { type: 'string' }, status_filter: { type: 'string' }, area_filter: { type: 'string', description: 'Canonical area name (Work/Family/Home/Health/Finance/Personal/Infrastructure) or "__unassigned__" for projects with no area' } } } },
+/**
+ * The authoritative list of MCP tools this server exposes. This is also what
+ * `introspectMcpTools()` reads when building `tool`-typed capability rows
+ * during startup self-registration (§2.11). The server's ListTools handler
+ * and the startup introspector read this same array — no drift possible.
+ */
+export const MCP_TOOL_DEFINITIONS: McpToolDefinition[] = [
+  // Project Identity (14)
+  { name: 'list_projects', description: 'List all projects at a given depth, with optional type/status/area filters. Suggestion: use get_project() for full details on any project.', inputSchema: { type: 'object' as const, properties: { detail: { type: 'string', enum: ['minimal', 'summary', 'standard', 'full'], default: 'summary' }, type_filter: { type: 'string' }, status_filter: { type: 'string' }, area_filter: { type: 'string', description: 'Canonical area name (Work/Family/Home/Health/Finance/Personal/Infrastructure) or "__unassigned__" for projects with no area' } } } },
       { name: 'get_project', description: 'Get a single project by name at a given depth. Suggestion: use switch_project() for workspace context.', inputSchema: { type: 'object' as const, properties: { name: { type: 'string' }, detail: { type: 'string', enum: ['minimal', 'summary', 'standard', 'full'], default: 'full' } }, required: ['name'] } },
       { name: 'switch_project', description: 'Look up a project by name and return paths, status, ports, and workspace metadata.', inputSchema: { type: 'object' as const, properties: { name: { type: 'string' } }, required: ['name'] } },
       { name: 'search_projects', description: 'Search projects by keyword across name, description, goals, and extended fields. Optional area_filter narrows to a single canonical area.', inputSchema: { type: 'object' as const, properties: { query: { type: 'string' }, type_filter: { type: 'string' }, status_filter: { type: 'string' }, area_filter: { type: 'string' } }, required: ['query'] } },
@@ -72,7 +72,26 @@ export function createServer(dbPath?: string): Server {
       { name: 'get_project_digest', description: 'Read one project\'s essence digest. Returns { digest_text, spec_version, producer, generated_at, token_count?, stale } or null if no digest exists. Pass current_spec_version to compute staleness (omit to skip stale check).', inputSchema: { type: 'object' as const, properties: { project_name: { type: 'string' }, digest_kind: { type: 'string', default: 'essence' }, current_spec_version: { type: 'string', description: 'Optional: the project\'s current spec version. When provided, stale=true iff stored spec_version differs.' } }, required: ['project_name'] } },
       { name: 'get_project_digests', description: 'Batch read project essence digests. Returns a map keyed by project name. Missing projects are omitted unless include_missing=true. include_stale=false filters out digests whose spec_version differs from current_spec_versions[project_name].', inputSchema: { type: 'object' as const, properties: { project_names: { type: 'array', items: { type: 'string' }, description: 'Optional: limit to these projects. Omit for all projects with digests.' }, digest_kind: { type: 'string', default: 'essence' }, include_missing: { type: 'boolean', default: false }, include_stale: { type: 'boolean', default: true }, current_spec_versions: { type: 'object', description: 'Optional: map of project_name to its current spec version, for staleness computation.' } } } },
       { name: 'refresh_project_digest', description: 'Write a project\'s essence digest (replace semantics). Invoked by the CLI generator or any other writer. Rejects writes exceeding the per-kind token ceiling (1200 for essence) with a trim-and-retry error. Returns prior_spec_version when a digest already existed.', inputSchema: { type: 'object' as const, properties: { project_name: { type: 'string' }, digest_kind: { type: 'string', default: 'essence' }, digest_text: { type: 'string' }, spec_version: { type: 'string' }, producer: { type: 'string', description: 'Free-form identifier for what produced the digest (e.g., "local-qwen3.6-35b-a3b-8bit", "manual").' }, token_count: { type: 'number' } }, required: ['project_name', 'digest_text', 'spec_version', 'producer'] } },
-    ],
+];
+
+export function createServer(dbPath?: string): Server {
+  const registry = new Registry(dbPath);
+  const memoryStore = new MemoryStore(dbPath);
+  const memoryRetrieval = new MemoryRetrieval(dbPath);
+  const crossQuery = new CrossQuery(dbPath);
+  const memoryReflection = new MemoryReflection(dbPath);
+  const bootstrapManager = new Bootstrap(dbPath);
+  const healthAssessor = new HealthAssessor(dbPath);
+
+  const server = new Server(
+    { name: 'setlist', version: '0.1.0' },
+    { capabilities: { tools: {} } },
+  );
+
+  // ── Tool Definitions ──────────────────────────────────────
+
+  server.setRequestHandler(ListToolsRequestSchema, async () => ({
+    tools: MCP_TOOL_DEFINITIONS,
   }));
 
   // ── Tool Handlers ─────────────────────────────────────────
