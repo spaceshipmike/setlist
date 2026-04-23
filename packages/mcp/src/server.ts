@@ -5,6 +5,7 @@ import {
   HealthAssessor,
   type CapabilityDeclaration, type QueryDepth,
 } from '@setlist/core';
+import { selfRegisterCapabilities, stderrLogger, SELF_REGISTER_PROJECT, type Logger } from './self-register.js';
 
 /**
  * Shape of one MCP tool registration — a name, human description, and JSON
@@ -74,7 +75,26 @@ export const MCP_TOOL_DEFINITIONS: McpToolDefinition[] = [
       { name: 'refresh_project_digest', description: 'Write a project\'s essence digest (replace semantics). Invoked by the CLI generator or any other writer. Rejects writes exceeding the per-kind token ceiling (1200 for essence) with a trim-and-retry error. Returns prior_spec_version when a digest already existed.', inputSchema: { type: 'object' as const, properties: { project_name: { type: 'string' }, digest_kind: { type: 'string', default: 'essence' }, digest_text: { type: 'string' }, spec_version: { type: 'string' }, producer: { type: 'string', description: 'Free-form identifier for what produced the digest (e.g., "local-qwen3.6-35b-a3b-8bit", "manual").' }, token_count: { type: 'number' } }, required: ['project_name', 'digest_text', 'spec_version', 'producer'] } },
 ];
 
-export function createServer(dbPath?: string): Server {
+/**
+ * Canonical description and placement used when the server auto-creates the
+ * setlist project row on first launch against a fresh registry (S115). If
+ * the operator has already registered setlist manually, these values are
+ * NOT overwritten — auto-create is a safety net, not an authority.
+ */
+export const SETLIST_CANONICAL_DESCRIPTION =
+  'TypeScript implementation of the Project Registry — the active intelligence hub for the user\'s personal ecosystem. Provides project identity, capability declarations, portfolio memory, port allocation, task routing, batch operations, cross-project intelligence, per-project essence digests, and a desktop control panel via a local SQLite database, MCP server, and Electron app.';
+export const SETLIST_CANONICAL_AREA = 'Infrastructure';
+
+export interface CreateServerOptions {
+  logger?: Logger;
+  /**
+   * When true, skip first-run auto-create and startup self-registration.
+   * Used by tests that need a completely quiet server (no side-effect writes).
+   */
+  skipSelfRegister?: boolean;
+}
+
+export function createServer(dbPath?: string, options: CreateServerOptions = {}): Server {
   const registry = new Registry(dbPath);
   const memoryStore = new MemoryStore(dbPath);
   const memoryRetrieval = new MemoryRetrieval(dbPath);
@@ -82,6 +102,36 @@ export function createServer(dbPath?: string): Server {
   const memoryReflection = new MemoryReflection(dbPath);
   const bootstrapManager = new Bootstrap(dbPath);
   const healthAssessor = new HealthAssessor(dbPath);
+
+  // ── First-run auto-create + self-registration (§2.11, S115) ─
+  //
+  // The order matters: create the project row BEFORE writing capability rows,
+  // because project_capabilities.project_id is a foreign key. Failures here
+  // are caught and logged; they never prevent the server from coming up.
+  if (!options.skipSelfRegister) {
+    const logger = options.logger ?? stderrLogger;
+    try {
+      const existing = registry.getProject(SELF_REGISTER_PROJECT, 'minimal');
+      if (!existing) {
+        registry.register({
+          name: SELF_REGISTER_PROJECT,
+          type: 'project',
+          status: 'active',
+          description: SETLIST_CANONICAL_DESCRIPTION,
+          area: SETLIST_CANONICAL_AREA,
+          producer: 'setlist-self-register',
+        });
+      }
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      logger.warn(`Capability self-registration: setlist project auto-create failed (${msg}); skipping capability registration.`);
+      // Fall through: skip self-register if project row couldn't be established.
+      options = { ...options, skipSelfRegister: true };
+    }
+    if (!options.skipSelfRegister) {
+      selfRegisterCapabilities(registry, logger);
+    }
+  }
 
   const server = new Server(
     { name: 'setlist', version: '0.1.0' },

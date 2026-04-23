@@ -30,7 +30,11 @@ describe('MCP Server (S21)', () => {
   beforeEach(() => {
     tmpDir = mkdtempSync(join(tmpdir(), 'setlist-mcp-test-'));
     dbPath = join(tmpDir, 'test.db');
-    server = createServer(dbPath);
+    // These tests exercise individual tool call semantics and count projects
+    // directly; they don't care about the startup self-registration path.
+    // Dedicated integration tests in `self-register-integration.test.ts`
+    // cover the auto-create + capability self-registration behavior.
+    server = createServer(dbPath, { skipSelfRegister: true });
   });
 
   afterEach(() => {
