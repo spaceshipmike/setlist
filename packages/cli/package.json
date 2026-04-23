@@ -11,6 +11,14 @@
     ".": {
       "import": "./dist/index.js",
       "types": "./dist/index.d.ts"
+    },
+    "./introspect": {
+      "import": "./dist/introspect-commands.js",
+      "types": "./dist/introspect-commands.d.ts"
+    },
+    "./commands": {
+      "import": "./dist/commands.js",
+      "types": "./dist/commands.d.ts"
     }
   },
   "scripts": {

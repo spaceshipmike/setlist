@@ -2,6 +2,7 @@
 import { Registry, initDb, scanLocations, applyProposals, scanMemories, applyMemoryMigration } from '@setlist/core';
 import { runWorker, installWorker, uninstallWorker, workerStatus } from './worker.js';
 import { runDigestRefresh } from './digest.js';
+import { CLI_COMMAND_DEFINITIONS } from './commands.js';
 
 const args = process.argv.slice(2);
 const command = args[0];
@@ -162,7 +163,10 @@ switch (command) {
     const refreshed = results.filter(r => r.status === 'refreshed').length;
     const skipped = results.filter(r => r.status.startsWith('skipped')).length;
     const errored = results.filter(r => r.status === 'error').length;
-    console.log(`\nDone: ${refreshed} refreshed, ${skipped} skipped, ${errored} failed (of ${results.length} total).`);
+    const parts = [`${refreshed} refreshed`];
+    if (skipped > 0) parts.push(`${skipped} skipped`);
+    parts.push(`${errored} failed`);
+    console.log(`\nDone: ${parts.join(', ')} (of ${results.length} total).`);
     if (errored > 0) process.exit(1);
     break;
   }
@@ -205,21 +209,19 @@ switch (command) {
     break;
   }
 
-  default:
-    console.log(`setlist — Project Registry CLI (v0.1.0)
-
-Commands:
-  init                           Initialize the registry database
-  migrate [--dry-run] [--yes]    Scan ~/Code and ~/Projects, register projects
-  migrate-memories [--apply]     Import CC auto-memory and fctry memory into registry
-  update <name> [--status ...]   Update a project's core fields
-  archive <name>                 Archive a project
-  digest refresh <project>       Generate and store the project's essence digest
-  digest refresh --all           Refresh digests for every active project
-  digest refresh --stale         Refresh only projects whose digest lags current spec
-  ui                             Launch the Setlist desktop app
-  worker run [--dry-run]         Run one worker cycle
-  worker install [--interval N]  Install launchd periodic job
-  worker uninstall               Remove launchd job
-  worker status                  Show worker status`);
+  default: {
+    // Help text is derived from CLI_COMMAND_DEFINITIONS so the runtime
+    // dispatcher and the startup introspector stay in sync.
+    const lines: string[] = ['setlist — Project Registry CLI (v0.1.0)', '', 'Commands:'];
+    for (const cmd of CLI_COMMAND_DEFINITIONS) {
+      lines.push(`  ${cmd.usage.padEnd(62)} ${cmd.description}`);
+      if (cmd.subcommands) {
+        for (const sub of cmd.subcommands) {
+          const usage = sub.usage ?? `setlist ${cmd.name} ${sub.name}`;
+          lines.push(`    ${usage.padEnd(60)} ${sub.description}`);
+        }
+      }
+    }
+    console.log(lines.join('\n'));
+  }
 }

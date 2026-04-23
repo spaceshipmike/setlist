@@ -18,6 +18,7 @@
   },
   "dependencies": {
     "@setlist/core": "*",
+    "@setlist/cli": "*",
     "@modelcontextprotocol/sdk": "^1.12.0"
   }
 }
