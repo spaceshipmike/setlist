@@ -10,13 +10,13 @@
     "packages/app"
   ],
   "scripts": {
-    "build": "npm run build -w packages/core && npm run build -w packages/mcp && npm run build -w packages/cli",
+    "build": "npm run build -w packages/core && npm run build -w packages/cli && npm run build -w packages/mcp",
     "build:core": "npm run build -w packages/core",
     "build:mcp": "npm run build -w packages/mcp",
     "build:cli": "npm run build -w packages/cli",
     "test": "vitest run",
     "test:watch": "vitest",
-    "typecheck": "tsc --noEmit -p packages/core/tsconfig.json && tsc --noEmit -p packages/mcp/tsconfig.json && tsc --noEmit -p packages/cli/tsconfig.json",
+    "typecheck": "tsc --noEmit -p packages/core/tsconfig.json && tsc --noEmit -p packages/cli/tsconfig.json && tsc --noEmit -p packages/mcp/tsconfig.json",
     "verify:mcp-abi": "bash scripts/verify-mcp-abi.sh"
   },
   "devDependencies": {
