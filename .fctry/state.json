@@ -1,9 +1,8 @@
 {
-  "currentCommand": "ref",
+  "currentCommand": "evolve",
   "completedSteps": [
     "state-owner-scan",
-    "researcher",
-    "user-confirmed",
+    "scenario-crafter",
     "spec-writer"
   ],
   "refPatterns": [
@@ -43,5 +42,6 @@
       "adopted": true
     }
   ],
-  "digestWritten": true
+  "digestWritten": true,
+  "_specVersionBumped": true
 }

@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { mkdtempSync, rmSync, mkdirSync, writeFileSync, existsSync, readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
+import { execSync } from 'node:child_process';
 import { Bootstrap, Registry } from '../src/index.js';
 
 describe('Bootstrap', () => {
@@ -371,6 +372,76 @@ describe('Bootstrap', () => {
         // Should get the folder exists error (checked first)
         expect(err.message).toContain('FOLDER_EXISTS');
       }
+    });
+  });
+
+  // ── Portfolio-root .gitignore: auto-append new project dir ─────
+
+  describe('bootstrapProject - parent .gitignore update', () => {
+    beforeEach(() => {
+      bootstrap.configureBootstrap({
+        path_roots: { project: codeRoot, area_of_focus: areaRoot },
+        template_dir: templateDir,
+      });
+    });
+
+    it('appends project dir to parent .gitignore when parent is a git repo with an existing .gitignore', () => {
+      execSync('git init -q', { cwd: codeRoot, stdio: 'pipe' });
+      const gitignorePath = join(codeRoot, '.gitignore');
+      writeFileSync(gitignorePath, 'existing-project/\nanother-project/\n');
+
+      const result = bootstrap.bootstrapProject({
+        name: 'portfolio-thing',
+        type: 'project',
+      });
+
+      expect(result.parent_gitignore_updated).toBe(true);
+      const after = readFileSync(gitignorePath, 'utf8');
+      expect(after).toContain('existing-project/');
+      expect(after).toContain('portfolio-thing/');
+      expect(after.endsWith('\n')).toBe(true);
+    });
+
+    it('does not duplicate an existing entry', () => {
+      execSync('git init -q', { cwd: codeRoot, stdio: 'pipe' });
+      const gitignorePath = join(codeRoot, '.gitignore');
+      writeFileSync(gitignorePath, 'portfolio-thing/\n');
+
+      const result = bootstrap.bootstrapProject({
+        name: 'portfolio-thing',
+        type: 'project',
+      });
+
+      expect(result.parent_gitignore_updated).toBe(false);
+      const after = readFileSync(gitignorePath, 'utf8');
+      const occurrences = after.split('\n').filter((l) => l.trim() === 'portfolio-thing/').length;
+      expect(occurrences).toBe(1);
+    });
+
+    it('is a no-op when parent directory is not a git repo', () => {
+      const gitignorePath = join(codeRoot, '.gitignore');
+      writeFileSync(gitignorePath, 'something/\n');
+
+      const result = bootstrap.bootstrapProject({
+        name: 'standalone',
+        type: 'project',
+      });
+
+      expect(result.parent_gitignore_updated).toBe(false);
+      expect(readFileSync(gitignorePath, 'utf8')).toBe('something/\n');
+    });
+
+    it('is a no-op when parent is a git repo but has no .gitignore', () => {
+      execSync('git init -q', { cwd: codeRoot, stdio: 'pipe' });
+      // No .gitignore is created in the parent.
+
+      const result = bootstrap.bootstrapProject({
+        name: 'no-ignore',
+        type: 'project',
+      });
+
+      expect(result.parent_gitignore_updated).toBe(false);
+      expect(existsSync(join(codeRoot, '.gitignore'))).toBe(false);
     });
   });
 });

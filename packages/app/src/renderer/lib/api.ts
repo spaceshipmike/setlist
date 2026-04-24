@@ -260,6 +260,7 @@ export interface BootstrapResult {
   type: string;
   git_initialized: boolean;
   templates_applied: boolean;
+  parent_gitignore_updated: boolean;
 }
 
 export default api;

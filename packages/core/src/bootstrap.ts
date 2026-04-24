@@ -1,5 +1,5 @@
-import { existsSync, mkdirSync, cpSync, readdirSync, statSync, rmSync, renameSync } from 'node:fs';
-import { join } from 'node:path';
+import { existsSync, mkdirSync, cpSync, readdirSync, statSync, rmSync, renameSync, readFileSync, writeFileSync } from 'node:fs';
+import { basename, dirname, join } from 'node:path';
 import { execSync } from 'node:child_process';
 import { connect, getDbPath, initDb } from './db.js';
 import { Registry } from './registry.js';
@@ -49,6 +49,36 @@ export interface BootstrapResult {
   type: ProjectType;
   git_initialized: boolean;
   templates_applied: boolean;
+  parent_gitignore_updated: boolean;
+}
+
+// If the new project's parent directory is itself a git repo with an existing
+// .gitignore, append the project's directory name so the parent repo ignores
+// the nested sub-repo. This is the portfolio-root convention at ~/Code/ where
+// each project is its own git repo. Best-effort: never fails the bootstrap.
+function maybeUpdateParentGitignore(targetPath: string): boolean {
+  try {
+    const parentDir = dirname(targetPath);
+    if (!existsSync(join(parentDir, '.git'))) return false;
+
+    const gitignorePath = join(parentDir, '.gitignore');
+    if (!existsSync(gitignorePath)) return false;
+
+    const projectName = basename(targetPath);
+    const entryWithSlash = `${projectName}/`;
+    const content = readFileSync(gitignorePath, 'utf8');
+    const alreadyPresent = content.split('\n').some((line) => {
+      const trimmed = line.trim();
+      return trimmed === projectName || trimmed === entryWithSlash;
+    });
+    if (alreadyPresent) return false;
+
+    const suffix = content.length === 0 || content.endsWith('\n') ? '' : '\n';
+    writeFileSync(gitignorePath, `${content}${suffix}${entryWithSlash}\n`);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 export class BootstrapNotConfiguredError extends RegistryError {
@@ -252,12 +282,15 @@ export class Bootstrap {
         throw err;
       }
 
+      const parentGitignoreUpdated = maybeUpdateParentGitignore(targetPath);
+
       return {
         name: opts.name,
         path: targetPath,
         type: dbType,
         git_initialized: gitInitialized,
         templates_applied: templatesApplied,
+        parent_gitignore_updated: parentGitignoreUpdated,
       };
     } finally {
       db.close();

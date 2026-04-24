@@ -3,7 +3,7 @@
 ```yaml
 ---
 title: Setlist
-spec-version: "0.24"
+spec-version: "0.25"
 date: 2026-04-24
 status: active
 author: Mike
@@ -721,6 +721,8 @@ An agent or user calls `bootstrap_project` with a project name, type (`project`)
 2. Creates the project folder at the configured path root for the `project` type (e.g., `~/Code/my-new-project`).
 3. Copies the contents of the template directory into the new folder, applying any template-specific scaffolding.
 4. Initializes a git repository in the new folder and creates an initial commit.
+
+When the new project's parent directory is itself a git repository with an existing `.gitignore` — the portfolio-root convention at `~/Code/`, where each project is its own git repo and the parent directory tracks only its own metadata — `bootstrap_project` appends the new project's directory name (with a trailing slash) to that `.gitignore` so the parent repo ignores the nested sub-repo. The append is best-effort and silent: it never fails the bootstrap, it is a no-op when the parent directory is not a git repo, when the parent has no `.gitignore` (one is not created), or when the entry is already listed. The result surfaces this as `parent_gitignore_updated: true | false` alongside the existing `git_initialized` and `templates_applied` flags.
 
 The caller receives confirmation with the registered project name and the created path. The project is immediately queryable in the registry and ready for development.
 
@@ -1905,7 +1907,7 @@ Complete tool reference for the 39 MCP tools.
 
 | Tool | Parameters | Returns |
 |------|-----------|---------|
-| bootstrap_project | name, type, display_name?, status?, description?, goals?, area?, parent_project?, path_override? | Registered project name + created folder path. `area` and `parent_project` are validated the same as in `register_project` |
+| bootstrap_project | name, type, display_name?, status?, description?, goals?, area?, parent_project?, path_override? | Registered project name, created folder path, and side-effect flags `git_initialized`, `templates_applied`, `parent_gitignore_updated`. `area` and `parent_project` are validated the same as in `register_project`. |
 | configure_bootstrap | path_roots, template_dir?, archive_path_root? | Updated bootstrap configuration |
 
 **Health:**

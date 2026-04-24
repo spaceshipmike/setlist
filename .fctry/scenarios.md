@@ -2004,3 +2004,21 @@ Validates: `#capability-declarations` (2.11) failure-isolation, `#observability`
 - The warning is emitted to stderr (or the MCP server's structured log channel), not to stdout — it does not interfere with MCP protocol framing on stdio transports
 
 Difficulty: hard
+
+---
+
+## S118: Bootstrap Auto-Appends Project Directory to Parent .gitignore {#s118}
+**Given** an operator invoking `bootstrap_project` from a portfolio root where the parent directory of the new project's path (e.g. `~/Code/`) is itself a git repository and already carries its own `.gitignore` file — the long-standing "portfolio root is a repo, each project is a nested repo we don't want tracked" convention
+**When** the bootstrap runs to completion and creates the new project folder at `<parent>/<project-name>/`
+**Then** the new project's directory name is appended to the parent's existing `.gitignore` on its own line with a trailing slash, preserving the file's existing contents and trailing-newline discipline — and the bootstrap result surfaces a dedicated boolean flag so the operator can see whether a parent-level ignore entry was actually written, without the bootstrap ever failing because of a .gitignore hiccup.
+
+Validates: `#project-bootstrap` (2.13) portfolio-root .gitignore convention
+
+**Satisfaction criteria:**
+- When the parent directory is a git repo (has a `.git/` directory) and has an existing `.gitignore`, a line of the form `<project-name>/` (with trailing slash) is appended on its own line — pre-existing entries in the file remain byte-identical above it, the file's trailing-newline discipline is preserved (no stripped or doubled final newline), and the bootstrap result reports `parent_gitignore_updated: true`
+- When the project name is already listed in the parent's `.gitignore` — in either the bare `<project-name>` form or the trailing-slash `<project-name>/` form — the file is left byte-identical and the result reports `parent_gitignore_updated: false`; no duplicate line is written
+- When the parent directory is not a git repo (no `.git/` directory at that level), the helper is a pure no-op: the result reports `parent_gitignore_updated: false`, and any unrelated `.gitignore` that happens to exist in that non-repo parent is not mutated — the convention only applies to portfolio-root-style git repos
+- When the parent directory is a git repo but has no `.gitignore` file at all, the helper does not create one — the result reports `parent_gitignore_updated: false` and no new file appears on disk; opting into the convention is the operator's choice, expressed by the presence of an existing `.gitignore`
+- The behavior is best-effort and never propagates: if the append fails for any filesystem reason (unreadable file, permission denied on write, I/O error), the bootstrap itself still succeeds with the project folder created and registered, and the result reports `parent_gitignore_updated: false` — the operator is not blocked from bootstrapping a project because of a parent-directory permission quirk
+
+Difficulty: medium
