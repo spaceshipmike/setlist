@@ -2,7 +2,7 @@
   "versions": {
     "external": {
       "type": "external",
-      "current": "0.2.6",
+      "current": "0.2.7",
       "propagationTargets": [],
       "incrementRules": {
         "patch": "auto-per-chunk",

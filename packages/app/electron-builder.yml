@@ -13,7 +13,13 @@ asarUnpack:
   - node_modules/better-sqlite3/**
 mac:
   target:
+    # dmg is what humans download for first install; zip is what
+    # electron-updater downloads to apply an update in-place.
+    # Both go into the GitHub Release; latest-mac.yml points at the zip.
     - target: dmg
+      arch:
+        - arm64
+    - target: zip
       arch:
         - arm64
   # Notarization + hardened runtime are mandatory for the auto-update path
