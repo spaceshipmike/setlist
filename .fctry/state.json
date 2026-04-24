@@ -1,47 +1,4 @@
 {
-  "currentCommand": "evolve",
-  "completedSteps": [
-    "state-owner-scan",
-    "scenario-crafter",
-    "spec-writer"
-  ],
-  "refPatterns": [
-    {
-      "name": "Canonical knowledge-file taxonomy",
-      "description": "Five named free-form surfaces (architecture / commands / patterns / gotchas / decisions), each with a one-line editorial charter and surgical-edit discipline. Suggests Setlist's project_digests schema could grow a small named catalog of digest_kind values without migration.",
-      "section": "portfolio-memory",
-      "source": "https://github.com/chiefautism/claude-intel",
-      "adopted": true
-    },
-    {
-      "name": "PostToolUse JSONL event-feed ingest",
-      "description": "Low-cost tool-call event stream (Edit/Write/Bash/NotebookEdit; skip Read/Glob/Grep as noisy) appended as JSONL with rotation discipline (cap at 500, keep last 300). Gives Setlist a uniform event-ingest surface so interactive sessions stop producing zero reinforcement signal.",
-      "section": "portfolio-memory",
-      "source": "https://github.com/chiefautism/claude-intel",
-      "adopted": true
-    },
-    {
-      "name": "Stateless read + cursor-based incremental reflection",
-      "description": "Per-invocation lightweight update layer: read what's known, tail the delta since last cursor, reinforce or contradict, advance the cursor. Separates continuous incremental reinforcement from threshold-triggered deep consolidation. Gated on the event-feed pattern landing first.",
-      "section": "portfolio-memory",
-      "source": "https://github.com/chiefautism/claude-intel",
-      "adopted": true
-    },
-    {
-      "name": "rescan_project as first-class reset",
-      "description": "One named admin operation that archives (soft-delete, not destruction) all project-scoped memories + refreshes the digest + clears reinforcement history. Replaces N separate forget + digest-refresh calls for post-refactor cleanup while preserving audit trail.",
-      "section": "portfolio-memory",
-      "source": "https://github.com/chiefautism/claude-intel",
-      "adopted": true
-    },
-    {
-      "name": "Bounded-file discipline as principle",
-      "description": "Cross-cutting rule: every free-form surface carries an explicit token/line ceiling, enforced at write time, selected for compactness not comprehensiveness. Generalizes the existing digest ceiling to cover the event feed, any future digest-kind catalog, and any future free-form surface.",
-      "section": "design-principles",
-      "source": "https://github.com/chiefautism/claude-intel",
-      "adopted": true
-    }
-  ],
-  "digestWritten": true,
-  "_specVersionBumped": true
+  "currentCommand": "execute",
+  "completedSteps": []
 }

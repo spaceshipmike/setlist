@@ -1,6 +1,6 @@
 {
   "statusLine": {
     "type": "command",
-    "command": "node /Users/mike/code/fctry/src/statusline/fctry-statusline.js"
+    "command": "node /Users/mike/Code/fctry/src/statusline/fctry-statusline.js"
   }
 }

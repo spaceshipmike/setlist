@@ -11,8 +11,8 @@ Schema v12 (adds `project_digests` table for free-form per-project essence summa
 This project is built and maintained using the fctry spec-driven workflow.
 
 - **Spec:** `.fctry/spec.md` — the complete natural-language specification
-- **Scenarios:** `.fctry/scenarios.md` — 111 end-to-end scenarios defining behavioral satisfaction
-- **Config:** `.fctry/config.json` — version registry (external 0.1.34, spec 0.22)
+- **Scenarios:** `.fctry/scenarios.md` — 118 end-to-end scenarios defining behavioral satisfaction
+- **Config:** `.fctry/config.json` — version registry (external 0.1.40, spec 0.25)
 - **State:** `.fctry/state.json` — current workflow state
 
 Code is validated solely through scenario satisfaction. No human reviews the code.
@@ -118,7 +118,7 @@ Every project in the registry should be discoverable and understandable by agent
 | File | Purpose |
 |------|---------|
 | spec.md | NLSpec v2 — the complete specification |
-| scenarios.md | Holdout scenario set (111 scenarios) |
+| scenarios.md | Holdout scenario set (118 scenarios) |
 | config.json | Version registry |
 | state.json | Current workflow state |
 | interview-state.md | Interview completion record |
@@ -156,12 +156,14 @@ Scenarios in `.fctry/scenarios.md` define the behavioral contract. Key categorie
 - **S81-S90:** Auto-update (dev-disabled, signed+notarized release, channel persistence, stable vs beta feeds, Check For Updates menu, About dialog version, silent background download, update-downloaded toast, install-on-quit prompt, Settings status line)
 - **S91-S96:** Testing discipline and native-binding hygiene (CI gates, Electron security, ABI safety net)
 - **S97-S111:** Project digests (write/replace/staleness/archive-cascade/ceiling; generator v2 provider + fallback, non-code docling extraction, docling-unavailable, file-tree-hash staleness, --all portfolio refresh, multi-project no-silent-drop, underscore-dir walker skip, `.digestignore` composition, large-spec handling)
+- **S112-S117:** Capability self-registration (MCP tools, CLI commands, and library exports re-declare on every server startup; per-surface failure isolation; drift is structurally impossible)
+- **S118:** Bootstrap auto-appends sub-project entries to the parent project's `.gitignore` (idempotent, best-effort)
 
 <!-- compact-instructions
 Preserve during auto-compaction:
 - Spec: .fctry/spec.md (Setlist NLSpec; port history in §1.5)
-- Scenarios: .fctry/scenarios.md (111 scenarios, S01-S111)
-- Config: .fctry/config.json (external 0.1.34, spec 0.22)
+- Scenarios: .fctry/scenarios.md (118 scenarios, S01-S118)
+- Config: .fctry/config.json (external 0.1.40, spec 0.25)
 - State: .fctry/state.json (current workflow step)
 - Key constraint: Schema v12 with canonical areas + sub-projects + project digests, 20 tables
 - Key constraint: 39 MCP tools covering identity, capabilities, memory, ports, tasks, bootstrap, health
