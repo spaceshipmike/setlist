@@ -64,10 +64,11 @@ Push a tag matching `v*` (e.g., `v0.2.0`). The workflow:
 1. Verifies all five signing credentials are set. Missing any → hard
    fail with `missing required env var: $NAME`. No silent skip.
 2. `npm ci && npm run build`.
-3. `electron-builder --mac --arm64 --x64 --publish always` signs with
+3. `electron-builder --mac --arm64 --publish always` signs with
    the Developer ID cert, notarizes via Apple's notary service, staples
-   the ticket, and publishes `.dmg` artifacts + `latest-mac.yml` /
-   `beta-mac.yml` update metadata to the GitHub Release.
+   the ticket, and publishes the `.dmg` + `latest-mac.yml` /
+   `beta-mac.yml` update metadata to the GitHub Release. Apple Silicon
+   only — Intel builds were dropped at v0.2.4.
 
 Non-prerelease tags feed the Stable channel; tags with a prerelease
 component (`v0.2.0-beta.1`) feed the Beta channel. `electron-updater`
