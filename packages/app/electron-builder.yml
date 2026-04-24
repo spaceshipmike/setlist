@@ -28,3 +28,4 @@ publish:
   provider: github
   owner: spaceshipmike
   repo: setlist
+  releaseType: release
