@@ -48,7 +48,7 @@ packages/
 - The desktop app and the MCP server need different native ABIs for `better-sqlite3` (Electron's Node vs. standalone Node). A wrapper script swaps binaries between dev/build/start steps and a session-start hook checks ABI integrity.
 - The desktop app shares a design system (`chorus-ui`) with another personal app (Chorus) — same surfaces, accents, typography, status colors. The information architecture is Setlist's own.
 
-**Spec-driven, not test-driven.** Setlist is built using a workflow called [fctry](https://github.com/spaceshipmike/fctry) (factory). The complete behavioral contract is described in plain English in `.fctry/spec.md` (NLSpec v2 format) and validated by 118 end-to-end scenarios in `.fctry/scenarios.md`. The scenarios are evaluated by an LLM-as-judge — they're the holdout set, not test fixtures shown to the coding agent during builds. Vitest runs alongside as a fast local canary, but it's not the truth signal.
+**Spec-driven, not test-driven.** Setlist is built using a personal workflow I call fctry (factory). The complete behavioral contract is described in plain English in `.fctry/spec.md` (NLSpec v2 format) and validated by 118 end-to-end scenarios in `.fctry/scenarios.md`. The scenarios are evaluated by an LLM-as-judge — they're the holdout set, not test fixtures shown to the coding agent during builds. Vitest runs alongside as a fast local canary, but it's not the truth signal.
 
 What this means in practice:
 - I describe behavior in user-facing language; the coding agent picks the implementation
