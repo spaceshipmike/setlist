@@ -12,7 +12,7 @@ This project is built and maintained using the fctry spec-driven workflow.
 
 - **Spec:** `.fctry/spec.md` — the complete natural-language specification
 - **Scenarios:** `.fctry/scenarios.md` — 111 end-to-end scenarios defining behavioral satisfaction
-- **Config:** `.fctry/config.json` — version registry (external 0.1.32, spec 0.22)
+- **Config:** `.fctry/config.json` — version registry (external 0.1.34, spec 0.22)
 - **State:** `.fctry/state.json` — current workflow state
 
 Code is validated solely through scenario satisfaction. No human reviews the code.
@@ -161,7 +161,7 @@ Scenarios in `.fctry/scenarios.md` define the behavioral contract. Key categorie
 Preserve during auto-compaction:
 - Spec: .fctry/spec.md (Setlist NLSpec; port history in §1.5)
 - Scenarios: .fctry/scenarios.md (111 scenarios, S01-S111)
-- Config: .fctry/config.json (external 0.1.32, spec 0.22)
+- Config: .fctry/config.json (external 0.1.34, spec 0.22)
 - State: .fctry/state.json (current workflow step)
 - Key constraint: Schema v12 with canonical areas + sub-projects + project digests, 20 tables
 - Key constraint: 39 MCP tools covering identity, capabilities, memory, ports, tasks, bootstrap, health

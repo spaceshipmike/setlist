@@ -10,7 +10,7 @@ import __cjs_mod__ from "node:module";
 const __filename = import.meta.filename;
 const __dirname = import.meta.dirname;
 const require2 = __cjs_mod__.createRequire(import.meta.url);
-const SCHEMA_VERSION = 11;
+const SCHEMA_VERSION = 12;
 const CANONICAL_AREAS = [
   { name: "Work", display_name: "Work", description: "Professional, client, and advisory projects.", color: "#3b82f6" },
   { name: "Family", display_name: "Family", description: "Household family coordination and planning.", color: "#ec4899" },
@@ -238,6 +238,17 @@ CREATE VIRTUAL TABLE IF NOT EXISTS memory_fts USING fts5(
     content_l1
 );
 
+CREATE TABLE IF NOT EXISTS project_digests (
+    project_id INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+    digest_kind TEXT NOT NULL DEFAULT 'essence',
+    digest_text TEXT NOT NULL,
+    spec_version TEXT NOT NULL,
+    producer TEXT NOT NULL,
+    generated_at TEXT NOT NULL,
+    token_count INTEGER,
+    PRIMARY KEY (project_id, digest_kind)
+);
+
 -- Indexes
 CREATE INDEX IF NOT EXISTS idx_projects_type ON projects(type);
 CREATE INDEX IF NOT EXISTS idx_projects_status ON projects(status);
@@ -266,6 +277,7 @@ CREATE INDEX IF NOT EXISTS idx_edges_type ON memory_edges(relationship_type);
 CREATE INDEX IF NOT EXISTS idx_sources_memory ON memory_sources(memory_id);
 CREATE INDEX IF NOT EXISTS idx_enrichment_memory ON enrichment_log(memory_id, engine_kind);
 CREATE INDEX IF NOT EXISTS idx_memories_pinned ON memories(is_pinned, status);
+CREATE INDEX IF NOT EXISTS idx_project_digests_project ON project_digests(project_id);
 `;
 const FTS_TRIGGERS_SQL = `
 CREATE TRIGGER IF NOT EXISTS memory_fts_insert AFTER INSERT ON memories BEGIN
@@ -552,6 +564,21 @@ function upgradeSchema(db) {
     } finally {
       db.pragma("foreign_keys = ON");
     }
+  }
+  if (currentVersion >= 11 && currentVersion < 12) {
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS project_digests (
+          project_id INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+          digest_kind TEXT NOT NULL DEFAULT 'essence',
+          digest_text TEXT NOT NULL,
+          spec_version TEXT NOT NULL,
+          producer TEXT NOT NULL,
+          generated_at TEXT NOT NULL,
+          token_count INTEGER,
+          PRIMARY KEY (project_id, digest_kind)
+      );
+    `);
+    db.exec(`CREATE INDEX IF NOT EXISTS idx_project_digests_project ON project_digests(project_id)`);
   }
   db.prepare("INSERT OR REPLACE INTO schema_meta (key, value) VALUES ('schema_version', ?)").run(String(SCHEMA_VERSION));
 }
@@ -1755,6 +1782,130 @@ class Registry {
           result.audience = row.audience;
         return result;
       });
+    } finally {
+      db.close();
+    }
+  }
+  // ── Project Digests ──────────────────────────────────────────
+  /**
+   * Read a single project's digest of the given kind. Returns null if no digest
+   * exists. Staleness is computed against `current_spec_version` when provided;
+   * when omitted, stale defaults to false (caller can't distinguish fresh from
+   * stale without knowing the current version).
+   */
+  getProjectDigest(project_name, opts) {
+    const kind = opts?.digest_kind ?? "essence";
+    const db = this.open();
+    try {
+      const row = db.prepare(`
+        SELECT pd.digest_kind, pd.digest_text, pd.spec_version, pd.producer, pd.generated_at, pd.token_count
+        FROM project_digests pd
+        JOIN projects p ON p.id = pd.project_id
+        WHERE p.name = ? AND pd.digest_kind = ?
+      `).get(project_name, kind);
+      if (!row)
+        return null;
+      const stale = opts?.current_spec_version != null ? row.spec_version !== opts.current_spec_version : false;
+      return {
+        project_name,
+        digest_kind: row.digest_kind,
+        digest_text: row.digest_text,
+        spec_version: row.spec_version,
+        producer: row.producer,
+        generated_at: row.generated_at,
+        token_count: row.token_count,
+        stale
+      };
+    } finally {
+      db.close();
+    }
+  }
+  /**
+   * Batch read digests. Returns a map keyed by project name. Missing projects
+   * are omitted unless `include_missing: true`, in which case they appear with
+   * `digest_text: null`. `include_stale` defaults to true; set to false to
+   * exclude stale digests (requires `current_spec_versions` to compute).
+   */
+  getProjectDigests(opts) {
+    const kind = opts?.digest_kind ?? "essence";
+    const includeMissing = opts?.include_missing ?? false;
+    const includeStale = opts?.include_stale ?? true;
+    const currentVersions = opts?.current_spec_versions ?? {};
+    const db = this.open();
+    try {
+      let sql = `
+        SELECT p.name AS project_name, pd.digest_text, pd.spec_version, pd.producer, pd.generated_at, pd.token_count
+        FROM projects p
+        LEFT JOIN project_digests pd ON pd.project_id = p.id AND pd.digest_kind = ?
+      `;
+      const params = [kind];
+      if (opts?.project_names && opts.project_names.length > 0) {
+        const placeholders = opts.project_names.map(() => "?").join(", ");
+        sql += ` WHERE p.name IN (${placeholders})`;
+        params.push(...opts.project_names);
+      }
+      sql += " ORDER BY p.name";
+      const rows = db.prepare(sql).all(...params);
+      const result = {};
+      for (const r of rows) {
+        const hasDigest = r.digest_text != null;
+        if (!hasDigest && !includeMissing)
+          continue;
+        const current = currentVersions[r.project_name];
+        const stale = hasDigest && current != null ? r.spec_version !== current : false;
+        if (stale && !includeStale)
+          continue;
+        result[r.project_name] = {
+          digest_text: r.digest_text,
+          spec_version: r.spec_version,
+          producer: r.producer,
+          generated_at: r.generated_at,
+          token_count: r.token_count,
+          stale
+        };
+      }
+      return result;
+    } finally {
+      db.close();
+    }
+  }
+  /**
+   * Write (replace) a project's digest. Per-kind token ceilings enforce a hard
+   * upper bound; callers should trim to the target range (see DIGEST_KIND_CONFIG
+   * in models.ts). Returns the prior spec_version if one existed, so the
+   * caller can log drift.
+   */
+  refreshProjectDigest(opts) {
+    const kind = opts.digest_kind ?? "essence";
+    const DIGEST_CEILINGS = { essence: 1200 };
+    const ceiling = DIGEST_CEILINGS[kind];
+    if (ceiling != null && opts.token_count != null && opts.token_count > ceiling) {
+      throw new Error(`Digest exceeds ceiling for kind '${kind}' (${opts.token_count} > ${ceiling} tokens). Trim and retry.`);
+    }
+    const db = this.open();
+    try {
+      const project = db.prepare("SELECT id FROM projects WHERE name = ?").get(opts.project_name);
+      if (!project)
+        throw new NotFoundError(opts.project_name);
+      const prior = db.prepare(`
+        SELECT spec_version FROM project_digests WHERE project_id = ? AND digest_kind = ?
+      `).get(project.id, kind);
+      db.prepare(`
+        INSERT INTO project_digests (project_id, digest_kind, digest_text, spec_version, producer, generated_at, token_count)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT (project_id, digest_kind) DO UPDATE SET
+          digest_text = excluded.digest_text,
+          spec_version = excluded.spec_version,
+          producer = excluded.producer,
+          generated_at = excluded.generated_at,
+          token_count = excluded.token_count
+      `).run(project.id, kind, opts.digest_text, opts.spec_version, opts.producer, (/* @__PURE__ */ new Date()).toISOString(), opts.token_count ?? null);
+      return {
+        project_name: opts.project_name,
+        digest_kind: kind,
+        written: true,
+        prior_spec_version: prior?.spec_version ?? null
+      };
     } finally {
       db.close();
     }

@@ -1887,3 +1887,120 @@ Validates: `#rules` (3.3) Digest generator rules v0.21 (provider-aware input-siz
 - If the hosted path would estimate a per-invocation cost above the client-side ceiling ($1.00 default), the remainder of the batch skips the hosted path and goes straight to local-mlx — the ceiling is enforced even for a single large project
 
 Difficulty: hard
+
+---
+
+## S112: MCP Server Self-Registers All Three Capability Surfaces on Startup {#s112}
+**Given** a registry in which `setlist` is already registered as a project row and the MCP server binary is launched via its standard entrypoint
+**When** the server completes its startup sequence and an agent immediately calls `query_capabilities --project setlist`
+**Then** the response lists the full cross-surface capability set — all 39 MCP tools, every top-level CLI command, and the public `@setlist/core` library exports — each with the correct `type` field and a human-meaningful description, with no manual bootstrap step required by the operator.
+
+Validates: `#capability-declarations` (2.11) self-registration, `#capabilities` (3.1) MCP tool surface
+
+**Satisfaction criteria:**
+- `query_capabilities --project setlist --type tool` returns exactly 39 rows whose names match the set of tools actually registered in the MCP server's tool-registration array — not a static list that could drift
+- `query_capabilities --project setlist --type cli-command` returns one row for every top-level subcommand in `packages/cli/src/index.ts` (e.g. `digest refresh`, `ui`, `worker`, and the others) — the count equals the number of commands the CLI actually dispatches, no more and no less
+- `query_capabilities --project setlist --type library` returns one row for every public export from `packages/core/src/index.ts` — internal helpers not listed in the package's public surface do not appear
+- Each registered capability carries a non-empty `description` field — bare-name registrations (name only, no description) fail this scenario because they defeat discovery
+- Self-registration happens with no operator action — the user never runs `setlist capabilities register` or edits a JSON seed; simply launching the MCP server is sufficient
+- The three surfaces use the type strings specified in §2.11 (`tool`, `cli-command`, `library`) verbatim — not pluralized, not capitalized, not `mcp-tool` or `cli`
+- The self-registration call produces no user-visible output on stdout/stderr during a normal startup — it is a silent idempotent step, not an event the operator needs to acknowledge
+
+Difficulty: medium
+
+---
+
+## S113: Repeated Startups Produce an Identical Capability Set With No Drift {#s113}
+**Given** a registry against which the MCP server has already completed one self-registration startup, leaving setlist's capability rows in a known state
+**When** the server is stopped and restarted one or more times without any code change between runs
+**Then** the capability set for setlist after each subsequent startup is byte-identical to the set after the first startup — no duplicates are introduced, no rows disappear, and the row count remains stable across N restarts.
+
+Validates: `#capability-declarations` (2.11) idempotent self-registration, replace semantics
+
+**Satisfaction criteria:**
+- After the second startup, `query_capabilities --project setlist` returns exactly the same row count as after the first startup — idempotence is observable at the count level
+- The set of capability names returned is identical across startups — no `tool_name` appears twice, no name drops between runs
+- Each row's `description`, `type`, and any invocation metadata fields are unchanged across startups — the replace write is deterministic given the same code surface
+- A contrived 10-restart loop produces the same capability set on every read between restarts — no slow accumulation, no slow leakage
+- The `project_capabilities` table row count for `project = setlist` after N startups equals the row count after 1 startup — the write genuinely replaces rather than appending
+- No startup logs a warning about duplicate-capability detection on a clean restart — the no-op idempotent path is the silent path
+
+Difficulty: medium
+
+---
+
+## S114: Code Changes to the Tool Surface Are Reflected on the Next Startup {#s114}
+**Given** a running setlist system whose last MCP server startup registered the then-current tool surface, and a subsequent code change that adds one new MCP tool and removes one existing MCP tool before a restart
+**When** the MCP server is restarted against the same registry after the code change
+**Then** the stored capability set for setlist on the next `query_capabilities` read reflects code reality exactly — the new tool appears, the removed tool is gone, and no tombstone of the removed tool lingers — consistent with the §2.11 replace-semantics contract.
+
+Validates: `#capability-declarations` (2.11) replace semantics + code-reality reflection
+
+**Satisfaction criteria:**
+- After restart, the added tool appears in `query_capabilities --project setlist --type tool` with its new name and description — the addition is observable without any manual registration step
+- After restart, the removed tool no longer appears in the capability set — a consumer searching for it gets an empty result, not a stale hit
+- The total `tool`-typed row count shifts by the net delta (one added minus one removed = zero net change in the illustrative case) — the write genuinely replaces the prior set rather than layering over it
+- The same reflection path applies to CLI commands and library exports — adding a new subcommand in `packages/cli/src/index.ts` or a new public export in `packages/core/src/index.ts` causes the corresponding row to appear on the next restart, and removing one causes its row to disappear
+- Unrelated capability rows (the ones that did not change in code) retain their descriptions and metadata byte-identically — replace semantics operate on the setlist project's capability set as a whole, not selectively, but the outcome is stable for untouched entries
+- No code path requires editing a checked-in `capabilities.json` or similar hand-maintained manifest — the only source of truth is the code itself (tool-registration array, CLI dispatcher, library export list)
+
+Difficulty: medium
+
+---
+
+## S115: First-Run Against a Fresh Registry Auto-Creates the Setlist Project Row {#s115}
+**Given** a brand-new registry database in which no `setlist` project row exists — e.g. a clean install where schema migrations have run but no projects have been registered yet
+**When** the MCP server is launched for the first time against this database
+**Then** the startup sequence creates a `setlist` project row (with correct `name`, `type`, and `description`, and placed in the appropriate area) before writing capabilities, so that the foreign-key-bound capability rows land cleanly — the server does not crash with a "project not found" error, and does not silently skip self-registration.
+
+Validates: `#capability-declarations` (2.11) first-run bootstrap, `#registration` (2.2) self-registration safety
+
+**Satisfaction criteria:**
+- After the first startup, `get_project --name setlist` returns a row — the project row was auto-created, not left missing
+- The auto-created row carries a sensible `description` (one paragraph naming setlist as the registry itself) — not an empty string, not a placeholder like "TODO"
+- The auto-created row is placed in the appropriate canonical area (e.g. `infrastructure`) — not orphaned with a null area
+- Capability rows for setlist exist after the first startup — the bootstrap order is "create project row, then register capabilities," not the reverse
+- A second startup against the same registry does NOT create a duplicate setlist project row — the auto-create path checks for existence and is idempotent, matching the S113 idempotence contract at the project-row level
+- If the operator has manually registered setlist as a project row before ever launching the MCP server, the first startup updates capabilities without overwriting user-visible fields like `description` or `area` — auto-registration is a safety net, not an authority over operator-chosen metadata
+- The MCP server never crashes on first launch against an empty registry — "fresh registry" is a supported state, not an error path
+
+Difficulty: medium
+
+---
+
+## S116: Cross-Surface Discovery by Type Returns the Correct Surface {#s116}
+**Given** a registry in which setlist has completed self-registration (via the S112 happy path) and another portfolio project (e.g. `chorus-app`) has separately registered a smaller set of capabilities of mixed types
+**When** an agent issues `query_capabilities --type tool`, then `query_capabilities --type cli-command`, then `query_capabilities --type library` across the whole registry (no project filter)
+**Then** each type filter returns the union of rows for that type across all projects — setlist's 39 tools appear in the `tool` query, setlist's CLI commands appear in the `cli-command` query, setlist's library exports appear in the `library` query, and each surface is independently discoverable.
+
+Validates: `#capability-declarations` (2.11) discoverability by type, `#capabilities` (3.1) `query_capabilities`
+
+**Satisfaction criteria:**
+- `query_capabilities --type tool` returns a result set that includes all 39 setlist tools by name — plus any tools registered by other projects, making the cross-project union observable
+- `query_capabilities --type cli-command` returns setlist's CLI commands alongside any CLI commands registered by other projects — setlist's commands are not hidden inside a different type bucket
+- `query_capabilities --type library` returns setlist's library exports — agent consumers (e.g. chorus-app importing `@setlist/core`) can discover the public API without reading setlist's source
+- A type filter that matches no capability returns an empty result, not an error — e.g. `--type api-endpoint` returning nothing is valid when no project registers API endpoints
+- Combining filters works additively: `query_capabilities --project setlist --type cli-command` narrows to setlist's CLI commands only, not a union with chorus-app's — the filters AND, they do not OR
+- A keyword search (`query_capabilities --keyword digest`) matches capabilities across all three setlist surfaces where the word appears (e.g. the `refresh_project_digest` tool, the `digest refresh` CLI command, and any digest-related library export) — cross-surface discovery is keyword-navigable, not type-siloed
+
+Difficulty: medium
+
+---
+
+## S117: Partial Introspection Failure Does Not Crash Self-Registration {#s117}
+**Given** a startup where one of the three introspection paths throws (e.g. the CLI-command introspector raises because `packages/cli/src/index.ts` cannot be resolved at runtime, or the library-exports enumeration fails with a module-load error), while the other two paths succeed
+**When** the MCP server completes startup self-registration despite the partial failure
+**Then** the server does not crash — it registers the surfaces that did introspect successfully, leaves the failing surface unwritten, logs exactly one clear warning naming which surface failed and why, and remains responsive to `query_capabilities` requests for the surfaces that did register.
+
+Validates: `#capability-declarations` (2.11) failure-isolation, `#observability` (7.3) self-registration warnings
+
+**Satisfaction criteria:**
+- The MCP server completes startup and accepts MCP requests — a partial introspection failure never prevents the server from becoming available
+- `query_capabilities --project setlist --type tool` still returns the 39 tools in the illustrative case where only the CLI introspector failed — the surfaces that succeeded are fully written
+- `query_capabilities --project setlist --type cli-command` returns either the last-known-good set (if replace-semantics skipped the failing surface entirely) or an empty set — the contract is "do not write a partial/empty replacement over a previously-good set when the introspector itself failed," so a stale previous set is preferred over a destructive overwrite
+- Exactly one WARN-level log line names the failed surface and the underlying cause (e.g. `Capability self-registration: cli-command introspection failed (<reason>); other surfaces registered`) — not a stack-trace dump, not a silent swallow, not a repeated spam per-tool
+- A subsequent restart after the code issue is fixed heals the gap on the next startup — the failing surface rewrites successfully and the capability set converges to code reality (same mechanism as S114)
+- A failure in a single tool's description computation (not in the introspector as a whole) still registers the other 38 tools and flags the problematic one with a WARN — one bad description does not take the entire tool surface offline
+- The warning is emitted to stderr (or the MCP server's structured log channel), not to stdout — it does not interfere with MCP protocol framing on stdio transports
+
+Difficulty: hard
