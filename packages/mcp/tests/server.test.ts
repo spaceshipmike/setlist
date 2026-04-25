@@ -43,10 +43,10 @@ describe('MCP Server (S21)', () => {
 
   // ── Tool Registration ──────────────────────────────────────
 
-  // spec 0.22: 36 identity/memory/ports/tasks/bootstrap/health + 3 digests = 39 total
-  it('registers exactly 39 tools', async () => {
+  // spec 0.26: 39 base tools + 8 area/project_type CRUD tools = 47 total
+  it('registers exactly 47 tools', async () => {
     const tools = await listTools(server);
-    expect(tools).toHaveLength(39);
+    expect(tools).toHaveLength(47);
   });
 
   it('registers all expected tool names', async () => {
@@ -54,13 +54,14 @@ describe('MCP Server (S21)', () => {
     const names = tools.map(t => t.name).sort();
     expect(names).toEqual([
       'archive_project', 'assess_health', 'batch_update', 'bootstrap_project', 'check_port', 'claim_port',
-      'configure_bootstrap', 'configure_memory', 'correct', 'cross_query', 'discover_ports',
+      'configure_bootstrap', 'configure_memory', 'correct', 'create_area', 'create_project_type', 'cross_query',
+      'delete_area', 'delete_project_type', 'discover_ports',
       'enrich_project', 'feedback', 'forget', 'get_project', 'get_project_digest', 'get_project_digests',
-      'get_registry_stats', 'inspect_memory', 'list_projects', 'list_tasks', 'memory_status',
+      'get_registry_stats', 'inspect_memory', 'list_areas', 'list_project_types', 'list_projects', 'list_tasks', 'memory_status',
       'portfolio_brief', 'queue_task', 'recall', 'reflect', 'refresh_project_digest', 'register_capabilities',
       'register_project', 'release_port', 'rename_project', 'retain',
       'search_projects', 'set_parent_project', 'set_project_area', 'switch_project',
-      'update_project', 'query_capabilities', 'write_fields',
+      'update_area', 'update_project', 'update_project_type', 'query_capabilities', 'write_fields',
     ].sort());
   });
 
@@ -154,11 +155,12 @@ describe('MCP Server (S21)', () => {
     expect(r2.area).toBeNull();
   });
 
-  it('set_project_area rejects invalid canonical area names', async () => {
+  // spec 0.26 (supersedes S77): area validation runs against the live areas table.
+  it('set_project_area rejects unknown area names against the live areas table (S133)', async () => {
     await callTool(server, 'register_project', { name: 'ap' });
     const result = await callTool(server, 'set_project_area', { name: 'ap', area: 'NotReal' }) as string;
+    expect(result).toContain('INVALID_AREA');
     expect(result).toContain('NotReal');
-    expect(result).toContain('Work');
   });
 
   // spec 0.13: set_parent_project tool (S75, S76)
@@ -455,5 +457,48 @@ describe('MCP Server (S21)', () => {
   it('errors include structured error messages', async () => {
     const result = await callTool(server, 'get_project', { name: 'no-such-project' }) as string;
     expect(result).toContain('NOT_FOUND');
+  });
+
+  // ── Spec 0.26: areas + project_types CRUD ──────────────────
+
+  it('list_areas returns the seven seed defaults', async () => {
+    const areas = await callTool(server, 'list_areas') as Array<{ name: string }>;
+    const names = areas.map(a => a.name).sort();
+    expect(names).toEqual(['Family', 'Finance', 'Health', 'Home', 'Infrastructure', 'Personal', 'Work']);
+  });
+
+  it('create_area + update_area + delete_area round-trip', async () => {
+    const created = await callTool(server, 'create_area', { name: 'Garage Band', color: '#0ea5e9' }) as { id: number; name: string };
+    expect(created.name).toBe('Garage Band');
+    const updated = await callTool(server, 'update_area', { id: created.id, name: 'Studio' }) as { id: number; name: string };
+    expect(updated.id).toBe(created.id);
+    expect(updated.name).toBe('Studio');
+    const del = await callTool(server, 'delete_area', { id: created.id }) as { ok: boolean };
+    expect(del.ok).toBe(true);
+  });
+
+  it('delete_area refuses when projects still reference it', async () => {
+    await callTool(server, 'register_project', { name: 'p-work', area: 'Work' });
+    const areas = await callTool(server, 'list_areas') as Array<{ id: number; name: string }>;
+    const work = areas.find(a => a.name === 'Work')!;
+    const result = await callTool(server, 'delete_area', { id: work.id }) as string;
+    expect(result).toContain('AREA_HAS_PROJECTS');
+  });
+
+  it('list_project_types returns the two seed defaults', async () => {
+    const types = await callTool(server, 'list_project_types') as Array<{ name: string; git_init: boolean }>;
+    const names = types.map(t => t.name).sort();
+    expect(names).toEqual(['Code project', 'Non-code project']);
+    const code = types.find(t => t.name === 'Code project')!;
+    expect(code.git_init).toBe(true);
+  });
+
+  it('create_project_type + update_project_type round-trip', async () => {
+    const created = await callTool(server, 'create_project_type', {
+      name: 'Notebook', default_directory: '~/Notebooks', git_init: false,
+    }) as { id: number; name: string; git_init: boolean };
+    expect(created.git_init).toBe(false);
+    const updated = await callTool(server, 'update_project_type', { id: created.id, git_init: true }) as { id: number; git_init: boolean };
+    expect(updated.git_init).toBe(true);
   });
 });

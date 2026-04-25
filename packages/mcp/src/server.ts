@@ -73,6 +73,16 @@ export const MCP_TOOL_DEFINITIONS: McpToolDefinition[] = [
       { name: 'get_project_digest', description: 'Read one project\'s essence digest. Returns { digest_text, spec_version, producer, generated_at, token_count?, stale } or null if no digest exists. Pass current_spec_version to compute staleness (omit to skip stale check).', inputSchema: { type: 'object' as const, properties: { project_name: { type: 'string' }, digest_kind: { type: 'string', default: 'essence' }, current_spec_version: { type: 'string', description: 'Optional: the project\'s current spec version. When provided, stale=true iff stored spec_version differs.' } }, required: ['project_name'] } },
       { name: 'get_project_digests', description: 'Batch read project essence digests. Returns a map keyed by project name. Missing projects are omitted unless include_missing=true. include_stale=false filters out digests whose spec_version differs from current_spec_versions[project_name].', inputSchema: { type: 'object' as const, properties: { project_names: { type: 'array', items: { type: 'string' }, description: 'Optional: limit to these projects. Omit for all projects with digests.' }, digest_kind: { type: 'string', default: 'essence' }, include_missing: { type: 'boolean', default: false }, include_stale: { type: 'boolean', default: true }, current_spec_versions: { type: 'object', description: 'Optional: map of project_name to its current spec version, for staleness computation.' } } } },
       { name: 'refresh_project_digest', description: 'Write a project\'s essence digest (replace semantics). Invoked by the CLI generator or any other writer. Rejects writes exceeding the per-kind token ceiling (1200 for essence) with a trim-and-retry error. Returns prior_spec_version when a digest already existed.', inputSchema: { type: 'object' as const, properties: { project_name: { type: 'string' }, digest_kind: { type: 'string', default: 'essence' }, digest_text: { type: 'string' }, spec_version: { type: 'string' }, producer: { type: 'string', description: 'Free-form identifier for what produced the digest (e.g., "local-qwen3.6-35b-a3b-8bit", "manual").' }, token_count: { type: 'number' } }, required: ['project_name', 'digest_text', 'spec_version', 'producer'] } },
+      // Areas (4) — spec 0.26
+      { name: 'list_areas', description: 'List all user-managed areas. Returns id, name, display_name, description, color for each row in the areas table.', inputSchema: { type: 'object' as const, properties: {} } },
+      { name: 'create_area', description: 'Create a new user-managed area. Color must come from the curated 12-color palette. Throws DUPLICATE_AREA_NAME on a name collision and INVALID_AREA_COLOR on an off-palette color.', inputSchema: { type: 'object' as const, properties: { name: { type: 'string' }, display_name: { type: 'string' }, description: { type: 'string' }, color: { type: 'string', description: 'Hex color from AREA_COLOR_PALETTE.' } }, required: ['name', 'color'] } },
+      { name: 'update_area', description: 'Update an existing area. Patch-style — undefined fields are left alone. Renames preserve the row id, so memory routing continues to resolve.', inputSchema: { type: 'object' as const, properties: { id: { type: 'number' }, name: { type: 'string' }, display_name: { type: 'string' }, description: { type: 'string' }, color: { type: 'string' } }, required: ['id'] } },
+      { name: 'delete_area', description: 'Delete a user-managed area. Throws AREA_HAS_PROJECTS when projects still reference it (the UI shows a reassign flow first).', inputSchema: { type: 'object' as const, properties: { id: { type: 'number' } }, required: ['id'] } },
+      // Project types (4) — spec 0.26
+      { name: 'list_project_types', description: 'List all user-managed project types. Returns id, name, default_directory, git_init, template_directory, color for each row.', inputSchema: { type: 'object' as const, properties: {} } },
+      { name: 'create_project_type', description: 'Create a new user-managed project type. default_directory drives bootstrap; git_init controls whether bootstrap initializes a repository. template_directory and color are optional. Throws DUPLICATE_PROJECT_TYPE_NAME on a name collision.', inputSchema: { type: 'object' as const, properties: { name: { type: 'string' }, default_directory: { type: 'string' }, git_init: { type: 'boolean' }, template_directory: { type: ['string', 'null'] }, color: { type: ['string', 'null'] } }, required: ['name', 'default_directory', 'git_init'] } },
+      { name: 'update_project_type', description: 'Update an existing project type. Patch-style.', inputSchema: { type: 'object' as const, properties: { id: { type: 'number' }, name: { type: 'string' }, default_directory: { type: 'string' }, git_init: { type: 'boolean' }, template_directory: { type: ['string', 'null'] }, color: { type: ['string', 'null'] } }, required: ['id'] } },
+      { name: 'delete_project_type', description: 'Delete a user-managed project type. Throws TYPE_HAS_PROJECTS when projects still reference it.', inputSchema: { type: 'object' as const, properties: { id: { type: 'number' } }, required: ['id'] } },
 ];
 
 /**
@@ -459,6 +469,58 @@ export function createServer(dbPath?: string, options: CreateServerOptions = {})
             producer: a.producer as string,
             token_count: a.token_count as number | undefined,
           });
+          break;
+
+        // ── Areas (spec 0.26) ────────────────────────────────
+        case 'list_areas':
+          result = registry.listAreas();
+          break;
+        case 'create_area':
+          result = registry.createArea({
+            name: a.name as string,
+            display_name: a.display_name as string | undefined,
+            description: a.description as string | undefined,
+            color: a.color as string,
+          });
+          break;
+        case 'update_area':
+          result = registry.updateArea(a.id as number, {
+            name: a.name as string | undefined,
+            display_name: a.display_name as string | undefined,
+            description: a.description as string | undefined,
+            color: a.color as string | undefined,
+          });
+          break;
+        case 'delete_area':
+          registry.deleteArea(a.id as number);
+          result = { ok: true };
+          break;
+
+        // ── Project types (spec 0.26) ────────────────────────
+        case 'list_project_types':
+          result = registry.listProjectTypes();
+          break;
+        case 'create_project_type':
+          result = registry.createProjectType({
+            name: a.name as string,
+            default_directory: a.default_directory as string,
+            git_init: a.git_init as boolean,
+            template_directory: (a.template_directory as string | null | undefined) ?? null,
+            color: (a.color as string | null | undefined) ?? null,
+          });
+          break;
+        case 'update_project_type':
+          result = registry.updateProjectType(a.id as number, {
+            name: a.name as string | undefined,
+            default_directory: a.default_directory as string | undefined,
+            git_init: a.git_init as boolean | undefined,
+            template_directory: a.template_directory as string | null | undefined,
+            color: a.color as string | null | undefined,
+          });
+          break;
+        case 'delete_project_type':
+          registry.deleteProjectType(a.id as number);
+          result = { ok: true };
           break;
 
         default:
