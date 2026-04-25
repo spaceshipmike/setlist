@@ -341,11 +341,11 @@
     "lastCheckpoint": "2026-04-25T09:24:00Z",
     "completionGate": {
       "retro": true,
-      "capabilities": false,
+      "capabilities": true,
       "experienceReport": true,
-      "memoryDigest": false,
+      "memoryDigest": true,
       "buildTrace": true,
-      "codebaseIndex": false
+      "codebaseIndex": true
     },
     "completedAt": "2026-04-25T09:24:00Z",
     "chunkProgress": {
