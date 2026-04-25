@@ -7,10 +7,6 @@
 
 :root {
   color-scheme: dark;
-  /* macOS overlay scrollbars ignore ::-webkit-scrollbar entirely;
-     the standard scrollbar-color property is the only knob that
-     actually paints them. Soft white thumb on a transparent track. */
-  scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
 }
 
 body {
@@ -20,6 +16,23 @@ body {
   color: var(--color-text-primary);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+/* Scrollbar — match chorus. Explicit width switches Chromium from
+   the overlay scrollbar (unstyleable) to the classic one. */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(236, 236, 236, 0.08);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(236, 236, 236, 0.16);
 }
 
 /* Shared form field styles */
