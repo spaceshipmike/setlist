@@ -3,7 +3,12 @@
     "external": {
       "type": "external",
       "current": "0.2.7",
-      "propagationTargets": [],
+      "propagationTargets": [
+        {
+          "file": "package.json",
+          "field": "version"
+        }
+      ],
       "incrementRules": {
         "patch": "auto-per-chunk",
         "minor": "suggest-at-plan-completion",

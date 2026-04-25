@@ -23,7 +23,7 @@ describe('Schema Initialization (S01)', () => {
     try {
       const meta = db.prepare("SELECT value FROM schema_meta WHERE key = 'schema_version'").get() as { value: string };
       expect(meta.value).toBe(String(SCHEMA_VERSION));
-      expect(SCHEMA_VERSION).toBe(12);
+      expect(SCHEMA_VERSION).toBe(13);
     } finally {
       db.close();
     }
