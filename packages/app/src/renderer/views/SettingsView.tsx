@@ -1,6 +1,18 @@
+// @fctry: #desktop-app
+//
+// Settings panel — spec 0.26 §2.14. Five sections, in order:
+//   1. Areas         (user-managed CRUD)
+//   2. Project types (user-managed CRUD)
+//   3. View          (column visibility, density, default landing)
+//   4. Bootstrap     (path roots, archive root, template dir — legacy)
+//   5. Updates       (auto-update channel + status)
+
 import { useState, useEffect } from 'react';
 import api, { type BootstrapConfig } from '../lib/api';
 import { UpdatesSection } from '../components/UpdatesSection';
+import { AreasSection } from '../components/AreasSection';
+import { ProjectTypesSection } from '../components/ProjectTypesSection';
+import { ViewSection } from '../components/ViewSection';
 
 interface SettingsViewProps {
   onBack: () => void;
@@ -89,6 +101,16 @@ export function SettingsView({ onBack }: SettingsViewProps) {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
+  const flashSuccess = (msg: string) => {
+    setSuccess(msg);
+    setError(null);
+    setTimeout(() => setSuccess(null), 2000);
+  };
+  const flashError = (msg: string) => {
+    setError(msg);
+    setSuccess(null);
+  };
+
   useEffect(() => {
     api.getBootstrapConfig().then(setConfig).catch(() => setConfig({ path_roots: {} })).finally(() => setLoading(false));
   }, []);
@@ -100,10 +122,9 @@ export function SettingsView({ onBack }: SettingsViewProps) {
     try {
       const updated = await api.configureBootstrap(opts);
       setConfig(updated);
-      setSuccess('Saved');
-      setTimeout(() => setSuccess(null), 2000);
+      flashSuccess('Saved');
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to save');
+      flashError(e instanceof Error ? e.message : 'Failed to save');
     } finally {
       setSaving(false);
     }
@@ -112,7 +133,7 @@ export function SettingsView({ onBack }: SettingsViewProps) {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
-        <span className="text-[var(--color-text-tertiary)]">Loading settings...</span>
+        <span className="text-[var(--color-text-tertiary)]">Loading settings…</span>
       </div>
     );
   }
@@ -128,7 +149,7 @@ export function SettingsView({ onBack }: SettingsViewProps) {
 
       <h1 className="text-xl font-semibold text-[var(--color-text-primary)] mb-1">Settings</h1>
       <p className="text-sm text-[var(--color-text-tertiary)] mb-6">
-        Configure where projects are created and archived on disk.
+        Manage areas and project types, choose how the project list looks, and configure where new projects land on disk.
       </p>
 
       {error && (
@@ -142,44 +163,54 @@ export function SettingsView({ onBack }: SettingsViewProps) {
         </div>
       )}
 
-      <div>
-        <PathField
-          label="Code project root"
-          description="Where code projects are created (e.g., ~/Code)"
-          value={config?.path_roots?.project || ''}
-          onChange={(v) => save({ path_roots: { project: v } })}
-          saving={saving}
-        />
-        <PathField
-          label="Non-code project root"
-          description="Where non-code projects are created (e.g., ~/Projects)"
-          value={config?.path_roots?.non_code_project || ''}
-          onChange={(v) => save({ path_roots: { non_code_project: v } })}
-          saving={saving}
-        />
-        <PathField
-          label="Area of focus root"
-          description="Where areas of focus are created (e.g., ~/Areas)"
-          value={config?.path_roots?.area_of_focus || ''}
-          onChange={(v) => save({ path_roots: { area_of_focus: v } })}
-          saving={saving}
-        />
-        <PathField
-          label="Archive path root"
-          description="Where archived projects are moved (e.g., ~/Archive). Git repos have .git stripped before moving."
-          value={config?.archive_path_root || ''}
-          onChange={(v) => save({ archive_path_root: v })}
-          saving={saving}
-        />
-        <PathField
-          label="Template directory"
-          description="Where project templates live (e.g., ~/Resources/System/Templates)"
-          value={config?.template_dir || ''}
-          onChange={(v) => save({ template_dir: v })}
-          saving={saving}
-        />
-      </div>
+      {/* 1. Areas */}
+      <AreasSection onError={flashError} onSuccess={flashSuccess} />
 
+      {/* 2. Project types */}
+      <ProjectTypesSection onError={flashError} onSuccess={flashSuccess} />
+
+      {/* 3. View */}
+      <ViewSection />
+
+      {/* 4. Bootstrap */}
+      <section className="mb-8">
+        <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--color-text-secondary)] mb-3">Bootstrap</h2>
+        <p className="text-xs text-[var(--color-text-tertiary)] mb-3">
+          Where new projects land on disk. Project types created above can override these defaults per-type.
+        </p>
+        <div>
+          <PathField
+            label="Code project root"
+            description="Where code projects are created (e.g., ~/Code)"
+            value={config?.path_roots?.project || ''}
+            onChange={(v) => save({ path_roots: { project: v } })}
+            saving={saving}
+          />
+          <PathField
+            label="Non-code project root"
+            description="Where non-code projects are created (e.g., ~/Projects)"
+            value={config?.path_roots?.non_code_project || ''}
+            onChange={(v) => save({ path_roots: { non_code_project: v } })}
+            saving={saving}
+          />
+          <PathField
+            label="Archive path root"
+            description="Where archived projects are moved (e.g., ~/Archive). Git repos have .git stripped before moving."
+            value={config?.archive_path_root || ''}
+            onChange={(v) => save({ archive_path_root: v })}
+            saving={saving}
+          />
+          <PathField
+            label="Template directory"
+            description="Where project templates live (e.g., ~/Resources/System/Templates)"
+            value={config?.template_dir || ''}
+            onChange={(v) => save({ template_dir: v })}
+            saving={saving}
+          />
+        </div>
+      </section>
+
+      {/* 5. Updates */}
       <UpdatesSection />
     </div>
   );
