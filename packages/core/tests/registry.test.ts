@@ -73,10 +73,10 @@ describe('Registry', () => {
       expect(p.children).toEqual([]);
     });
 
-    // spec 0.13 S77: invalid area name is rejected with a listing of valid areas.
-    it('rejects invalid area name at registration (S77)', () => {
+    // spec 0.26 (supersedes S77): invalid area name is rejected with INVALID_AREA.
+    it('rejects invalid area name at registration (S133)', () => {
       expect(() => registry.register({ name: 'bad-area', type: 'project', status: 'active', area: 'NotARealArea' }))
-        .toThrow(/NotARealArea.*Work.*Family.*Home.*Health.*Finance.*Personal.*Infrastructure/s);
+        .toThrow(/INVALID_AREA.*NotARealArea/);
     });
   });
 
@@ -824,10 +824,10 @@ describe('Registry', () => {
       expect(r2.area).toBeNull();
     });
 
-    // S77
-    it('setProjectArea rejects unknown area names and lists valid ones', () => {
+    // S133 (supersedes S77): rejected with INVALID_AREA against the live areas table.
+    it('setProjectArea rejects unknown area names against the live areas table (S133)', () => {
       expect(() => registry.setProjectArea('solo', 'Nope'))
-        .toThrow(/Nope.*Work.*Family.*Home.*Health.*Finance.*Personal.*Infrastructure/s);
+        .toThrow(/INVALID_AREA.*Nope/);
     });
 
     // S77: case-sensitive — 'work' lowercase is not accepted
@@ -1018,6 +1018,101 @@ describe('Registry', () => {
       expect(contents).toContain('jkl33');     // global — allowed
       expect(contents).toContain('mno11');     // portfolio — allowed
       expect(contents).toContain('pqr88');     // own project — allowed
+    });
+  });
+
+  // ── Spec 0.26: user-managed areas (S128–S131) ───────────────
+
+  describe('areas CRUD (S128–S131)', () => {
+    it('listAreas returns the seven seed defaults on a fresh DB', () => {
+      const areas = registry.listAreas();
+      const names = areas.map(a => a.name).sort();
+      expect(names).toEqual(['Family', 'Finance', 'Health', 'Home', 'Infrastructure', 'Personal', 'Work']);
+    });
+
+    it('createArea adds a new area with a palette color', () => {
+      const a = registry.createArea({ name: 'Side Hustle', color: '#0ea5e9', description: 'Misc' });
+      expect(a.name).toBe('Side Hustle');
+      expect(a.color).toBe('#0ea5e9');
+      const all = registry.listAreas().map(x => x.name);
+      expect(all).toContain('Side Hustle');
+    });
+
+    it('createArea rejects a color outside the curated palette (INVALID_AREA_COLOR)', () => {
+      expect(() => registry.createArea({ name: 'Bogus', color: '#123abc' }))
+        .toThrow(/INVALID_AREA_COLOR/);
+    });
+
+    it('createArea rejects duplicate names (DUPLICATE_AREA_NAME)', () => {
+      expect(() => registry.createArea({ name: 'Work', color: '#3b82f6' }))
+        .toThrow(/DUPLICATE_AREA_NAME/);
+    });
+
+    it('updateArea preserves id (memory routing) when renaming (S130)', () => {
+      const before = registry.listAreas().find(a => a.name === 'Work')!;
+      const after = registry.updateArea(before.id, { name: 'Career', display_name: 'Career' });
+      expect(after.id).toBe(before.id);
+      expect(after.name).toBe('Career');
+    });
+
+    it('deleteArea blocks when projects still reference it (AREA_HAS_PROJECTS)', () => {
+      registry.register({ name: 'work-1', type: 'project', status: 'active', area: 'Work' });
+      const work = registry.listAreas().find(a => a.name === 'Work')!;
+      expect(() => registry.deleteArea(work.id)).toThrow(/AREA_HAS_PROJECTS/);
+    });
+
+    it('deleteArea succeeds when no projects reference it', () => {
+      const a = registry.createArea({ name: 'Throwaway', color: '#84cc16' });
+      registry.deleteArea(a.id);
+      expect(registry.listAreas().find(x => x.name === 'Throwaway')).toBeUndefined();
+    });
+  });
+
+  // ── Spec 0.26: user-managed project types (S124–S127) ──────
+
+  describe('project types CRUD (S124–S127)', () => {
+    it('listProjectTypes returns the two seed defaults on a fresh DB', () => {
+      const types = registry.listProjectTypes();
+      const names = types.map(t => t.name).sort();
+      expect(names).toEqual(['Code project', 'Non-code project']);
+      const code = types.find(t => t.name === 'Code project')!;
+      expect(code.git_init).toBe(true);
+      expect(code.default_directory).toBe('~/Code');
+    });
+
+    it('createProjectType adds a new user-defined type', () => {
+      const t = registry.createProjectType({
+        name: 'Research',
+        default_directory: '~/Research',
+        git_init: false,
+        color: '#a855f7',
+      });
+      expect(t.name).toBe('Research');
+      expect(t.git_init).toBe(false);
+      expect(t.template_directory).toBeNull();
+    });
+
+    it('updateProjectType edits fields atomically', () => {
+      const before = registry.listProjectTypes().find(t => t.name === 'Code project')!;
+      const after = registry.updateProjectType(before.id, { default_directory: '~/Workspace', git_init: false });
+      expect(after.default_directory).toBe('~/Workspace');
+      expect(after.git_init).toBe(false);
+      expect(after.id).toBe(before.id);
+    });
+
+    it('deleteProjectType blocks when projects still reference it (TYPE_HAS_PROJECTS)', () => {
+      const code = registry.listProjectTypes().find(t => t.name === 'Code project')!;
+      // Register a project using the seeded "Code project" type via direct DB write.
+      // (Step 4 wires bootstrap to set project_type_id; here we set it manually.)
+      registry.register({ name: 'p1', type: 'project', status: 'active' });
+      // Manually set project_type_id since the public API hasn't been extended yet.
+      const db = (registry as unknown as { open: () => import('better-sqlite3').Database }).open();
+      try {
+        db.prepare(`UPDATE projects SET project_type_id = ? WHERE name = 'p1'`).run(code.id);
+      } finally {
+        db.close();
+      }
+      expect(() => registry.deleteProjectType(code.id)).toThrow(/TYPE_HAS_PROJECTS/);
     });
   });
 });

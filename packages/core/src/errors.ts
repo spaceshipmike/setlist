@@ -52,6 +52,90 @@ export class InvalidInputError extends RegistryError {
   }
 }
 
+/** spec 0.26: project_type_id refers to a row that does not exist. */
+export class InvalidProjectTypeError extends RegistryError {
+  constructor(idOrName: number | string) {
+    super(
+      'INVALID_PROJECT_TYPE',
+      `No project type matches '${idOrName}'.`,
+      `Use list_project_types to see available types, or create_project_type to add one.`
+    );
+    this.name = 'InvalidProjectTypeError';
+  }
+}
+
+/** spec 0.26: area_id or area name refers to a row that does not exist. */
+export class InvalidAreaError extends RegistryError {
+  constructor(idOrName: number | string) {
+    super(
+      'INVALID_AREA',
+      `No area matches '${idOrName}'.`,
+      `Use list_areas to see available areas, or create_area to add one.`
+    );
+    this.name = 'InvalidAreaError';
+  }
+}
+
+/** spec 0.26: cannot delete an area that still has projects. */
+export class AreaHasProjectsError extends RegistryError {
+  constructor(areaName: string, count: number) {
+    super(
+      'AREA_HAS_PROJECTS',
+      `Area '${areaName}' still has ${count} project${count === 1 ? '' : 's'}.`,
+      `Reassign or archive those projects first, then delete the area.`
+    );
+    this.name = 'AreaHasProjectsError';
+  }
+}
+
+/** spec 0.26: cannot delete a project type that still has projects. */
+export class ProjectTypeHasProjectsError extends RegistryError {
+  constructor(typeName: string, count: number) {
+    super(
+      'TYPE_HAS_PROJECTS',
+      `Project type '${typeName}' still has ${count} project${count === 1 ? '' : 's'}.`,
+      `Reassign or archive those projects first, then delete the type.`
+    );
+    this.name = 'ProjectTypeHasProjectsError';
+  }
+}
+
+/** spec 0.26: color value is not in the curated palette. */
+export class InvalidAreaColorError extends RegistryError {
+  constructor(color: string) {
+    super(
+      'INVALID_AREA_COLOR',
+      `Color '${color}' is not in the curated palette.`,
+      `Pick a color from AREA_COLOR_PALETTE.`
+    );
+    this.name = 'InvalidAreaColorError';
+  }
+}
+
+/** spec 0.26: an area with the given name already exists. */
+export class DuplicateAreaNameError extends RegistryError {
+  constructor(name: string) {
+    super(
+      'DUPLICATE_AREA_NAME',
+      `An area named '${name}' already exists.`,
+      `Pick a different name, or update the existing area.`
+    );
+    this.name = 'DuplicateAreaNameError';
+  }
+}
+
+/** spec 0.26: a project type with the given name already exists. */
+export class DuplicateProjectTypeNameError extends RegistryError {
+  constructor(name: string) {
+    super(
+      'DUPLICATE_PROJECT_TYPE_NAME',
+      `A project type named '${name}' already exists.`,
+      `Pick a different name, or update the existing type.`
+    );
+    this.name = 'DuplicateProjectTypeNameError';
+  }
+}
+
 /**
  * Find the closest matching project name using Levenshtein distance.
  */

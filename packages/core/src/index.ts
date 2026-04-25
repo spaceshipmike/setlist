@@ -1,6 +1,14 @@
 export { initDb, connect, getDbPath, getTemplateFields, SCHEMA_VERSION } from './db.js';
 export * from './models.js';
 export * from './errors.js';
+export {
+  AREA_COLOR_PALETTE, SEED_AREAS, isValidAreaColor,
+  type AreaRow,
+} from './areas.js';
+export {
+  SEED_PROJECT_TYPES, rowToProjectType,
+  type ProjectType as UserProjectType, type ProjectTypeRow,
+} from './project-types.js';
 export { serializeFieldValue, deserializeFieldValue, writeFields } from './fields.js';
 export { Registry, PORT_RANGE_MIN, PORT_RANGE_MAX } from './registry.js';
 export { MemoryStore } from './memory.js';
