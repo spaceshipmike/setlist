@@ -1,14 +1,23 @@
 // @fctry: #health-assessment
+// @fctry: #desktop-app
 import { useEffect, useMemo, useState } from 'react';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import { useProjects, type SortField, type SortDir } from '../hooks/useProjects';
+import { useAreas } from '../hooks/useAreas';
 import { EmptyState } from '../components/EmptyState';
-import api, { type HealthTier, type ProjectSummary, AREA_NAMES, type AreaName } from '../lib/api';
+import { ColumnsControl } from '../components/ColumnsControl';
+import { DensityToggle } from '../components/DensityToggle';
+import api, { type HealthTier, type ProjectSummary, type AreaName } from '../lib/api';
+import {
+  getColumns, setColumns, type ColumnVisibility,
+  getDensity, setDensity, type RowDensity,
+  getLanding, type LandingView,
+} from '../lib/preferences';
 
-// spec 0.13: 7 canonical areas + Unassigned bucket. Lane collapse state is
-// persisted in localStorage per-user so reloads don't blow away the layout.
+// Spec 0.26 §2.14: lane order is the live `areas` table plus an "Unassigned"
+// bucket at the end. Lane collapse + chip filter state persist in localStorage
+// so reloads don't blow away the layout.
 const UNASSIGNED_LANE = '__unassigned__';
-const LANE_ORDER: readonly string[] = [...AREA_NAMES, UNASSIGNED_LANE];
 const LANE_COLLAPSE_KEY = 'setlist:home:lane-collapsed';
 const AREA_FILTER_KEY = 'setlist:home:area-chips';
 
@@ -102,6 +111,109 @@ function SortHeader({
       <span>{label}</span>
       {isActive && <span aria-hidden>{dir === 'asc' ? '↑' : '↓'}</span>}
     </button>
+  );
+}
+
+// Spec 0.26: extract the column-headers + row body so we can reuse it for both
+// grouped lanes and the flat landing view, and so the dynamic grid-template
+// (driven by column visibility) lives in one place.
+function buildGridTemplate(columns: ColumnVisibility): string {
+  const cols = ['1fr']; // Name is always shown.
+  if (columns.health) cols.push('90px');
+  if (columns.status) cols.push('100px');
+  if (columns.type) cols.push('110px');
+  if (columns.updated_at) cols.push('100px');
+  if (columns.area) cols.push('100px');
+  return cols.join(' ');
+}
+
+interface ProjectRowsProps {
+  laneProjects: ProjectSummary[];
+  healthMap: Record<string, HealthTier>;
+  columns: ColumnVisibility;
+  density: RowDensity;
+  sort: SortField;
+  sortDir: SortDir;
+  onSortClick: (f: SortField) => void;
+  onProjectClick: (name: string) => void;
+  /** When set, suppresses the indent/connector for sub-project rendering — used in flat landing view. */
+  flat?: boolean;
+}
+
+function ProjectRows({
+  laneProjects, healthMap, columns, density, sort, sortDir, onSortClick, onProjectClick, flat,
+}: ProjectRowsProps) {
+  const gridTemplate = buildGridTemplate(columns);
+  const rowPad = density === 'compact' ? 'py-1.5' : 'py-2.5';
+  return (
+    <>
+      <div
+        className="grid gap-4 px-4 py-1.5 bg-[var(--color-bg-elevated)]/40 border-b border-[var(--color-border)]"
+        style={{ gridTemplateColumns: gridTemplate }}
+      >
+        <SortHeader label="Name" field="name" current={sort} dir={sortDir} onClick={onSortClick} />
+        {columns.health && <SortHeader label="Health" field="health" current={sort} dir={sortDir} onClick={onSortClick} />}
+        {columns.status && <SortHeader label="Status" field="status" current={sort} dir={sortDir} onClick={onSortClick} />}
+        {columns.type && <SortHeader label="Type" field="type" current={sort} dir={sortDir} onClick={onSortClick} />}
+        {columns.updated_at && <SortHeader label="Updated" field="updated_at" current={sort} dir={sortDir} onClick={onSortClick} />}
+        {columns.area && <span className="text-xs uppercase tracking-wider font-medium text-[var(--color-text-tertiary)]">Area</span>}
+      </div>
+      {laneProjects.map((p) => {
+        const tier = p.status !== 'archived' ? healthMap[p.name] : undefined;
+        const parent = p.parent_project ?? null;
+        const sameAreaParent = !flat && parent && laneProjects.some((q) => q.name === parent);
+        const crossAreaParent = parent && !sameAreaParent;
+        const typeLabel = p.project_type
+          ?? (Array.isArray(p.paths) && p.paths.some((path: string) => path.includes('/Code/')) ? 'Code project' : 'Non-code project');
+        return (
+          <button
+            key={p.name}
+            onClick={() => onProjectClick(p.name)}
+            className={`w-full grid gap-4 px-4 ${rowPad} items-center text-left border-b border-[var(--color-border)] last:border-b-0
+              hover:bg-[var(--color-bg-elevated)] transition-colors
+              focus:outline-none focus:bg-[var(--color-bg-elevated)]`}
+            style={{ gridTemplateColumns: gridTemplate }}
+          >
+            <div className={`min-w-0 ${sameAreaParent ? 'pl-6 relative' : ''}`}>
+              {sameAreaParent && (
+                <span aria-hidden className="absolute left-2 top-0 bottom-0 w-px bg-[var(--color-border)]" />
+              )}
+              <span className="block text-sm text-[var(--color-text-primary)] truncate">
+                {p.display_name || p.name}
+              </span>
+              {crossAreaParent && (
+                <span className="block text-[11px] text-[var(--color-text-tertiary)] truncate">
+                  ↳ {parent}
+                </span>
+              )}
+            </div>
+            {columns.health && (
+              <div
+                className="flex items-center gap-1.5"
+                title={tier ? HEALTH_LABEL[tier] : (p.status === 'archived' ? '' : 'Assessing...')}
+              >
+                {p.status === 'archived' ? (
+                  <span className="text-xs text-[var(--color-text-tertiary)]">—</span>
+                ) : (
+                  <>
+                    <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${
+                      tier ? HEALTH_DOT[tier] : 'bg-[var(--color-text-tertiary)]/40'
+                    }`} />
+                    <span className="text-xs text-[var(--color-text-secondary)]">
+                      {tier ? HEALTH_LABEL[tier] : '…'}
+                    </span>
+                  </>
+                )}
+              </div>
+            )}
+            {columns.status && <span className="text-xs text-[var(--color-text-secondary)]">{p.status}</span>}
+            {columns.type && <span className="text-xs text-[var(--color-text-tertiary)] truncate">{typeLabel}</span>}
+            {columns.updated_at && <span className="text-xs text-[var(--color-text-tertiary)]">{timeAgo(p.updated_at)}</span>}
+            {columns.area && <span className="text-xs text-[var(--color-text-tertiary)] truncate">{p.area ?? '—'}</span>}
+          </button>
+        );
+      })}
+    </>
   );
 }
 
@@ -202,6 +314,26 @@ export function HomeView({
   const { projects, loading, refreshing, error, statuses, archivedCount, refresh } = useProjects({
     filter, statusFilters, sort, sortDir, healthMap,
   });
+  const { areas } = useAreas();
+
+  // Spec 0.26: live lane order from the areas table + Unassigned at the end.
+  const LANE_ORDER: readonly string[] = useMemo(
+    () => [...areas.map((a) => a.name), UNASSIGNED_LANE],
+    [areas],
+  );
+
+  // Spec 0.26 §S119, §S120, §S122: column visibility, density, and landing
+  // view live in the preferences module. Sort key/dir come from props (App.tsx
+  // owns them and persists separately).
+  const [columns, setColsState] = useState<ColumnVisibility>(() => getColumns());
+  const [density, setDensityState] = useState<RowDensity>(() => getDensity());
+  const [landing, setLandingState] = useState<LandingView>(() => getLanding());
+  const updateColumns = (next: ColumnVisibility) => { setColsState(next); setColumns(next); };
+  const updateDensity = (next: RowDensity) => { setDensityState(next); setDensity(next); };
+
+  // Re-read landing on mount in case Settings changed it while this view
+  // wasn't focused.
+  useEffect(() => { setLandingState(getLanding()); }, []);
 
   // spec 0.13: area filter chips (multi-select OR) + lane collapse state.
   // Both persisted to localStorage; initialized lazily on mount.
@@ -287,7 +419,7 @@ export function HomeView({
       buckets[key] = out;
     }
     return buckets;
-  }, [areaFiltered]);
+  }, [areaFiltered, LANE_ORDER]);
 
   const handleSortClick = (field: SortField) => {
     if (field === sort) {
@@ -350,7 +482,7 @@ export function HomeView({
       </div>
 
       {/* Filters */}
-      <div className="flex items-center gap-3 mb-3">
+      <div className="flex items-center gap-3 mb-3 flex-wrap">
         <input
           type="text"
           placeholder="Filter..."
@@ -367,6 +499,9 @@ export function HomeView({
           selected={statusFilters}
           onChange={onStatusFiltersChange}
         />
+        {/* Spec 0.26: column visibility + density controls in the filter bar. */}
+        <ColumnsControl columns={columns} onChange={updateColumns} />
+        <DensityToggle density={density} onChange={updateDensity} />
         <span className="text-xs text-[var(--color-text-tertiary)]">
           {areaFiltered.length} project{areaFiltered.length !== 1 ? 's' : ''}
           {refreshing && (
@@ -407,10 +542,25 @@ export function HomeView({
         )}
       </div>
 
-      {/* Grouped lanes — one per canonical area + Unassigned */}
+      {/* Spec 0.26 §S122: respect default landing view — flat grid skips the
+          lane-grouping entirely and renders one combined ProjectRows. */}
       {areaFiltered.length === 0 ? (
         <div className="text-center py-12 text-[var(--color-text-tertiary)]">
           No projects match the current filters
+        </div>
+      ) : landing === 'flat' ? (
+        <div className="border border-[var(--color-border)] rounded-lg overflow-hidden">
+          <ProjectRows
+            laneProjects={areaFiltered as ProjectSummary[]}
+            healthMap={healthMap}
+            columns={columns}
+            density={density}
+            sort={sort}
+            sortDir={sortDir}
+            onSortClick={handleSortClick}
+            onProjectClick={onProjectClick}
+            flat
+          />
         </div>
       ) : (
         <div className="space-y-3">
@@ -459,77 +609,16 @@ export function HomeView({
                 </button>
 
                 {!isCollapsed && (
-                  <>
-                    {/* Column headers */}
-                    <div className="grid grid-cols-[1fr_90px_100px_80px_100px] gap-4 px-4 py-1.5
-                      bg-[var(--color-bg-elevated)]/40 border-b border-[var(--color-border)]">
-                      <SortHeader label="Name" field="name" current={sort} dir={sortDir} onClick={handleSortClick} />
-                      <SortHeader label="Health" field="health" current={sort} dir={sortDir} onClick={handleSortClick} />
-                      <SortHeader label="Status" field="status" current={sort} dir={sortDir} onClick={handleSortClick} />
-                      <SortHeader label="Type" field="type" current={sort} dir={sortDir} onClick={handleSortClick} />
-                      <SortHeader label="Updated" field="updated_at" current={sort} dir={sortDir} onClick={handleSortClick} />
-                    </div>
-                    {laneProjects.map(p => {
-                      const tier = p.status !== 'archived' ? healthMap[p.name] : undefined;
-                      const parent = p.parent_project ?? null;
-                      // Same-area parent present in this lane → indent + connector
-                      const sameAreaParent = parent
-                        && laneProjects.some(q => q.name === parent);
-                      // Cross-area parent (or archived parent not in this lane) → caption
-                      const crossAreaParent = parent && !sameAreaParent;
-                      return (
-                        <button
-                          key={p.name}
-                          onClick={() => onProjectClick(p.name)}
-                          className="w-full grid grid-cols-[1fr_90px_100px_80px_100px] gap-4 px-4 py-2.5
-                            items-center text-left border-b border-[var(--color-border)] last:border-b-0
-                            hover:bg-[var(--color-bg-elevated)] transition-colors
-                            focus:outline-none focus:bg-[var(--color-bg-elevated)]"
-                        >
-                          <div className={`min-w-0 ${sameAreaParent ? 'pl-6 relative' : ''}`}>
-                            {sameAreaParent && (
-                              <span
-                                aria-hidden
-                                className="absolute left-2 top-0 bottom-0 w-px bg-[var(--color-border)]"
-                              />
-                            )}
-                            <span className="block text-sm text-[var(--color-text-primary)] truncate">
-                              {p.display_name || p.name}
-                            </span>
-                            {crossAreaParent && (
-                              <span className="block text-[11px] text-[var(--color-text-tertiary)] truncate">
-                                ↳ {parent}
-                              </span>
-                            )}
-                          </div>
-                          <div
-                            className="flex items-center gap-1.5"
-                            title={tier ? HEALTH_LABEL[tier] : (p.status === 'archived' ? '' : 'Assessing...')}
-                          >
-                            {p.status === 'archived' ? (
-                              <span className="text-xs text-[var(--color-text-tertiary)]">—</span>
-                            ) : (
-                              <>
-                                <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${
-                                  tier ? HEALTH_DOT[tier] : 'bg-[var(--color-text-tertiary)]/40'
-                                }`} />
-                                <span className="text-xs text-[var(--color-text-secondary)]">
-                                  {tier ? HEALTH_LABEL[tier] : '…'}
-                                </span>
-                              </>
-                            )}
-                          </div>
-                          <span className="text-xs text-[var(--color-text-secondary)]">{p.status}</span>
-                          <span className="text-xs text-[var(--color-text-tertiary)]">
-                            {Array.isArray(p.paths) && p.paths.some((path: string) => path.includes('/Code/')) ? 'Code' : 'Project'}
-                          </span>
-                          <span className="text-xs text-[var(--color-text-tertiary)]">
-                            {timeAgo(p.updated_at)}
-                          </span>
-                        </button>
-                      );
-                    })}
-                  </>
+                  <ProjectRows
+                    laneProjects={laneProjects}
+                    healthMap={healthMap}
+                    columns={columns}
+                    density={density}
+                    sort={sort}
+                    sortDir={sortDir}
+                    onSortClick={handleSortClick}
+                    onProjectClick={onProjectClick}
+                  />
                 )}
               </section>
             );
