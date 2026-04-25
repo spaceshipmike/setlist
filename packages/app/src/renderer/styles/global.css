@@ -18,6 +18,30 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+/* Dark scrollbars — Chromium overlay scrollbars on macOS don't track
+   color-scheme reliably, so paint them explicitly. */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 5px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.25);
+  background-clip: padding-box;
+  border: 2px solid transparent;
+}
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
 /* Shared form field styles */
 .input-field {
   width: 100%;
