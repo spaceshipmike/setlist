@@ -1,4 +1,18 @@
 {
-  "currentCommand": "execute",
-  "completedSteps": []
+  "currentCommand": "review",
+  "completedSteps": [
+    "state-owner-scan",
+    "spec-writer"
+  ],
+  "scenarioScore": {
+    "satisfied": 0,
+    "total": 134
+  },
+  "specVersion": "0.26",
+  "upgradeApplied": {
+    "from": "0.84.3",
+    "to": "0.84.5"
+  },
+  "lastUpdated": "2026-04-25T02:16:41.010Z",
+  "digestWritten": true
 }

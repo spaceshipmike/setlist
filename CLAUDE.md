@@ -4,15 +4,17 @@
 
 Setlist is the TypeScript implementation of the Project Registry — the active intelligence hub for the user's personal ecosystem. It provides project identity, capability declarations, portfolio memory, port allocation, task routing, batch operations, cross-project intelligence, and a desktop control panel via a local SQLite database, MCP server, and Electron app.
 
-Schema v12 (adds `project_digests` table for free-form per-project essence summaries, versioned by spec version, cascaded on archive; builds on v11's canonical areas table, first-class area_id/parent_project_id columns on projects, area_of_focus type retired, and v10's unified memory types, belief classification, temporal validity, entity extraction, procedural versioning), 39 MCP tools, desktop UI sharing Chorus's design system with multiselect status filtering and archived project visibility. For origin and port history, see spec §1.5.
+Spec 0.26 introduces user-managed areas (seeded with seven defaults, full CRUD via Settings) and first-class user-managed project types (default directory, git-init flag, optional template directory) backed by a new `project_types` table; the desktop app gains a restructured Settings panel and Home-view controls (column visibility, density toggle, sort persistence, default landing view, Cmd-, accelerator). Schema v13 and the new tables/UI are specced but **not yet built** — the running system is still on schema v12. For origin and port history, see spec §1.5.
+
+Running system: Schema v12 (adds `project_digests` table for free-form per-project essence summaries, versioned by spec version, cascaded on archive; builds on v11's canonical areas table, first-class area_id/parent_project_id columns on projects, area_of_focus type retired, and v10's unified memory types, belief classification, temporal validity, entity extraction, procedural versioning), 39 MCP tools, desktop UI sharing Chorus's design system with multiselect status filtering and archived project visibility.
 
 ## Factory Contract
 
 This project is built and maintained using the fctry spec-driven workflow.
 
 - **Spec:** `.fctry/spec.md` — the complete natural-language specification
-- **Scenarios:** `.fctry/scenarios.md` — 118 end-to-end scenarios defining behavioral satisfaction
-- **Config:** `.fctry/config.json` — version registry (external 0.1.40, spec 0.25)
+- **Scenarios:** `.fctry/scenarios.md` — 134 end-to-end scenarios defining behavioral satisfaction
+- **Config:** `.fctry/config.json` — version registry (external 0.2.7, spec 0.26)
 - **State:** `.fctry/state.json` — current workflow state
 
 Code is validated solely through scenario satisfaction. No human reviews the code.
@@ -118,7 +120,7 @@ Every project in the registry should be discoverable and understandable by agent
 | File | Purpose |
 |------|---------|
 | spec.md | NLSpec v2 — the complete specification |
-| scenarios.md | Holdout scenario set (118 scenarios) |
+| scenarios.md | Holdout scenario set (134 scenarios) |
 | config.json | Version registry |
 | state.json | Current workflow state |
 | interview-state.md | Interview completion record |
@@ -152,20 +154,25 @@ Scenarios in `.fctry/scenarios.md` define the behavioral contract. Key categorie
 - **S38-S44:** Project bootstrap (configuration, code/non-code/area bootstrapping, error states)
 - **S45-S64:** Desktop app (window management, IPC bridge, card grid, filtering/sorting, detail tabs, CRUD operations, design system, CLI launcher, empty state, error feedback, data refresh, packaging)
 - **S65-S70:** Project health assessment (composite tier, activity/completeness/outcomes dimensions, assess_health MCP tool, Home view health dot and Overview Health section)
-- **S71-S80:** Canonical areas and sub-projects (areas seed, area_of_focus retirement, knowmarks soft-link migration, set_project_area, set_parent_project + cycle prevention, invalid area rejection, memory scope bubble-up through area, parent archive non-cascade, get_project returns area+parent+children)
+- **S71-S80:** Areas as a structural element and sub-projects (S71 superseded by S128, S77 superseded by S133 in spec 0.26; remaining: knowmarks soft-link migration, set_project_area, set_parent_project + cycle prevention, memory scope bubble-up through area, parent archive non-cascade, get_project returns area+parent+children)
 - **S81-S90:** Auto-update (dev-disabled, signed+notarized release, channel persistence, stable vs beta feeds, Check For Updates menu, About dialog version, silent background download, update-downloaded toast, install-on-quit prompt, Settings status line)
 - **S91-S96:** Testing discipline and native-binding hygiene (CI gates, Electron security, ABI safety net)
 - **S97-S111:** Project digests (write/replace/staleness/archive-cascade/ceiling; generator v2 provider + fallback, non-code docling extraction, docling-unavailable, file-tree-hash staleness, --all portfolio refresh, multi-project no-silent-drop, underscore-dir walker skip, `.digestignore` composition, large-spec handling)
 - **S112-S117:** Capability self-registration (MCP tools, CLI commands, and library exports re-declare on every server startup; per-surface failure isolation; drift is structurally impossible)
 - **S118:** Bootstrap auto-appends sub-project entries to the parent project's `.gitignore` (idempotent, best-effort)
+- **S119-S123:** Home view controls (column visibility, row density, sort persistence, default landing view, Cmd-, accelerator)
+- **S124-S127:** Project types as first-class user-managed entities (CRUD, fields, delete-block-with-projects, path-based migration on upgrade)
+- **S128-S131:** User-managed areas (CRUD in Settings, delete-block-with-projects, label-only renames preserve memory routing, curated 12-preset color palette)
+- **S132-S134:** Legacy `area_of_focus` removed, area-name validation against live table, Settings panel structure (Areas → Project types → View → Bootstrap → Updates) — supersedes S41/S71/S77
 
 <!-- compact-instructions
 Preserve during auto-compaction:
-- Spec: .fctry/spec.md (Setlist NLSpec; port history in §1.5)
-- Scenarios: .fctry/scenarios.md (118 scenarios, S01-S118)
-- Config: .fctry/config.json (external 0.1.40, spec 0.25)
+- Spec: .fctry/spec.md (Setlist NLSpec at 0.26; port history in §1.5)
+- Scenarios: .fctry/scenarios.md (134 scenarios, S01-S134)
+- Config: .fctry/config.json (external 0.2.7, spec 0.26)
 - State: .fctry/state.json (current workflow step)
-- Key constraint: Schema v12 with canonical areas + sub-projects + project digests, 20 tables
-- Key constraint: 39 MCP tools covering identity, capabilities, memory, ports, tasks, bootstrap, health
+- Key constraint: Spec 0.26 — areas user-managed (CRUD, seeded defaults), project types first-class (default_directory, git_init, template_directory), Home view has column visibility/density/sort persistence/landing view, Cmd-, opens Settings; schema v13 specced but not built
+- Key constraint: Running code is still on schema v12 (canonical areas + sub-projects + project digests, 20 tables); v12 → v13 migration is the next /fctry:execute target
+- Key constraint: 39 MCP tools covering identity, capabilities, memory, ports, tasks, bootstrap, health (no area/type CRUD MCP tools — desktop-app only in 0.26)
 - Key constraint: Library-first (@setlist/core), ESM-only, better-sqlite3
 -->

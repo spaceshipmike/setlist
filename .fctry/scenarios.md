@@ -8,6 +8,21 @@ Setlist is a TypeScript project; the Python project-registry-service was retired
 in spec 0.19 and remains only as historical provenance for the scenario set itself. Scenarios
 marked `[TS]` cover packaging, import, and native-binding concerns specific to this implementation.
 
+## Supersedes
+
+The user-settings evolve (spec 0.26) shifts areas and project types from system-owned closed
+sets to user-managed entities. The original scenarios are kept here as an audit trail; their
+contracts are replaced by the listed successors.
+
+- **S41 superseded by S124** — project types are no longer retired; they are first-class
+  user-managed entities seeded with Code project + Non-code project. `area_of_focus` is
+  removed entirely (see also S132 for the legacy plumbing cleanup).
+- **S71 superseded by S128** — the `areas` table is seeded at install but is no longer
+  the "sole source of truth" closed set; users may add, rename, recolor, or delete rows
+  via Settings.
+- **S77 superseded by S133** — invalid area name validation now goes against the live
+  `areas` table state, not a hardcoded literal set.
+
 ---
 
 ## S01: Schema Initialization {#s01}
@@ -561,17 +576,20 @@ and port discovery proposes port claims from config files.
 ---
 
 ## S38: Bootstrap Configuration {#s38}
-**Given** a running registry with no bootstrap configuration
-**When** the user calls `configure_bootstrap` with a default project path root (e.g., `project → ~/Code`) and a template directory path (e.g., `~/Resources/System/Templates/`)
+**Given** a running registry with the `project_types` table seeded with Code project + Non-code project (and possibly user-added types)
+**When** the user calls `configure_bootstrap` with path roots keyed by user-defined project type names (e.g., `"Code project" → ~/Code`, `"Non-code project" → ~/Projects`) and a template directory path (e.g., `~/Resources/System/Templates/`)
 **Then** the configuration is stored persistently and the user can verify it was saved by calling the tool again to see current settings.
 
 **Satisfaction criteria:**
-- `configure_bootstrap` accepts a default path root for projects (areas are no longer bootstrapped — they are canonical seeds, not project-type bootstraps)
+- `configure_bootstrap` accepts a `path_roots` map whose keys are project type names that exist in the `project_types` table at call time — no hardcoded enum of allowed keys
+- `configure_bootstrap` rejects `area_of_focus` as a path-roots key with an error explaining that the legacy type was removed in the user-settings evolve; the error names the migration that retired it
+- `configure_bootstrap` rejects path-roots keys that do not match any row in `project_types` with a clear error listing the valid current type names
 - `configure_bootstrap` accepts a template directory path
 - Configuration persists across registry restarts (stored in the database, not in-memory)
-- Calling `configure_bootstrap` with no arguments returns the current configuration
+- Calling `configure_bootstrap` with no arguments returns the current configuration, including the path-roots map keyed by current type names
 - Partial updates merge with existing configuration rather than replacing it entirely
 - Invalid paths (e.g., nonexistent template directory) produce a clear error, not a silent save
+- Renaming a project type via Settings updates existing path-roots entries to the new key transparently — the user does not have to re-call `configure_bootstrap` after a rename
 
 ---
 
@@ -606,6 +624,14 @@ and port discovery proposes port claims from config files.
 ---
 
 ## S41: Area Type Retired — Seed Table Only {#s41}
+
+> **Status: SUPERSEDED by S124** (user-settings evolve, spec 0.26).
+> The original contract here said area-as-project-type was retired and that areas were
+> canonical seeds. In the user-settings evolve, project types themselves became
+> first-class user-managed entities — see S124 for the new contract. The
+> `area_of_focus` legacy plumbing cleanup is now covered by S132. This scenario is
+> kept as audit trail; it is no longer evaluated against the live system.
+
 **Given** a post-evolve registry where `area_of_focus` is no longer a valid project type
 **When** any producer attempts to register, bootstrap, or update a project with type `area_of_focus`
 **Then** the operation is rejected with a clear error, and the user is directed to the canonical area seed table for area assignment instead.
@@ -698,16 +724,18 @@ Difficulty: medium
 ## S47: Home View Card Grid [App] {#s47}
 **Given** the registry contains 12+ projects distributed across several canonical areas, some projects assigned to parents, and some with no area at all
 **When** the user is on the home view
-**Then** projects are grouped into area lanes (one lane per canonical area present) plus a dedicated "Unassigned" lane, with sub-projects visually nested under their parent when the parent shares the same area.
+**Then** projects are grouped into area lanes (one lane per area present) plus a dedicated "Unassigned" lane, with sub-projects visually nested under their parent when the parent shares the same area, and each row exposes the columns the user has chosen to show.
 
 **Satisfaction criteria:**
-- Every registered, non-archived project appears as a card under the lane for its assigned area, or under the "Unassigned" lane when no area is set
+- Every registered, non-archived project appears as a card/row under the lane for its assigned area, or under the "Unassigned" lane when no area is set
 - The "Unassigned" lane is always visible when at least one unassigned project exists, with a clearly distinct visual treatment so it reads as a real group, not an error state
 - Sub-projects whose parent lives in the same area are indented under the parent with a connector glyph (e.g., "↳") indicating the parent relationship
 - Sub-projects whose parent lives in a DIFFERENT area appear as top-level cards in their own area lane, annotated with a small "↳ parent-name" caption that names the cross-area parent
-- Each card displays: project name, status indicator, health dot, and last-updated timestamp
-- Cards reflow responsively within each lane as the window resizes
-- Areas themselves are never rendered as cards — they are lane headers only (areas are no longer a project type)
+- Each row always displays the project Name; additional columns (Status, Health, Type, Updated, Area badge) are shown only when toggled on in the Columns control (see S119)
+- The Type column reflects the project's actual type from the `project_types` table, not a path-based heuristic
+- The Area badge column shows the area name with the area's curated palette color
+- Cards/rows reflow responsively within each lane as the window resizes
+- Areas themselves are never rendered as cards — they are lane headers only (areas are not a project type)
 
 Difficulty: medium
 
@@ -716,16 +744,18 @@ Difficulty: medium
 ## S48: Home View Filtering and Sorting [App] {#s48}
 **Given** the home view is showing 15+ project cards
 **When** the user types a search term in the filter input, or changes the sort order
-**Then** the grid immediately narrows to matching projects or reorders, with no perceptible delay.
+**Then** the grid immediately narrows to matching projects or reorders, with no perceptible delay; the chosen sort field and direction are remembered for the next session.
 
 **Satisfaction criteria:**
 - A search/filter input is visible on the home view without scrolling
 - Typing filters cards by project name (substring match, case-insensitive)
 - The grid updates as the user types (no submit button required)
-- A sort control lets the user choose between at least: alphabetical, last updated, and project type
-- Area filter chips are visible on the home view — one chip per canonical area plus an "Unassigned" chip — and support multi-select with OR semantics (selecting Work + Family shows projects in either area)
+- A sort control lets the user choose between at least: alphabetical, last updated, and project type, and lets the user pick ascending or descending direction
+- The chosen sort field and direction persist per-machine across app launches (see S121); reopening the app restores the last sort, not a hardcoded default
+- Area filter chips are visible on the home view — one chip per area present in the live `areas` table, plus an "Unassigned" chip — and support multi-select with OR semantics (selecting Work + Family shows projects in either area)
 - When area chips are active, lanes for unselected areas are hidden; when no chip is selected, all lanes are visible
 - Area chip filtering composes with the text filter and sort control
+- The text-filter term itself is session-scoped (does NOT persist across launches) — only the sort field/direction persist
 - Clearing the filter restores all cards
 - When no cards match the filter, a helpful empty state is shown (not a blank area)
 
@@ -1088,23 +1118,35 @@ Difficulty: hard
 ---
 
 ## S70: Health Indicator on Home View and Detail View [App] {#s70}
-**Given** the desktop app is open showing the home view or a project detail view
+**Given** the desktop app is open showing the home view (with the Health column toggled on) or a project detail view
 **When** the user looks at a project
-**Then** a health indicator is visible — a colored dot on the home view list row, and a Health section on the Overview tab of the detail view showing the tier, per-dimension breakdown, and reasons.
+**Then** a health indicator is visible — a colored dot in the Health column on the home view, and a Health section on the Overview tab of the detail view showing the tier, per-dimension breakdown, and reasons.
 
 **Satisfaction criteria:**
-- Each home view row shows a colored dot representing the project's overall health tier alongside the existing status indicator
+- When the Health column is toggled on (see S119), each home view row shows a colored dot in that column representing the project's overall health tier alongside the existing status indicator
+- When the Health column is toggled off, the dot is not rendered on the home view at all — the column is hidden, not just visually muted — and column-toggle state persists per-machine across launches
 - The dot uses a distinct color per tier (green Healthy, amber At risk, red Stale, gray Unknown) and is accessible via a hover tooltip naming the tier
-- Clicking into a project's detail view shows a Health section on the Overview tab with the overall tier, the three dimension tiers, and the list of reasons
+- The Health column hidden state does NOT affect the detail-view Health section — clicking into a project's detail view always shows the Health section on the Overview tab with the overall tier, the three dimension tiers, and the list of reasons
 - The Health section updates when the project is re-assessed (e.g., after editing fields that affect completeness)
-- Archived projects do not show a health dot on the home view
-- Health computation for the home view is batched so scrolling a large portfolio stays smooth
+- Archived projects do not show a health dot on the home view, regardless of column visibility
+- Health computation for the home view is batched so scrolling a large portfolio stays smooth, and is skipped entirely when the column is hidden so there is no work cost for users who don't surface it
 
 Difficulty: medium
 
 ---
 
 ## S71: Area Seed Table Initialization {#s71}
+
+> **Status: SUPERSEDED by S128** (user-settings evolve, spec 0.26).
+> The original contract framed the `areas` table as the "sole source of truth for valid
+> area names" and "system-owned, no tool may mutate." In the user-settings evolve, the
+> table is seeded with the 7 defaults at install but is then user-managed via Settings —
+> see S128 for area CRUD, S129 for the delete-with-projects guard, and S133 for the
+> downstream validation contract. The seed step is still required and still produces
+> the 7 default rows on a fresh registry — what changed is that those rows are mutable
+> post-install. This scenario is kept as audit trail; its post-install immutability
+> claims are no longer evaluated.
+
 **Given** a fresh registry database (or a pre-v11 database being migrated upward)
 **When** @setlist/core opens the database and runs the v10→v11 migration
 **Then** the canonical area seed table exists and is populated with exactly 7 canonical areas, and the seed table is the sole source of truth for valid area names.
@@ -1209,6 +1251,15 @@ Difficulty: medium
 ---
 
 ## S77: Invalid Area Name Rejection {#s77}
+
+> **Status: SUPERSEDED by S133** (user-settings evolve, spec 0.26).
+> The original contract validated against a fixed list of 7 canonical areas. In the
+> user-settings evolve, validation is performed against the live `areas` table state
+> at call time — see S133 for the new contract that handles user-added, renamed, and
+> deleted areas. The high-level behavior (clear error naming the invalid input and
+> listing valid alternatives) is preserved; only the source of "valid" changed.
+> This scenario is kept as audit trail.
+
 **Given** the canonical area seed table containing 7 canonical areas
 **When** a producer calls `set_project_area('my-project', 'NotARealArea')` or registers a project with an area name not in the seed table
 **Then** the call fails with a clear error naming the invalid input and listing the valid canonical areas.
@@ -2020,5 +2071,340 @@ Validates: `#project-bootstrap` (2.13) portfolio-root .gitignore convention
 - When the parent directory is not a git repo (no `.git/` directory at that level), the helper is a pure no-op: the result reports `parent_gitignore_updated: false`, and any unrelated `.gitignore` that happens to exist in that non-repo parent is not mutated — the convention only applies to portfolio-root-style git repos
 - When the parent directory is a git repo but has no `.gitignore` file at all, the helper does not create one — the result reports `parent_gitignore_updated: false` and no new file appears on disk; opting into the convention is the operator's choice, expressed by the presence of an existing `.gitignore`
 - The behavior is best-effort and never propagates: if the append fails for any filesystem reason (unreadable file, permission denied on write, I/O error), the bootstrap itself still succeeds with the project folder created and registered, and the result reports `parent_gitignore_updated: false` — the operator is not blocked from bootstrapping a project because of a parent-directory permission quirk
+
+Difficulty: medium
+
+---
+
+## S119: Home View Column Visibility Dropdown and Persistence [App] {#s119}
+**Given** the desktop app is open on the home view, with the registry containing 12+ projects across several areas
+**When** the user opens the "Columns" control in the home view header and toggles individual column checkboxes
+**Then** columns immediately appear or disappear in the row layout, and the user's choices are remembered the next time the app launches on the same machine.
+
+Validates: `#desktop-app` (2.14) — Settings panel + home view column visibility
+
+**Satisfaction criteria:**
+- A control labeled "Columns" (icon-only is acceptable provided its accessible name is "Columns") sits in the home view header alongside the existing sort and status controls
+- Activating the control opens a popover containing one checkbox per togglable column: Status, Health, Type, Updated, Area badge — five entries total
+- Toggling any checkbox updates the home view in place — the column appears or disappears from every visible row without requiring a reload, scroll, or filter re-application
+- The Name column is not present in the popover and cannot be hidden — there is no UI affordance to remove it, and no state combination can cause it to disappear from the row layout
+- Column visibility choices persist per-machine across app launches (localStorage, matching the existing lane-collapse/area-chips persistence convention) — closing and reopening the app restores the exact toggle state
+- Defaults on first launch (or after localStorage clear): all five togglable columns visible
+- The popover shows current state correctly when reopened — checkboxes reflect the live visibility, not a stale snapshot from popover-open time
+- When all five togglable columns are hidden, only the Name column renders; the row remains a usable, non-broken layout
+
+Difficulty: easy
+
+---
+
+## S120: Home View Row Density Toggle [App] {#s120}
+**Given** the desktop app is open on the home view
+**When** the user changes the row density between Compact and Comfortable in the home view header
+**Then** all visible rows immediately re-render at the chosen height, and the choice is remembered for future sessions on the same machine.
+
+Validates: `#desktop-app` (2.14) — home view density preference
+
+**Satisfaction criteria:**
+- A density toggle (segmented control or dropdown labeled "Density" with options "Compact" and "Comfortable") is present in the home view header
+- Selecting "Compact" reduces row height noticeably (smaller vertical padding, tighter line-height) while keeping all visible columns readable; selecting "Comfortable" returns to the spacious default
+- The change applies immediately to all rows in all lanes — no reload, no flicker, no inconsistent rows mid-transition
+- The chosen density persists per-machine across app launches via localStorage; reopening the app restores the last setting
+- Default on first launch: Comfortable
+- Density does not affect the Name column's truncation behavior or the popover/dropdown menus' density — it is scoped to the home view row layout
+- The toggle is keyboard-accessible (focusable, operable via arrow keys / space / enter as appropriate for the chosen control type)
+
+Difficulty: easy
+
+---
+
+## S121: Sort Order Persists Across Sessions [App] {#s121}
+**Given** the desktop app has been used and the user has previously selected a sort field (e.g., "Last updated") and direction (e.g., descending) on the home view
+**When** the user closes the app and reopens it on the same machine
+**Then** the home view restores the previously chosen sort field and direction, not a hardcoded default.
+
+Validates: `#desktop-app` (2.14) — view preference persistence
+
+**Satisfaction criteria:**
+- The home view sort field and direction are written to localStorage whenever the user changes them — no debounce delay long enough to lose a setting between change and quit
+- On app startup, the home view reads the persisted sort field and direction from localStorage and applies them before the first paint of the project list — the user does not see a flash of default sort followed by their preference
+- All sort fields offered by the sort control (alphabetical, last updated, project type, plus any others the build adds) are individually persistable
+- Both ascending and descending direction states are persisted independently of the field
+- A localStorage value that names a sort field no longer offered by the build (e.g., a removed field after a downgrade) falls back to the default sort gracefully, without throwing or rendering an empty list
+- This persistence is independent of the column-visibility persistence (S119) and the density persistence (S120) — they share the same localStorage namespace but do not interfere
+- The persisted sort applies on every launch until the user changes it; it does not silently reset on schema migration or app update
+
+Difficulty: easy
+
+---
+
+## S122: Default Landing View — Grouped vs Flat [App] {#s122}
+**Given** the desktop app is open and the user has navigated to the home view's View settings (in the Settings panel)
+**When** the user toggles the landing view preference between "Grouped by area" and "Flat list sorted by current sort"
+**Then** the home view immediately switches between area-lane grouping and a single flat list, and the choice is remembered for future sessions on the same machine.
+
+Validates: `#desktop-app` (2.14) — landing view preference
+
+**Satisfaction criteria:**
+- A "Landing view" or equivalently named control in the Settings panel View section offers exactly two options: "Grouped by area" (the default) and "Flat list"
+- Selecting "Grouped by area" renders the home view with one lane per area present plus the Unassigned lane, matching the layout described in S47
+- Selecting "Flat list" renders all non-archived projects in a single list ordered solely by the active sort (S48/S121) with no area-lane headers — the area badge column (when toggled on per S119) carries the area information per row
+- Switching modes is instantaneous and applies on the same home view without a reload
+- The choice persists per-machine across app launches via localStorage; reopening the app restores the last mode
+- Default on first launch: Grouped by area
+- The flat-list mode still respects sub-project nesting cues (the "↳ parent-name" caption from S47) so cross-parent relationships remain visible without lanes
+- Empty state and search-filter empty messages are sensible in both modes — the flat-list "no matches" message does not assume lanes
+
+Difficulty: medium
+
+---
+
+## S123: Cmd-, Opens Settings on macOS [App] {#s123}
+**Given** the desktop app is the focused window on macOS, on any view (home, project detail, or already inside Settings)
+**When** the user presses Command-Comma
+**Then** the Settings panel opens (or stays open if already showing), matching the standard macOS application convention.
+
+Validates: `#desktop-app` (2.14) — keyboard shortcuts
+
+**Satisfaction criteria:**
+- Command-Comma opens the Settings panel from any view in the app — home view, any project detail tab, the empty state, or a modal-free state
+- The shortcut is wired through the standard Electron application menu (`role: 'preferences'` or an explicit accelerator on a Settings menu item), so it appears in the macOS menu bar under the app name as "Settings…" or "Preferences…" with the `⌘,` glyph
+- Pressing Command-Comma when Settings is already open is a no-op or scrolls the user to the top of Settings — it does not toggle the panel closed and does not stack multiple panels
+- The shortcut does not fire when an input field is focused in a way that would consume the keystroke (e.g., a text input that explicitly captures `,`); in normal text-edit contexts the OS-level menu shortcut still fires and opens Settings, matching macOS app convention
+- On non-macOS platforms (Windows, Linux), the equivalent shortcut convention is wired (typically `Ctrl+,`); behavior is otherwise identical
+- The menu item is always enabled — there is no app state in which Settings is unreachable via the menu
+
+Difficulty: easy
+
+---
+
+## S124: Project Types as First-Class User-Managed Entities [App] {#s124}
+**Given** the desktop app is open and the user has navigated to Settings
+**When** the user opens the "Project types" section
+**Then** the user sees a list of all project types with full add / edit / delete affordances, including the seeded defaults (Code project, Non-code project) which can themselves be edited or removed when no projects use them.
+
+Validates: `#desktop-app` (2.14), `#entities` (3.2), `#rules` (3.3) — project types are user-managed
+
+**Satisfaction criteria:**
+- Settings has a "Project types" section visible in the panel with a list of all rows in the `project_types` table
+- The seeded defaults — exactly two on a fresh install, named "Code project" and "Non-code project" — appear in the list and are visually indistinguishable from user-added types (no "system" badge, no greyed-out controls) except that they may be in use by existing projects, which gates delete (see S126)
+- An "Add project type" affordance opens a creation form with fields for name, default directory, git-init flag, and optional template directory (see S125)
+- Each row in the list exposes Edit and Delete actions; both actions work on the seeded defaults as well as user-added types
+- Editing a type updates the row in place and the change is visible immediately throughout the app — the home view's Type column (when toggled on) reflects the new label on the next render
+- Deleting a type that has no projects assigned succeeds and removes it from the list; deleting a type that has projects is blocked per S126
+- The list reflects the live `project_types` table — it is not cached client-side beyond a normal render pass; opening Settings, making a change in another window, and reopening Settings shows the change
+- Renaming a type does not orphan existing projects — their type assignment follows the rename via the FK relationship, and the home view Type column shows the new name on the next render
+
+Difficulty: medium
+
+---
+
+## S125: Project Type Fields and Forward-Only Default Directory Edits [App] {#s125}
+**Given** the user is editing a project type in Settings (either creating a new one or editing an existing row)
+**When** the user fills in or modifies the type's fields and saves
+**Then** each project type carries a name, default directory, git-init flag, and optional template directory, and changing the default directory only affects projects bootstrapped after the change — existing project paths are never rewritten.
+
+Validates: `#desktop-app` (2.14), `#project-bootstrap` (2.13) — per-type bootstrap fields
+
+**Satisfaction criteria:**
+- The project-type form exposes exactly four fields: a name (free-text, required, must be unique among current types), a default directory (path, required, validated to exist or warning shown if it does not yet), a git-init flag (boolean toggle, required), and an optional template directory (path, blank means no template copy on bootstrap)
+- Saving a new type with a name that collides with an existing type is rejected with a clear error naming the collision; the form does not silently overwrite
+- Saving an edit to an existing type's default directory does NOT rewrite the `path` of any existing project of that type — every existing project's path on disk and in the registry remains byte-identical
+- Future bootstraps of projects with that type read the new default directory at bootstrap time, so the next `bootstrap_project` call lands at the new path root
+- The git-init flag is read at bootstrap time per type — toggling it on a type changes only future bootstraps, not the git state of existing projects (no `.git` is created or deleted retroactively)
+- The optional template directory, if blank, means bootstrap copies no template files for that type — only the empty project folder is created
+- An invalid template directory path (nonexistent at save time) produces a clear warning in the form before the user can save; saving anyway is allowed but flagged so the user understands the bootstrap will skip template copy with a runtime warning
+- The Code project seed defaults at install: name "Code project", default directory `~/Code/`, git-init true, template directory empty (the user can fill this in later)
+- The Non-code project seed defaults at install: name "Non-code project", default directory `~/Projects/`, git-init false, template directory empty
+
+Difficulty: medium
+
+---
+
+## S126: Block Project Type Delete When Projects Exist [App] {#s126}
+**Given** the user is in Settings > Project types, looking at a type that has N projects (N ≥ 1) currently assigned to it
+**When** the user clicks Delete on that type
+**Then** the deletion is blocked with a modal that shows the project count and offers a "Reassign and delete" flow with a target-type picker; the original type is only removed after every assigned project has been moved.
+
+Validates: `#desktop-app` (2.14), `#rules` (3.3) — type delete guard
+
+**Satisfaction criteria:**
+- Clicking Delete on a type with N ≥ 1 projects opens a modal whose title or body reads (in plain language) "This type has N projects. Move them to another type first." with the literal count substituted in
+- The modal includes a target-type picker showing every other project type (no self-target option)
+- The modal exposes a primary action labeled "Reassign and delete" that performs the bulk reassignment of all N projects to the chosen target type AND deletes the source type — atomically from the user's perspective (success means both happened, failure means neither happened)
+- A secondary action labeled "Cancel" (or close) dismisses the modal without making any change
+- If the user has not picked a target type, the "Reassign and delete" button is disabled (or clicking it surfaces an inline error) — the modal cannot proceed without a target
+- Clicking Delete on a type with zero projects skips this modal and deletes the type immediately (with a brief confirmation, if the design language uses one elsewhere)
+- After successful "Reassign and delete," the home view's Type column (when toggled on per S119) shows the new type label on the next render for every previously-assigned project
+- The flow works for the seeded defaults (Code project, Non-code project) — there is no special case preventing their deletion as long as the reassign step is completed
+
+Difficulty: medium
+
+---
+
+## S127: Project Type Migration on First Run After Upgrade {#s127}
+**Given** a registry that pre-dates the user-settings evolve, containing N existing projects whose `type` column is the legacy fossil value (`'project'`) and whose paths span both `~/Code/...` (e.g., `setlist`, `chorus-app`) and `~/Projects/...` or other roots (e.g., `q2-planning`, `archibald`)
+**When** the user opens any surface that triggers the v12→v13 migration (the desktop app, the MCP server, or a CLI command)
+**Then** every existing project gets a project type assignment derived from its path — anything whose path contains `/Code/` becomes "Code project", everything else becomes "Non-code project" — and the user can re-tag any project after migration with no data loss.
+
+Validates: `#schema` (5.2), `#entities` (3.2) — type migration heuristic
+
+**Satisfaction criteria:**
+- After migration, every project has a non-null `type` FK referencing either the seeded "Code project" row or the seeded "Non-code project" row in `project_types`
+- Projects whose `path` (or any registered path entry) contains the substring `/Code/` are assigned to "Code project" — case-sensitive match against the literal substring, applied consistently
+- Projects whose path does not contain `/Code/` are assigned to "Non-code project" — including projects whose path is null, empty, or does not exist on disk anymore
+- The migration is idempotent — running it twice (or running it on a registry that's already at v13) does not change any assignment and does not duplicate seed rows
+- The migration is atomic: a failure mid-migration rolls back to v12 with no partial assignment; on a clean re-run, all projects pick up the assignment in one pass
+- After migration, the user can call `update_project` (or use the desktop UI) to re-tag any project to any other type — including a user-added type — with no special unlock needed; the migration's heuristic decision is treated as a default, not a binding
+- Memories, ports, capabilities, tasks, and extended fields attached to existing projects are unchanged by the type migration
+- The schema version reads 13 after migration; the version was 12 before
+
+Difficulty: medium
+
+---
+
+## S128: Area CRUD in Settings [App] {#s128}
+**Given** the desktop app is open and the user has navigated to Settings
+**When** the user opens the "Areas" section
+**Then** the user sees a list of all areas with full add / rename / recolor / delete affordances, including the seven seeded defaults which can themselves be edited or removed when no projects use them.
+
+Validates: `#desktop-app` (2.14), `#entities` (3.2), `#rules` (3.3) — areas are user-managed
+
+**Satisfaction criteria:**
+- Settings has an "Areas" section visible in the panel with a list of all rows in the `areas` table
+- The seven seeded defaults (Work, Family, Home, Health, Finance, Personal, Infrastructure) appear in the list on a fresh install and are visually indistinguishable from user-added areas — no "system" badge, no greyed-out controls
+- An "Add area" affordance opens a creation form with fields for name (free-text, required, must be unique) and color (curated palette per S131)
+- Each area row exposes Rename, Recolor, and Delete actions; all three actions work on the seeded defaults as well as user-added areas
+- Renaming an area updates the label everywhere — lane headers on the home view, area chips in filtering, area badges in row columns, project detail Overview area field — without requiring a reload (see S130)
+- Recoloring an area updates the swatch wherever the area color is rendered (lane headers, area chips, area badges) immediately on save
+- Deleting an area that has no projects assigned succeeds and removes it from the list; deleting an area with projects is blocked per S129
+- The list reflects the live `areas` table — opening Settings, making a change via another producer (MCP tool, second window), and reopening Settings shows the change
+- Adding a new area makes it immediately available as a target in the area-chip filter (S48) and as a valid value for `set_project_area` (validation per S133)
+
+Difficulty: medium
+
+---
+
+## S129: Block Area Delete When Projects Exist [App] {#s129}
+**Given** the user is in Settings > Areas, looking at an area that has N projects (N ≥ 1) currently assigned to it
+**When** the user clicks Delete on that area
+**Then** the deletion is blocked with a modal that shows the project count and a target-area picker; the user must explicitly pick a target, and "Reassign and delete" then moves all projects to the chosen area and deletes the source area atomically.
+
+Validates: `#desktop-app` (2.14), `#rules` (3.3) — area delete guard
+
+**Satisfaction criteria:**
+- Clicking Delete on an area with N ≥ 1 projects opens a modal whose title or body shows the literal project count (e.g., "Personal has 4 projects assigned. Pick a target area before deleting.")
+- The modal includes a target-area picker showing every other area in the live `areas` table (no self-target option)
+- The "Reassign and delete" primary action is disabled until the user explicitly picks a target — there is no implicit default target, no "Unassigned" auto-fill; the user must make a choice
+- Activating "Reassign and delete" performs the bulk reassignment of all N projects to the chosen target area AND deletes the source area atomically — success means both happened, failure means neither happened
+- A "Cancel" / close action dismisses the modal with no change
+- After successful "Reassign and delete," the home view's lanes update on the next render: the source area's lane disappears, the target area's lane absorbs the moved projects, area-chip filters update, and area badges (when shown per S119) reflect the new assignment
+- Memories that were scoped to the deleted area's `area_id` follow the reassignment per the area_id join model (see S130 for label-rename behavior; for area-delete-with-reassign, the projects' area_id changes to the target's id, and area-scoped recall now bubbles up the target area's pool)
+- Clicking Delete on an area with zero projects skips the modal and deletes the area immediately
+- The flow works for any of the seven seeded defaults — none of them are protected from deletion by virtue of being seeded
+
+Difficulty: medium
+
+---
+
+## S130: Area Renames Are Label-Only and Do Not Disrupt Memory Recall {#s130}
+**Given** an area named "Personal" with three projects assigned to it, each carrying area-scoped memories that bubble up across the trio per S78
+**When** the user renames "Personal" to "Hobbies" in Settings > Areas
+**Then** the new label appears everywhere the area surfaces, and area-scoped memory recall continues to surface sibling memories without disruption — because the join key is `area_id`, not the label.
+
+Validates: `#desktop-app` (2.14), `#entities` (3.2) — area rename label-only contract; preserves S78
+
+**Satisfaction criteria:**
+- After the rename, every UI surface that previously read "Personal" now reads "Hobbies": the lane header on the home view, area chips on the home view, the area badge column (when toggled on per S119), the project detail Overview area field, and any area selector in modals (set-area, area filter, project-type-form area defaults if any)
+- The rename is reflected in `getProject(...).area` for every project assigned to the renamed area — `getProject('project-a').area` now returns `"Hobbies"` instead of `"Personal"`
+- For each of the three projects in the renamed area, `recall({ project: 'project-a' })` continues to surface area-scoped memories from `project-b` and `project-c` exactly as it did before the rename — no memory becomes invisible, no memory becomes orphaned, the four-level scope hierarchy from S78 is unchanged
+- No row in `memories`, `memory_versions`, `memory_edges`, `memory_sources`, `summary_blocks`, `enrichment_log`, or `recall_audit` is rewritten by the rename — the rename is purely an `areas.name` UPDATE plus any cached label invalidation in the UI
+- The rename is atomic: a UI surface that re-reads after the rename never sees a half-updated state where some rows show "Personal" and some show "Hobbies"
+- The rename does not change the area's `id` — any code or test asserting against `area_id` continues to work; the area_id-keyed join model is preserved exactly
+- The undo/redo affordance (if present) for the rename works without rewriting memory data — it is a label undo, not a data restore
+
+Difficulty: medium
+
+---
+
+## S131: Curated Palette for Area Colors [App] {#s131}
+**Given** the user is creating or recoloring an area in Settings
+**When** the user opens the color picker for the area
+**Then** the picker shows a curated grid of approximately 12 preset swatches that all pass contrast against the app background and avoid clashing with health-status colors; no free-form hex input is offered.
+
+Validates: `#desktop-app` (2.14), `#rules` (3.3) — curated palette constraint
+
+**Satisfaction criteria:**
+- The color picker for areas presents a grid of preset swatches — approximately 12 entries, fixed across the app and consistent with the broader Chorus design system token set
+- No text input field for entering a hex code is shown; no eyedropper, no color wheel, no alpha slider — selection is constrained to the curated set
+- Every swatch in the palette passes a documented contrast threshold (e.g., WCAG AA against the app's two background tokens, light and dark mode) — the build is allowed to verify this via a static check at build time rather than at runtime, but no swatch in the live picker fails the threshold
+- No swatch in the palette is identical to or visually adjacent to the four health-tier colors (green Healthy, amber At risk, red Stale, gray Unknown from S70) — area badges and health dots remain visually distinguishable when displayed in the same row
+- The currently-selected swatch is highlighted clearly; activating any other swatch updates the area color on save
+- The palette is the same set whether the user is creating a new area or recoloring an existing one — there is no "creation-only" or "recolor-only" subset
+- An area created or recolored with a swatch that the build later removes from the palette continues to render with its stored color; the palette constraint applies at pick-time, not display-time
+
+Difficulty: easy
+
+---
+
+## S132: Legacy `area_of_focus` Plumbing Removed {#s132}
+**Given** a registry being upgraded from a pre-user-settings build that may carry residual `area_of_focus` plumbing — the bootstrap validator's accepted-types list, a Settings UI "Area of focus root" field, and `schema_meta` rows keyed `bootstrap_path_root_area_of_focus`
+**When** the user-settings evolve migration runs and the new build starts
+**Then** every `area_of_focus` surface is gone: the bootstrap config rejects the key, the Settings UI does not render the field, and the legacy `schema_meta` rows are cleaned up.
+
+Validates: `#project-bootstrap` (2.13), `#schema` (5.2) — legacy plumbing cleanup
+
+**Satisfaction criteria:**
+- `configure_bootstrap({ path_roots: { area_of_focus: '<any path>' } })` is rejected with an error that names the retired key and points the caller at Settings > Areas (which is the correct successor for this concept) — see S38
+- The Settings UI Bootstrap section does not render any "Area of focus root" field on a fresh install or after migration — the field is gone from the markup, not hidden via CSS
+- After migration, `schema_meta` contains no rows whose key starts with `bootstrap_path_root_area_of_focus` — they are deleted, not preserved as orphans
+- The migration that performs this cleanup is part of v12→v13 (the user-settings evolve migration); it is idempotent — running it twice does not error and does not re-introduce the rows
+- No project's data is touched by the cleanup — only `schema_meta` rows and the bootstrap-config validator behavior change
+- A user who had previously set `bootstrap_path_root_area_of_focus` to a custom path is not silently destroyed: the migration emits an `observation` memory at portfolio scope noting the cleanup so the user can audit it after the fact, including the previous path value
+- The bootstrap result returned by `configure_bootstrap()` (with no args) after migration shows a `path_roots` map that does not contain the `area_of_focus` key under any circumstance
+
+Difficulty: medium
+
+---
+
+## S133: Invalid Area Name Validation Against Live Areas Table {#s133}
+**Given** a registry whose `areas` table currently contains some seeded defaults plus user-added areas (e.g., the seven defaults plus a user-added "Side Projects"), and where the user has previously deleted an area (e.g., "Finance") via S128/S129
+**When** a producer calls `set_project_area('my-project', 'NotARealArea')`, or `set_project_area('my-project', 'Finance')` (the deleted area), or registers a project with one of those names
+**Then** the call fails with a clear error naming the invalid input and listing the area names currently present in the live `areas` table — not a hardcoded literal set.
+
+Validates: `#rules` (3.3), `#entities` (3.2) — area validation against live state
+
+**Satisfaction criteria:**
+- The error code on rejection is `INVALID_INPUT` (or the spec's equivalent)
+- The error message names the rejected area string verbatim
+- The error message lists the valid area names by reading the live `areas` table at call time — user-added areas appear in the list, deleted areas do not
+- A name that was valid at the start of the session but has since been deleted by the user (in this window or another) is rejected on the next call with the live list — there is no stale client-side cache of allowed names
+- A name that was added by the user via Settings is accepted as soon as the area row exists — no restart, no cache invalidation step, no re-seeding required
+- `set_project_area('my-project', null)` is always valid and clears the area, regardless of what the live `areas` table contains
+- The project's existing area assignment is unchanged after a failed call — partial-update is impossible
+- The same validation contract applies to `register_project({ area: ... })`, `bootstrap_project({ area: ... })`, and `update_project({ area: ... })` — all four code paths read the live `areas` table at call time, none short-circuit against a hardcoded literal set
+- An area chip in the home view filter (S48) reflects the same live source — the chip set updates as areas are added or removed via Settings without an app restart
+
+Difficulty: medium
+
+---
+
+## S134: Settings Panel Structure and Section Order [App] {#s134}
+**Given** the desktop app is open and the user has opened the Settings panel (via Cmd-, per S123, the menu bar item, or any other entry point)
+**When** the user looks at the Settings panel
+**Then** Settings appears as a single scrolling page with vertical sections in a fixed order — Areas, Project types, View, Bootstrap, Updates — and the user can scroll any section into view independently.
+
+Validates: `#desktop-app` (2.14) — Settings panel structure
+
+**Satisfaction criteria:**
+- Settings opens as one scrolling page (not a tabbed or stacked-modal interface) with five vertical sections rendered top-to-bottom in this exact order: Areas, Project types, View, Bootstrap, Updates
+- Each section has a clearly delimited heading visible in the scroll flow; sections are visually separated by spacing or a hairline rule consistent with the Chorus design system
+- The Areas section contains the area CRUD list per S128 + the curated palette picker per S131
+- The Project types section contains the project-type CRUD list per S124 + the type form per S125
+- The View section contains the column-visibility default (S119), the density default (S120), the sort persistence behavior surfaced as a "Reset sort to default" action (S121), and the landing-view toggle (S122) — at minimum these four controls
+- The Bootstrap section contains the path roots per type, template directory, and any other bootstrap config from S38 — it does NOT contain an "Area of focus root" field per S132
+- The Updates section contains the update channel selector and last-checked status line per S83 + S90
+- The page scrolls smoothly through the full section list on the user's display; each section can be brought into view without dragging through hidden content (no horizontal scroll, no nested scroll containers that hijack the wheel)
+- Closing Settings (Esc, close button, or Cmd-, while open is treated per S123) returns the user to the prior view; reopening Settings resumes at the top of the page (or the last-scrolled position, per the design system convention — but consistently)
+- An empty state in any section (e.g., zero project types — only possible if all defaults were deleted) renders a helpful "Add your first <thing>" prompt rather than a blank gap
 
 Difficulty: medium
