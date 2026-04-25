@@ -1,5 +1,5 @@
 // @fctry: #auto-update
-import { app, BrowserWindow, ipcMain } from 'electron';
+import { app, BrowserWindow, ipcMain, nativeTheme } from 'electron';
 import { join } from 'node:path';
 import { registerIpcHandlers } from './ipc.js';
 import { initAutoUpdater } from './auto-update.js';
@@ -67,6 +67,11 @@ app.on('second-instance', () => {
 });
 
 app.whenReady().then(() => {
+  // Force dark AppKit appearance so native scrollbars and other system
+  // chrome (form-control corners, native dialogs) match the renderer's
+  // dark theme regardless of the user's OS setting.
+  nativeTheme.themeSource = 'dark';
+
   // Load persisted user prefs (update channel, last-check status).
   // Side effect: caches to memory so subsequent reads in this session
   // are instant.
