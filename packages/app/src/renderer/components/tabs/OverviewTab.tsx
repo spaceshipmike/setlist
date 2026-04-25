@@ -24,9 +24,9 @@ function parseArray(value: unknown): string[] {
 export function OverviewTab({ project, onNavigate }: OverviewTabProps) {
   const health = useProjectHealth(project.name, project.updated_at);
   const goals = parseArray(project.goals);
-  const topics = parseArray((project as Record<string, unknown>).topics);
-  const entities = parseArray((project as Record<string, unknown>).entities);
-  const concerns = parseArray((project as Record<string, unknown>).concerns);
+  const topics = parseArray(project.topics);
+  const entities = parseArray(project.entities);
+  const concerns = parseArray(project.concerns);
   const fields = project.extended_fields || {};
 
   const area = project.area ?? null;

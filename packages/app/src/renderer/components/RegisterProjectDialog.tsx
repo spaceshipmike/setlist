@@ -37,12 +37,15 @@ export function RegisterProjectDialog({ open, onOpenChange, onSuccess }: Registe
   const [error, setError] = useState<string | null>(null);
   const [nameWarning, setNameWarning] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
-  const checkTimer = useRef<ReturnType<typeof setTimeout>>();
+  const checkTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   // Bootstrap mode
-  const [createFolder, setCreateFolder] = useState(false);
+  const [createFolder, setCreateFolder] = useState(true);
   const [skipGit, setSkipGit] = useState(false);
   const [config, setConfig] = useState<BootstrapConfig | null>(null);
+  // When set, register the project pointing at this existing folder rather
+  // than creating a new one. Mutually exclusive with createFolder.
+  const [existingFolder, setExistingFolder] = useState<string | null>(null);
 
   // Load bootstrap config when dialog opens
   useEffect(() => {
@@ -124,6 +127,7 @@ export function RegisterProjectDialog({ open, onOpenChange, onSuccess }: Registe
           status: 'active',
           description: description.trim() || undefined,
           display_name: displayName.trim() || undefined,
+          paths: existingFolder ? [existingFolder] : undefined,
           area: resolvedArea,
           parent_project: resolvedParent,
         });
@@ -137,8 +141,9 @@ export function RegisterProjectDialog({ open, onOpenChange, onSuccess }: Registe
       setArea(UNASSIGNED);
       setParentProject('');
       setParentQuery('');
-      setCreateFolder(false);
+      setCreateFolder(true);
       setSkipGit(false);
+      setExistingFolder(null);
       onOpenChange(false);
       onSuccess();
     } catch (e) {
@@ -256,7 +261,10 @@ export function RegisterProjectDialog({ open, onOpenChange, onSuccess }: Registe
                   <input
                     type="checkbox"
                     checked={createFolder}
-                    onChange={(e) => setCreateFolder(e.target.checked)}
+                    onChange={(e) => {
+                      setCreateFolder(e.target.checked);
+                      if (e.target.checked) setExistingFolder(null);
+                    }}
                     className="w-3.5 h-3.5 rounded border-[var(--color-border-strong)]
                       accent-[var(--color-accent)]"
                   />
@@ -299,6 +307,51 @@ export function RegisterProjectDialog({ open, onOpenChange, onSuccess }: Registe
                           Skip git init
                         </span>
                       </label>
+                    )}
+                  </div>
+                )}
+
+                {!createFolder && (
+                  <div className="pl-5 space-y-2">
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          const picked = await api.pickDirectory({
+                            defaultPath: pathRoot ?? undefined,
+                            title: 'Select existing project folder',
+                          });
+                          if (picked) {
+                            setExistingFolder(picked);
+                            // Suggest a slug from the folder name if name is empty
+                            if (!name.trim()) {
+                              const base = picked.split('/').filter(Boolean).pop() ?? '';
+                              const slug = base.toLowerCase().replace(/[^a-z0-9_-]+/g, '-').replace(/^-+|-+$/g, '');
+                              if (slug) setName(slug);
+                            }
+                          }
+                        }}
+                        className="px-3 py-1.5 rounded-md text-xs
+                          bg-[var(--color-bg-card)] text-[var(--color-text-primary)]
+                          hover:bg-[var(--color-bg-hover)] border border-[var(--color-border)]
+                          transition-colors"
+                      >
+                        {existingFolder ? 'Change folder…' : 'Pick existing folder…'}
+                      </button>
+                      {existingFolder && (
+                        <button
+                          type="button"
+                          onClick={() => setExistingFolder(null)}
+                          className="text-xs text-[var(--color-text-tertiary)] hover:text-[var(--color-text-primary)]"
+                        >
+                          Clear
+                        </button>
+                      )}
+                    </div>
+                    {existingFolder && (
+                      <div className="text-xs font-mono text-[var(--color-text-tertiary)] bg-[var(--color-bg-card)] rounded px-2 py-1.5 break-all">
+                        {existingFolder}
+                      </div>
                     )}
                   </div>
                 )}

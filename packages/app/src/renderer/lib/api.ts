@@ -222,6 +222,9 @@ const api = {
     parent_project?: string | null;
   }) => window.setlist.bootstrapProject(opts) as Promise<BootstrapResult>,
 
+  pickDirectory: (opts?: { defaultPath?: string; title?: string }) =>
+    window.setlist.pickDirectory(opts) as Promise<string | null>,
+
   // ── Areas (spec 0.26) ────────────────────────────────────────
   listAreas: () => window.setlist.listAreas() as Promise<Area[]>,
   createArea: (opts: { name: string; display_name?: string; description?: string; color: string }) =>

@@ -71,7 +71,7 @@ function outcomeColor(outcome: UpdateOutcome): string {
   }
 }
 
-export function UpdatesSection(): JSX.Element {
+export function UpdatesSection() {
   const [status, setStatus] = useState<UpdateStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const [liveCheck, setLiveCheck] = useState<LastCheck | null>(null);

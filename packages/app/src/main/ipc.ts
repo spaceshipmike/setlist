@@ -1,7 +1,7 @@
 // @fctry: #health-assessment
 // @fctry: #auto-update
 import type { IpcMain } from 'electron';
-import { app } from 'electron';
+import { app, dialog, BrowserWindow } from 'electron';
 import { Registry, MemoryStore, MemoryRetrieval, Bootstrap, HealthAssessor } from '@setlist/core';
 import { getChannel, setChannel, getLastCheck, type UpdateChannel } from './prefs.js';
 import {
@@ -128,7 +128,7 @@ export function registerIpcHandlers(ipcMain: IpcMain): void {
     const retrieval = new MemoryRetrieval(reg.dbPath);
     return retrieval.recall({
       query: opts.query,
-      project: opts.project,
+      project_id: opts.project,
       token_budget: opts.token_budget ?? 4000,
     });
   });
@@ -193,6 +193,17 @@ export function registerIpcHandlers(ipcMain: IpcMain): void {
     if (!isUpdateDownloaded()) return false;
     quitAndInstall();
     return true;
+  });
+
+  ipcMain.handle('pickDirectory', async (e, opts?: { defaultPath?: string; title?: string }) => {
+    const parent = BrowserWindow.fromWebContents(e.sender) ?? undefined;
+    const result = await dialog.showOpenDialog(parent as BrowserWindow, {
+      properties: ['openDirectory', 'createDirectory'],
+      defaultPath: opts?.defaultPath,
+      title: opts?.title ?? 'Select folder',
+    });
+    if (result.canceled || result.filePaths.length === 0) return null;
+    return result.filePaths[0];
   });
 
   ipcMain.handle('bootstrapProject', (_e, opts: {

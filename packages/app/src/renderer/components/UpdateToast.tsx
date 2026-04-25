@@ -8,7 +8,7 @@
 import { useEffect, useRef, useState } from 'react';
 import api, { type UpdateEventPayload } from '../lib/api';
 
-export function UpdateToast(): JSX.Element | null {
+export function UpdateToast() {
   const [visible, setVisible] = useState(false);
   const [version, setVersion] = useState<string | null>(null);
   const [installing, setInstalling] = useState(false);

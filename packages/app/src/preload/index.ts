@@ -83,6 +83,9 @@ const api = {
   assessHealth: (name?: string, opts?: { fresh?: boolean }) =>
     ipcRenderer.invoke('assessHealth', name, opts),
 
+  pickDirectory: (opts?: { defaultPath?: string; title?: string }) =>
+    ipcRenderer.invoke('pickDirectory', opts),
+
   bootstrapProject: (opts: {
     name: string;
     type?: string;

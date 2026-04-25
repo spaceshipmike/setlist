@@ -14,7 +14,7 @@ type View =
   | { kind: 'detail'; projectName: string }
   | { kind: 'settings' };
 
-export function App(): JSX.Element {
+export function App() {
   const [view, setView] = useState<View>({ kind: 'home' });
   const [showRegister, setShowRegister] = useState(false);
   const refreshRef = useRef<(() => void) | null>(null);

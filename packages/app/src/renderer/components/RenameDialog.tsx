@@ -15,7 +15,7 @@ export function RenameDialog({ open, onOpenChange, currentName, onSuccess }: Ren
   const [error, setError] = useState<string | null>(null);
   const [duplicateWarning, setDuplicateWarning] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
-  const checkTimer = useRef<ReturnType<typeof setTimeout>>();
+  const checkTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   // Reset state when dialog opens
   useEffect(() => {
