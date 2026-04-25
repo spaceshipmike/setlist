@@ -83,7 +83,8 @@ const api = {
 
   bootstrapProject: (opts: {
     name: string;
-    type: string;
+    type?: string;
+    project_type_id?: number;
     status?: string;
     description?: string;
     goals?: string;
@@ -93,6 +94,32 @@ const api = {
     area?: string | null;
     parent_project?: string | null;
   }) => ipcRenderer.invoke('bootstrapProject', opts),
+
+  // Areas (spec 0.26)
+  listAreas: () => ipcRenderer.invoke('areas:list'),
+  createArea: (opts: { name: string; display_name?: string; description?: string; color: string }) =>
+    ipcRenderer.invoke('areas:create', opts),
+  updateArea: (id: number, patch: { name?: string; display_name?: string; description?: string; color?: string }) =>
+    ipcRenderer.invoke('areas:update', id, patch),
+  deleteArea: (id: number) => ipcRenderer.invoke('areas:delete', id),
+
+  // Project types (spec 0.26)
+  listProjectTypes: () => ipcRenderer.invoke('projectTypes:list'),
+  createProjectType: (opts: {
+    name: string;
+    default_directory: string;
+    git_init: boolean;
+    template_directory?: string | null;
+    color?: string | null;
+  }) => ipcRenderer.invoke('projectTypes:create', opts),
+  updateProjectType: (id: number, patch: {
+    name?: string;
+    default_directory?: string;
+    git_init?: boolean;
+    template_directory?: string | null;
+    color?: string | null;
+  }) => ipcRenderer.invoke('projectTypes:update', id, patch),
+  deleteProjectType: (id: number) => ipcRenderer.invoke('projectTypes:delete', id),
 
   // Auto-Update (#auto-update)
   getUpdateStatus: () =>

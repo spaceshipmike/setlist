@@ -197,7 +197,8 @@ export function registerIpcHandlers(ipcMain: IpcMain): void {
 
   ipcMain.handle('bootstrapProject', (_e, opts: {
     name: string;
-    type: string;
+    type?: string;
+    project_type_id?: number;
     status?: string;
     description?: string;
     goals?: string;
@@ -210,10 +211,61 @@ export function registerIpcHandlers(ipcMain: IpcMain): void {
     const bootstrap = new Bootstrap(reg.dbPath);
     return bootstrap.bootstrapProject({
       ...opts,
-      // spec 0.13: retired 'area_of_focus' type — app only creates 'project'
-      // or 'non_code_project' (routed to a different pathRoot via bootstrap).
-      type: opts.type as 'project' | 'non_code_project',
+      // spec 0.26: project_type_id (when present) drives the bootstrap. The
+      // legacy 'project' / 'non_code_project' string is still accepted for
+      // callers that haven't migrated.
+      type: opts.type as 'project' | 'non_code_project' | undefined,
       producer: 'setlist-app',
     });
+  });
+
+  // ── Areas (spec 0.26) ────────────────────────────────────────
+
+  ipcMain.handle('areas:list', () => {
+    return reg.listAreas();
+  });
+
+  ipcMain.handle('areas:create', (_e, opts: { name: string; display_name?: string; description?: string; color: string }) => {
+    return reg.createArea(opts);
+  });
+
+  ipcMain.handle('areas:update', (_e, id: number, patch: { name?: string; display_name?: string; description?: string; color?: string }) => {
+    return reg.updateArea(id, patch);
+  });
+
+  ipcMain.handle('areas:delete', (_e, id: number) => {
+    reg.deleteArea(id);
+    return { ok: true };
+  });
+
+  // ── Project types (spec 0.26) ────────────────────────────────
+
+  ipcMain.handle('projectTypes:list', () => {
+    return reg.listProjectTypes();
+  });
+
+  ipcMain.handle('projectTypes:create', (_e, opts: {
+    name: string;
+    default_directory: string;
+    git_init: boolean;
+    template_directory?: string | null;
+    color?: string | null;
+  }) => {
+    return reg.createProjectType(opts);
+  });
+
+  ipcMain.handle('projectTypes:update', (_e, id: number, patch: {
+    name?: string;
+    default_directory?: string;
+    git_init?: boolean;
+    template_directory?: string | null;
+    color?: string | null;
+  }) => {
+    return reg.updateProjectType(id, patch);
+  });
+
+  ipcMain.handle('projectTypes:delete', (_e, id: number) => {
+    reg.deleteProjectType(id);
+    return { ok: true };
   });
 }

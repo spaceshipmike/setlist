@@ -3,19 +3,44 @@
  * All calls are async (IPC invoke returns promises).
  */
 
-// spec 0.13: canonical areas
-export type AreaName =
-  | 'Work'
-  | 'Family'
-  | 'Home'
-  | 'Health'
-  | 'Finance'
-  | 'Personal'
-  | 'Infrastructure';
-export const AREA_NAMES: readonly AreaName[] = [
+// Spec 0.26: areas are user-managed. The renderer treats AreaName as a free-form
+// string and validates against the live `areas` table. The legacy seven-name
+// constant is kept for fallback rendering during the first paint before the
+// renderer has fetched the area list.
+export type AreaName = string;
+export const SEED_AREA_NAMES: readonly string[] = [
   'Work', 'Family', 'Home', 'Health', 'Finance', 'Personal', 'Infrastructure',
 ] as const;
+/** @deprecated since spec 0.26 — use a live area lookup instead. */
+export const AREA_NAMES = SEED_AREA_NAMES;
 export const UNASSIGNED_AREA_SENTINEL = '__unassigned__';
+
+// Spec 0.26: user-managed area row.
+export interface Area {
+  id: number;
+  name: string;
+  display_name: string;
+  description: string;
+  color: string;
+}
+
+// Spec 0.26: user-managed project type.
+export interface ProjectTypeRow {
+  id: number;
+  name: string;
+  default_directory: string;
+  git_init: boolean;
+  template_directory: string | null;
+  color: string | null;
+  created_at: number;
+  updated_at: number;
+}
+
+/** Curated 12-color palette for areas and project types. Mirrors core/AREA_COLOR_PALETTE. */
+export const AREA_COLOR_PALETTE: readonly string[] = [
+  '#3b82f6', '#ec4899', '#10b981', '#ef4444', '#f59e0b', '#a855f7',
+  '#6b7280', '#0ea5e9', '#14b8a6', '#f97316', '#84cc16', '#8b5cf6',
+] as const;
 
 export interface ProjectSummary {
   name: string;
@@ -38,6 +63,9 @@ export interface ProjectSummary {
   parent_project: string | null;
   parent_archived?: boolean;
   children: string[];
+  // spec 0.26: resolved user-managed project type name + id
+  project_type?: string | null;
+  project_type_id?: number | null;
 }
 
 export interface ProjectFull extends ProjectSummary {
@@ -182,7 +210,8 @@ const api = {
 
   bootstrapProject: (opts: {
     name: string;
-    type: string;
+    type?: string;
+    project_type_id?: number;
     status?: string;
     description?: string;
     goals?: string;
@@ -192,6 +221,34 @@ const api = {
     area?: AreaName | null;
     parent_project?: string | null;
   }) => window.setlist.bootstrapProject(opts) as Promise<BootstrapResult>,
+
+  // ── Areas (spec 0.26) ────────────────────────────────────────
+  listAreas: () => window.setlist.listAreas() as Promise<Area[]>,
+  createArea: (opts: { name: string; display_name?: string; description?: string; color: string }) =>
+    window.setlist.createArea(opts) as Promise<Area>,
+  updateArea: (id: number, patch: { name?: string; display_name?: string; description?: string; color?: string }) =>
+    window.setlist.updateArea(id, patch) as Promise<Area>,
+  deleteArea: (id: number) =>
+    window.setlist.deleteArea(id) as Promise<{ ok: boolean }>,
+
+  // ── Project types (spec 0.26) ────────────────────────────────
+  listProjectTypes: () => window.setlist.listProjectTypes() as Promise<ProjectTypeRow[]>,
+  createProjectType: (opts: {
+    name: string;
+    default_directory: string;
+    git_init: boolean;
+    template_directory?: string | null;
+    color?: string | null;
+  }) => window.setlist.createProjectType(opts) as Promise<ProjectTypeRow>,
+  updateProjectType: (id: number, patch: {
+    name?: string;
+    default_directory?: string;
+    git_init?: boolean;
+    template_directory?: string | null;
+    color?: string | null;
+  }) => window.setlist.updateProjectType(id, patch) as Promise<ProjectTypeRow>,
+  deleteProjectType: (id: number) =>
+    window.setlist.deleteProjectType(id) as Promise<{ ok: boolean }>,
 
   assessHealth: (name?: string, opts?: { fresh?: boolean }) =>
     window.setlist.assessHealth(name, opts) as Promise<HealthAssessment | PortfolioHealth>,
