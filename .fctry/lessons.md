@@ -150,3 +150,48 @@ Append-only structured lessons from builds. The State Owner manages maturation.
 **Anti-pattern:** Relying on `spy.wrappedMethod` or `spy.getMockImplementation()` to recover the original — these are not part of vitest's stable API and return undefined in vitest 3.x.
 **Context:** S117 integration test simulates a write failure for `capability_type === 'cli-command'` while letting the other two types go through. Needs both mock behavior (throw) and passthrough (call real).
 **Outcome:** Capturing `const realMethod = Registry.prototype.registerCapabilitiesForType` before `spyOn` and using `realMethod.call(this, ...)` inside the mock impl works reliably.
+
+### 2026-04-25T09:24:00Z | #schema (5.2)
+
+**Status:** candidate | **Confidence:** 1
+**Helpful:** 0 | **Harmful:** 0
+**Agent:** executor
+**Trigger:** tech-stack-pattern
+**Component:** core
+**Severity:** medium
+**Tags:** schema-migration, sqlite, idempotent-seed, spec-evolve
+**Rule:** When promoting a hardcoded constant (CANONICAL_AREAS) to a user-managed table, keep the constant name as a re-export alias from the new module — search-and-replace then becomes optional and migration tests don't break on a single rename.
+**Evidence:** Spec 0.25 → 0.26 schema v13 build. CANONICAL_AREAS retained as `export const CANONICAL_AREAS = SEED_AREAS` so existing migration code referencing it kept working.
+**Anti-pattern:** Deleting the legacy constant in the same commit that introduces the table — forces a wider blast radius and breaks any in-flight migration logic still calling it by name.
+**Context:** Schema v12 → v13 migration, areas relax from system-owned to user-managed.
+**Outcome:** Migration ran clean on fresh + existing v12 databases; tests passed in one shot after only adjusting the literal version-number assertions.
+
+### 2026-04-25T09:24:00Z | #desktop-app (2.14)
+
+**Status:** candidate | **Confidence:** 1
+**Helpful:** 0 | **Harmful:** 0
+**Agent:** executor
+**Trigger:** tech-stack-pattern
+**Component:** app
+**Severity:** medium
+**Tags:** electron, ipc, preload, contextBridge, accelerator
+**Rule:** When wiring a new menu accelerator (Cmd-,) → IPC → renderer listener, expose `onNavigateToSettings(handler)` from the preload bridge that returns an unsubscribe function — same shape as the existing `onUpdateEvent`. App.tsx's useEffect can return the unsubscribe directly as cleanup, no manual removeListener call needed.
+**Evidence:** Step 8 of spec 0.26 build: Cmd-, → BrowserWindow.getFocusedWindow().webContents.send('navigate-to-settings') → preload.onNavigateToSettings → App.tsx setView({kind:'settings'}).
+**Anti-pattern:** Subscribing in the renderer without returning an unsubscribe — accumulates listeners across hot reloads and causes ghost navigations.
+**Context:** New menu item with global accelerator on macOS + cross-process IPC + contextBridge.
+**Outcome:** Pattern is consistent with existing UpdateToast wiring; typecheck clean on first try.
+
+### 2026-04-25T09:24:00Z | #desktop-app (2.14)
+
+**Status:** candidate | **Confidence:** 1
+**Helpful:** 0 | **Harmful:** 0
+**Agent:** executor
+**Trigger:** tech-stack-pattern
+**Component:** app
+**Severity:** low
+**Tags:** react, dynamic-grid, column-visibility, css-grid
+**Rule:** For toggleable table columns, build a single `gridTemplateColumns` string from the visibility map (e.g., `'1fr 90px 100px ...'`) and apply it via `style={{ gridTemplateColumns }}`. Skip the `<span>` for hidden columns. The grid auto-collapses; no per-row branching.
+**Evidence:** Step 7 of spec 0.26 build: ColumnVisibility{status,health,type,updated_at,area}, buildGridTemplate() helper, ProjectRows component.
+**Anti-pattern:** Rendering all columns and hiding via `display: none` — wastes layout work and complicates header alignment.
+**Context:** Project list with 5 toggleable columns.
+**Outcome:** Headers and rows stay aligned with no extra plumbing.

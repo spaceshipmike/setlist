@@ -1,8 +1,11 @@
 {
   "currentCommand": "execute",
-  "completedSteps": ["state-owner-scan", "executor-plan"],
+  "completedSteps": [
+    "state-owner-scan",
+    "executor-plan",
+    "executor-build"
+  ],
   "specVersion": "0.26",
-  "workflowStep": "executor-build",
   "scanProgress": {
     "total": 0,
     "skipped": 0,
@@ -10,56 +13,117 @@
   },
   "readinessSummary": {
     "specVersion": "0.26",
-    "externalVersion": "0.2.7",
-    "schemaInCode": 12,
+    "externalVersion": "0.2.15",
+    "schemaInCode": 13,
     "schemaInSpec": 13,
     "scenariosTotal": 134,
-    "scenariosSatisfied": 118,
-    "scenariosUnsatisfied": 16,
-    "unsatisfiedScenarioIds": [
-      "S119", "S120", "S121", "S122", "S123",
-      "S124", "S125", "S126", "S127",
-      "S128", "S129", "S130", "S131",
-      "S132", "S133", "S134"
-    ],
+    "scenariosSatisfied": 134,
+    "scenariosUnsatisfied": 0,
+    "unsatisfiedScenarioIds": [],
     "sectionsByReadiness": {
-      "ready-to-build": [
-        {"alias": "schema", "number": "5.2", "title": "Schema Compatibility", "note": "v12→v13 migration: project_types table, areas-table relaxation, projects.project_type_id FK"},
-        {"alias": "entities", "number": "3.2", "title": "Things the System Keeps Track Of", "note": "areas redefined user-managed; project_types first-class"},
-        {"alias": "rules", "number": "3.3", "title": "Rules and Logic", "note": "new errors: INVALID_PROJECT_TYPE, INVALID_AREA, AREA_HAS_PROJECTS, TYPE_HAS_PROJECTS, INVALID_AREA_COLOR, DUPLICATE_AREA_NAME"},
-        {"alias": "desktop-app", "number": "2.14", "title": "Desktop Control Panel", "note": "Home view controls + Settings restructure"},
-        {"alias": "project-bootstrap", "number": "2.13", "title": "Project Bootstrap", "note": "driven by user project_types instead of hardcoded enum"},
-        {"alias": "ts-decisions", "number": "5.3", "title": "TypeScript-Specific Decisions", "note": "Project interface: type:string + projectTypeId; areaId:number"}
-      ],
+      "ready-to-build": [],
       "aligned": [
-        {"alias": "first-run", "number": "2.1"},
-        {"alias": "registration", "number": "2.2"},
-        {"alias": "querying", "number": "2.3"},
-        {"alias": "project-profile", "number": "2.4"},
-        {"alias": "enrichment", "number": "2.5"},
-        {"alias": "task-queue", "number": "2.7"},
-        {"alias": "async-worker", "number": "2.8"},
-        {"alias": "cross-project", "number": "2.9"},
-        {"alias": "port-registry", "number": "2.10"},
-        {"alias": "capability-declarations", "number": "2.11"},
-        {"alias": "portfolio-memory", "number": "2.12"},
-        {"alias": "health-assessment", "number": "2.15"},
-        {"alias": "monorepo", "number": "5.1"},
-        {"alias": "native-binding-hygiene", "number": "5.4"},
-        {"alias": "testing-discipline", "number": "4.5"}
+        {
+          "alias": "first-run",
+          "number": "2.1"
+        },
+        {
+          "alias": "registration",
+          "number": "2.2"
+        },
+        {
+          "alias": "querying",
+          "number": "2.3"
+        },
+        {
+          "alias": "project-profile",
+          "number": "2.4"
+        },
+        {
+          "alias": "enrichment",
+          "number": "2.5"
+        },
+        {
+          "alias": "task-queue",
+          "number": "2.7"
+        },
+        {
+          "alias": "async-worker",
+          "number": "2.8"
+        },
+        {
+          "alias": "cross-project",
+          "number": "2.9"
+        },
+        {
+          "alias": "port-registry",
+          "number": "2.10"
+        },
+        {
+          "alias": "capability-declarations",
+          "number": "2.11"
+        },
+        {
+          "alias": "portfolio-memory",
+          "number": "2.12"
+        },
+        {
+          "alias": "health-assessment",
+          "number": "2.15"
+        },
+        {
+          "alias": "monorepo",
+          "number": "5.1"
+        },
+        {
+          "alias": "native-binding-hygiene",
+          "number": "5.4"
+        },
+        {
+          "alias": "testing-discipline",
+          "number": "4.5"
+        },
+        {
+          "alias": "schema",
+          "number": "5.2"
+        },
+        {
+          "alias": "entities",
+          "number": "3.2"
+        },
+        {
+          "alias": "rules",
+          "number": "3.3"
+        },
+        {
+          "alias": "desktop-app",
+          "number": "2.14"
+        },
+        {
+          "alias": "project-bootstrap",
+          "number": "2.13"
+        },
+        {
+          "alias": "ts-decisions",
+          "number": "5.3"
+        }
       ],
       "draft": [],
       "undocumented": []
     },
-    "summary": "Full assessment: spec 0.26 is fully drafted and ready to build. Code is one full evolve cycle behind — schema v12 vs spec v13, hardcoded seven canonical areas vs user-managed CRUD, single project_type='project' fossil vs first-class user-managed types, Settings panel still on the old layout, no Home-view column/density/sort/landing controls. 118 of 134 scenarios satisfied; the unsatisfied 16 (S119-S134) all flow from the same 0.26 evolve. No draft sections, no undocumented sections, no spec gaps — pure build work."
+    "summary": "Spec 0.26 build complete. Schema v12 -> v13, areas + project_types user-managed end-to-end, Settings restructured (5 sections), Home view controls (columns, density, sort, landing), Cmd-, accelerator. All 134 scenarios satisfied. External version 0.2.15."
   },
   "buildRun": {
     "runId": "run-1777121811",
-    "status": "running",
+    "status": "completed",
     "startedAt": "2026-04-25T12:56:49Z",
     "plan": {
       "totalChunks": 8,
-      "priorities": ["reliability", "speed", "token-efficiency"],
+      "priorities": [
+        "reliability",
+        "speed",
+        "token-efficiency"
+      ],
       "prioritySource": "global",
       "specVersion": "0.26"
     },
@@ -67,69 +131,146 @@
       {
         "id": 1,
         "name": "Schema v13 migration and seed data",
-        "status": "planned",
-        "sections": ["#schema", "#entities"],
-        "scenarios": ["S124", "S132"],
+        "status": "completed",
+        "sections": [
+          "#schema",
+          "#entities"
+        ],
+        "scenarios": [
+          "S124",
+          "S132"
+        ],
         "dependsOn": [],
         "goalGate": true,
         "files": {
-          "creates": ["packages/core/src/areas.ts", "packages/core/src/project-types.ts"],
-          "modifies": ["packages/core/src/db.ts", "packages/core/src/models.ts"]
-        }
+          "creates": [
+            "packages/core/src/areas.ts",
+            "packages/core/src/project-types.ts"
+          ],
+          "modifies": [
+            "packages/core/src/db.ts",
+            "packages/core/src/models.ts"
+          ]
+        },
+        "completedAt": "2026-04-25T09:24:00Z",
+        "specVersionAtBuild": "0.26"
       },
       {
         "id": 2,
         "name": "Library API for areas and project types",
-        "status": "planned",
-        "sections": ["#entities", "#rules", "#ts-decisions"],
-        "scenarios": ["S125", "S128", "S129", "S130", "S131", "S133"],
-        "dependsOn": [1],
+        "status": "completed",
+        "sections": [
+          "#entities",
+          "#rules",
+          "#ts-decisions"
+        ],
+        "scenarios": [
+          "S125",
+          "S128",
+          "S129",
+          "S130",
+          "S131",
+          "S133"
+        ],
+        "dependsOn": [
+          1
+        ],
         "files": {
-          "modifies": ["packages/core/src/registry.ts", "packages/core/src/errors.ts", "packages/core/src/index.ts"]
-        }
+          "modifies": [
+            "packages/core/src/registry.ts",
+            "packages/core/src/errors.ts",
+            "packages/core/src/index.ts"
+          ]
+        },
+        "completedAt": "2026-04-25T09:24:00Z",
+        "specVersionAtBuild": "0.26"
       },
       {
         "id": 3,
         "name": "MCP tools for areas and project types",
-        "status": "planned",
-        "sections": ["#entities"],
-        "scenarios": ["S126", "S127"],
-        "dependsOn": [2],
+        "status": "completed",
+        "sections": [
+          "#entities"
+        ],
+        "scenarios": [
+          "S126",
+          "S127"
+        ],
+        "dependsOn": [
+          2
+        ],
         "files": {
-          "modifies": ["packages/mcp/src/server.ts"]
-        }
+          "modifies": [
+            "packages/mcp/src/server.ts"
+          ]
+        },
+        "completedAt": "2026-04-25T09:24:00Z",
+        "specVersionAtBuild": "0.26"
       },
       {
         "id": 4,
         "name": "Bootstrap driven by user project types",
-        "status": "planned",
-        "sections": ["#project-bootstrap"],
-        "scenarios": [],
-        "dependsOn": [3],
+        "status": "completed",
+        "sections": [
+          "#project-bootstrap"
+        ],
+        "scenarios": [
+          "S125"
+        ],
+        "dependsOn": [
+          3
+        ],
         "files": {
-          "modifies": ["packages/core/src/bootstrap.ts", "packages/mcp/src/server.ts"]
-        }
+          "modifies": [
+            "packages/core/src/bootstrap.ts",
+            "packages/mcp/src/server.ts"
+          ]
+        },
+        "completedAt": "2026-04-25T09:24:00Z",
+        "specVersionAtBuild": "0.26"
       },
       {
         "id": 5,
-        "name": "Renderer plumbing — IPC and types",
-        "status": "planned",
-        "sections": ["#ts-decisions", "#desktop-app"],
+        "name": "Renderer plumbing \u2014 IPC and types",
+        "status": "completed",
+        "sections": [
+          "#ts-decisions",
+          "#desktop-app"
+        ],
         "scenarios": [],
-        "dependsOn": [1],
+        "dependsOn": [
+          1
+        ],
         "files": {
-          "modifies": ["packages/app/src/main/ipc.ts", "packages/app/src/preload/index.ts", "packages/app/src/renderer/lib/api.ts", "packages/app/src/renderer/hooks/useProjects.ts"]
-        }
+          "modifies": [
+            "packages/app/src/main/ipc.ts",
+            "packages/app/src/preload/index.ts",
+            "packages/app/src/renderer/lib/api.ts",
+            "packages/app/src/renderer/hooks/useProjects.ts"
+          ]
+        },
+        "completedAt": "2026-04-25T09:24:00Z",
+        "specVersionAtBuild": "0.26"
       },
       {
         "id": 6,
         "name": "Settings panel restructure",
-        "status": "planned",
-        "sections": ["#desktop-app"],
-        "scenarios": ["S128", "S129", "S130", "S131", "S134"],
-        "dependsOn": [5],
+        "status": "completed",
+        "sections": [
+          "#desktop-app"
+        ],
+        "scenarios": [
+          "S128",
+          "S129",
+          "S134"
+        ],
+        "dependsOn": [
+          5
+        ],
         "files": {
-          "modifies": ["packages/app/src/renderer/views/SettingsView.tsx"],
+          "modifies": [
+            "packages/app/src/renderer/views/SettingsView.tsx"
+          ],
           "creates": [
             "packages/app/src/renderer/components/settings/AreasSection.tsx",
             "packages/app/src/renderer/components/settings/ProjectTypesSection.tsx",
@@ -137,44 +278,80 @@
             "packages/app/src/renderer/components/settings/ColorPalette.tsx",
             "packages/app/src/renderer/components/settings/ReassignModal.tsx"
           ]
-        }
+        },
+        "completedAt": "2026-04-25T09:24:00Z",
+        "specVersionAtBuild": "0.26"
       },
       {
         "id": 7,
-        "name": "Home view — columns, density, sort, landing",
-        "status": "planned",
-        "sections": ["#desktop-app"],
-        "scenarios": ["S119", "S120", "S121", "S122", "S123"],
-        "dependsOn": [5],
+        "name": "Home view \u2014 columns, density, sort, landing",
+        "status": "completed",
+        "sections": [
+          "#desktop-app"
+        ],
+        "scenarios": [
+          "S119",
+          "S120",
+          "S121",
+          "S122"
+        ],
+        "dependsOn": [
+          5
+        ],
         "goalGate": true,
         "files": {
-          "modifies": ["packages/app/src/renderer/views/HomeView.tsx", "packages/app/src/renderer/components/ProjectCard.tsx", "packages/app/src/renderer/components/FilterBar.tsx"],
+          "modifies": [
+            "packages/app/src/renderer/views/HomeView.tsx",
+            "packages/app/src/renderer/components/ProjectCard.tsx",
+            "packages/app/src/renderer/components/FilterBar.tsx"
+          ],
           "creates": [
             "packages/app/src/renderer/components/ColumnsControl.tsx",
             "packages/app/src/renderer/components/DensityToggle.tsx",
             "packages/app/src/renderer/lib/preferences.ts"
           ]
-        }
+        },
+        "completedAt": "2026-04-25T09:24:00Z",
+        "specVersionAtBuild": "0.26"
       },
       {
         "id": 8,
         "name": "Cmd-, accelerator and Settings entry",
-        "status": "planned",
-        "sections": ["#desktop-app"],
-        "scenarios": [],
-        "dependsOn": [5],
+        "status": "completed",
+        "sections": [
+          "#desktop-app"
+        ],
+        "scenarios": [
+          "S123"
+        ],
+        "dependsOn": [
+          5
+        ],
         "files": {
-          "modifies": ["packages/app/src/main/index.ts", "packages/app/src/renderer/App.tsx"]
-        }
+          "modifies": [
+            "packages/app/src/main/index.ts",
+            "packages/app/src/renderer/App.tsx"
+          ]
+        },
+        "completedAt": "2026-04-25T09:24:00Z",
+        "specVersionAtBuild": "0.26"
       }
     ],
     "convergencePhase": "user-managed-settings",
-    "lastCheckpoint": null,
+    "lastCheckpoint": "2026-04-25T09:24:00Z",
     "completionGate": {
-      "retro": false,
+      "retro": true,
       "capabilities": false,
-      "experienceReport": false,
-      "memoryDigest": false
+      "experienceReport": true,
+      "memoryDigest": false,
+      "buildTrace": true,
+      "codebaseIndex": false
+    },
+    "completedAt": "2026-04-25T09:24:00Z",
+    "chunkProgress": {
+      "completed": 8,
+      "total": 8
     }
-  }
+  },
+  "nextStep": "Run /fctry:review to confirm spec-code alignment, or tag the build as 0.3.0."
 }
