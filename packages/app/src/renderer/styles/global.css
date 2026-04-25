@@ -5,6 +5,10 @@
 @import '@fontsource/inter/600.css';
 @import '@fontsource/jetbrains-mono/400.css';
 
+:root {
+  color-scheme: dark;
+}
+
 body {
   margin: 0;
   font-family: var(--font-sans), system-ui, sans-serif;
