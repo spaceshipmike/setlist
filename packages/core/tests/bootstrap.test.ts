@@ -444,4 +444,37 @@ describe('Bootstrap', () => {
       expect(existsSync(join(codeRoot, '.gitignore'))).toBe(false);
     });
   });
+
+  // ── Spec 0.26: bootstrap driven by project_type_id ─────────────
+
+  describe('bootstrapProject - project_type_id (spec 0.26)', () => {
+    it('drives default_directory and git_init from a user-managed project type', () => {
+      // Create a custom project type rooted under tmpDir.
+      const customRoot = join(tmpDir, 'Notebooks');
+      mkdirSync(customRoot, { recursive: true });
+
+      const t = registry.createProjectType({
+        name: 'Notebook',
+        default_directory: customRoot,
+        git_init: false, // non-code: no git init
+      });
+
+      const result = bootstrap.bootstrapProject({
+        name: 'my-nb',
+        project_type_id: t.id,
+      });
+
+      expect(existsSync(join(customRoot, 'my-nb'))).toBe(true);
+      expect(result.git_initialized).toBe(false);
+
+      // Project row carries the project_type_id we passed.
+      const proj = registry.getProject('my-nb', 'standard') as Record<string, unknown>;
+      expect(proj.project_type).toBe('Notebook');
+    });
+
+    it('throws INVALID_PROJECT_TYPE when project_type_id does not exist', () => {
+      expect(() => bootstrap.bootstrapProject({ name: 'nope', project_type_id: 9999 }))
+        .toThrow(/INVALID_PROJECT_TYPE/);
+    });
+  });
 });

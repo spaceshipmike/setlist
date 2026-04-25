@@ -245,6 +245,9 @@ export function toSummary(record: ProjectRecord): Record<string, unknown> {
     area: record.area,
     parent_project: record.parent_project,
     children: record.children,
+    // Spec 0.26: project_type is the resolved user-managed type name (or null).
+    project_type: record.project_type_name,
+    project_type_id: record.project_type_id,
   };
   if (record.description) result.description = record.description;
   if (record.parent_project && record.parent_archived) result.parent_archived = true;
@@ -295,6 +298,9 @@ export function toFull(record: ProjectRecord): Record<string, unknown> {
     area: record.area,
     parent_project: record.parent_project,
     children: record.children,
+    // Spec 0.26: user-managed project type, resolved name and id.
+    project_type: record.project_type_name,
+    project_type_id: record.project_type_id,
   };
   if (record.parent_project && record.parent_archived) result.parent_archived = true;
   if (record.description) result.description = record.description;
