@@ -292,6 +292,68 @@ const LIBRARY_EXPORTS_MANIFEST: LibraryExportManifestEntry[] = [
     kind: 'function',
     description: 'Return CapabilityDeclarations for every public @setlist/core export — the input to startup self-registration of the library surface.',
   },
+
+  // Spec 0.26: user-managed areas and project types.
+  {
+    name: 'AREA_COLOR_PALETTE',
+    kind: 'constant',
+    description: 'Curated 12-color palette used for areas and project types in the Settings UI.',
+  },
+  {
+    name: 'SEED_AREAS',
+    kind: 'constant',
+    description: 'Seven seed-default areas inserted on a fresh database (Work, Family, Home, Health, Finance, Personal, Infrastructure). User-owned after init.',
+  },
+  {
+    name: 'isValidAreaColor',
+    kind: 'function',
+    description: 'Return true if the given color string is in AREA_COLOR_PALETTE.',
+  },
+  {
+    name: 'SEED_PROJECT_TYPES',
+    kind: 'constant',
+    description: 'Two seed-default project types inserted on a fresh database (Code project → ~/Code with git_init, Non-code project → ~/Projects without).',
+  },
+  {
+    name: 'rowToProjectType',
+    kind: 'function',
+    description: 'Convert a SQLite project_types row (git_init as 0/1) to the public ProjectType representation (boolean).',
+  },
+  {
+    name: 'InvalidProjectTypeError',
+    kind: 'error-class',
+    description: 'Thrown when a project_type_id or name does not match any row in the project_types table.',
+  },
+  {
+    name: 'InvalidAreaError',
+    kind: 'error-class',
+    description: 'Thrown when an area_id or name does not match any row in the areas table.',
+  },
+  {
+    name: 'AreaHasProjectsError',
+    kind: 'error-class',
+    description: 'Thrown when deleting an area that still has attached projects — the UI must show a reassign flow first.',
+  },
+  {
+    name: 'ProjectTypeHasProjectsError',
+    kind: 'error-class',
+    description: 'Thrown when deleting a project type that still has attached projects — the UI must show a reassign flow first.',
+  },
+  {
+    name: 'InvalidAreaColorError',
+    kind: 'error-class',
+    description: 'Thrown when a color is not in AREA_COLOR_PALETTE.',
+  },
+  {
+    name: 'DuplicateAreaNameError',
+    kind: 'error-class',
+    description: 'Thrown when creating or renaming an area would collide with an existing area name.',
+  },
+  {
+    name: 'DuplicateProjectTypeNameError',
+    kind: 'error-class',
+    description: 'Thrown when creating or renaming a project type would collide with an existing project-type name.',
+  },
 ];
 
 /**

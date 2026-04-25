@@ -5,9 +5,20 @@ import {
   type CapabilityDeclaration, type PortClaim,
   type AreaName,
   validateStatus, toSummary, toStandard, toFull,
-  AREA_NAME_SET, AREA_NAMES, UNASSIGNED_AREA_SENTINEL,
+  UNASSIGNED_AREA_SENTINEL,
 } from './models.js';
-import { DuplicateProjectError, NotFoundError, InvalidInputError, findClosestMatch } from './errors.js';
+import {
+  DuplicateProjectError, NotFoundError, InvalidInputError, findClosestMatch,
+  InvalidAreaError, InvalidProjectTypeError,
+  AreaHasProjectsError, ProjectTypeHasProjectsError,
+  InvalidAreaColorError, DuplicateAreaNameError, DuplicateProjectTypeNameError,
+} from './errors.js';
+import {
+  isValidAreaColor, type AreaRow,
+} from './areas.js';
+import {
+  rowToProjectType, type ProjectType as UserProjectType, type ProjectTypeRow,
+} from './project-types.js';
 import { writeFields, deserializeFieldValue } from './fields.js';
 import { discoverPortsInPath, type DiscoveredPort } from './port-discovery.js';
 
@@ -257,17 +268,15 @@ export class Registry {
       const by_status: Record<string, number> = {};
       for (const r of statusRows) by_status[r.status] = r.count;
 
-      // spec 0.13: per-area distribution + unassigned count
+      // spec 0.26: per-area distribution iterates the live `areas` table —
+      // user-managed entities, no canonical-list seed.
       const by_area: Record<string, number> = {};
-      for (const name of AREA_NAMES) by_area[name] = 0;
       const areaRows = db.prepare(`
         SELECT a.name as name, COUNT(p.id) as count
         FROM areas a LEFT JOIN projects p ON p.area_id = a.id
         GROUP BY a.id, a.name
       `).all() as { name: string; count: number }[];
-      for (const r of areaRows) {
-        if (AREA_NAME_SET.has(r.name)) by_area[r.name] = r.count;
-      }
+      for (const r of areaRows) by_area[r.name] = r.count;
       const unassigned = (db.prepare('SELECT COUNT(*) as c FROM projects WHERE area_id IS NULL').get() as { c: number }).c;
 
       return { total, by_type, by_status, by_area, unassigned };
@@ -352,21 +361,245 @@ export class Registry {
 
   // ── Area / Parent structural operations (spec 0.13) ──────────
 
-  /** Resolve an area name (case-sensitive) to an area_id, throwing InvalidInputError if unknown. */
+  /**
+   * Resolve an area name (case-sensitive) to an area_id, throwing
+   * InvalidAreaError if unknown.
+   *
+   * Spec 0.26: areas are user-managed entities. Validation runs against the
+   * live `areas` table, not against a hardcoded canonical list.
+   */
   private resolveAreaIdOrThrow(db: Database.Database, areaName: string): number {
-    if (!AREA_NAME_SET.has(areaName)) {
-      throw new InvalidInputError(
-        `Invalid area '${areaName}'. Valid canonical areas: ${AREA_NAMES.join(', ')}.`
-      );
-    }
     const row = db.prepare('SELECT id FROM areas WHERE name = ?').get(areaName) as { id: number } | undefined;
     if (!row) {
-      // Should not happen — canonical areas are seeded at initDb.
-      throw new InvalidInputError(
-        `Area '${areaName}' is canonical but missing from seed table. Run initDb.`
-      );
+      throw new InvalidAreaError(areaName);
     }
     return row.id;
+  }
+
+  // ── Area CRUD (spec 0.26) ────────────────────────────────────
+
+  /** List all user-managed areas, ordered by name. */
+  listAreas(): AreaRow[] {
+    const db = this.open();
+    try {
+      return db.prepare('SELECT id, name, display_name, description, color FROM areas ORDER BY name')
+        .all() as AreaRow[];
+    } finally {
+      db.close();
+    }
+  }
+
+  /**
+   * Create a new area. Throws DuplicateAreaNameError on UNIQUE collision and
+   * InvalidAreaColorError on a color outside the curated palette.
+   */
+  createArea(opts: { name: string; display_name?: string; description?: string; color: string }): AreaRow {
+    if (!opts.name || opts.name.trim().length === 0) {
+      throw new InvalidInputError('Area name cannot be empty.');
+    }
+    if (!isValidAreaColor(opts.color)) {
+      throw new InvalidAreaColorError(opts.color);
+    }
+    const db = this.open();
+    try {
+      const existing = db.prepare('SELECT id FROM areas WHERE name = ?').get(opts.name) as { id: number } | undefined;
+      if (existing) throw new DuplicateAreaNameError(opts.name);
+
+      const result = db.prepare(
+        `INSERT INTO areas (name, display_name, description, color) VALUES (?, ?, ?, ?)`
+      ).run(opts.name, opts.display_name ?? opts.name, opts.description ?? '', opts.color);
+
+      return db.prepare('SELECT id, name, display_name, description, color FROM areas WHERE id = ?')
+        .get(result.lastInsertRowid) as AreaRow;
+    } finally {
+      db.close();
+    }
+  }
+
+  /**
+   * Update an area. The `id` is the stable identity — renames preserve
+   * memory routing because area_id never changes. Patch-style: undefined
+   * fields are left alone.
+   */
+  updateArea(id: number, patch: { name?: string; display_name?: string; description?: string; color?: string }): AreaRow {
+    const db = this.open();
+    try {
+      const current = db.prepare('SELECT * FROM areas WHERE id = ?').get(id) as AreaRow | undefined;
+      if (!current) throw new InvalidAreaError(id);
+
+      if (patch.color !== undefined && !isValidAreaColor(patch.color)) {
+        throw new InvalidAreaColorError(patch.color);
+      }
+      if (patch.name !== undefined && patch.name !== current.name) {
+        const conflict = db.prepare('SELECT id FROM areas WHERE name = ? AND id != ?').get(patch.name, id) as { id: number } | undefined;
+        if (conflict) throw new DuplicateAreaNameError(patch.name);
+      }
+
+      const next = {
+        name: patch.name ?? current.name,
+        display_name: patch.display_name ?? current.display_name,
+        description: patch.description ?? current.description,
+        color: patch.color ?? current.color,
+      };
+      db.prepare(
+        `UPDATE areas SET name = ?, display_name = ?, description = ?, color = ? WHERE id = ?`
+      ).run(next.name, next.display_name, next.description, next.color, id);
+
+      return db.prepare('SELECT id, name, display_name, description, color FROM areas WHERE id = ?').get(id) as AreaRow;
+    } finally {
+      db.close();
+    }
+  }
+
+  /**
+   * Delete an area. Throws AreaHasProjectsError if any project references it
+   * (delete-block guard — the UI must show a reassign flow first).
+   */
+  deleteArea(id: number): void {
+    const db = this.open();
+    try {
+      const area = db.prepare('SELECT name FROM areas WHERE id = ?').get(id) as { name: string } | undefined;
+      if (!area) throw new InvalidAreaError(id);
+
+      const count = (db.prepare('SELECT COUNT(*) AS c FROM projects WHERE area_id = ?').get(id) as { c: number }).c;
+      if (count > 0) throw new AreaHasProjectsError(area.name, count);
+
+      db.prepare('DELETE FROM areas WHERE id = ?').run(id);
+    } finally {
+      db.close();
+    }
+  }
+
+  // ── Project-type CRUD (spec 0.26) ────────────────────────────
+
+  /** List all user-managed project types, ordered by name. */
+  listProjectTypes(): UserProjectType[] {
+    const db = this.open();
+    try {
+      const rows = db.prepare(
+        `SELECT id, name, default_directory, git_init, template_directory, color, created_at, updated_at
+         FROM project_types ORDER BY name`
+      ).all() as ProjectTypeRow[];
+      return rows.map(rowToProjectType);
+    } finally {
+      db.close();
+    }
+  }
+
+  /** Create a new project type. */
+  createProjectType(opts: {
+    name: string;
+    default_directory: string;
+    git_init: boolean;
+    template_directory?: string | null;
+    color?: string | null;
+  }): UserProjectType {
+    if (!opts.name || opts.name.trim().length === 0) {
+      throw new InvalidInputError('Project-type name cannot be empty.');
+    }
+    if (!opts.default_directory || opts.default_directory.trim().length === 0) {
+      throw new InvalidInputError('Project-type default_directory cannot be empty.');
+    }
+    if (opts.color != null && !isValidAreaColor(opts.color)) {
+      throw new InvalidAreaColorError(opts.color);
+    }
+    const db = this.open();
+    try {
+      const existing = db.prepare('SELECT id FROM project_types WHERE name = ?').get(opts.name) as { id: number } | undefined;
+      if (existing) throw new DuplicateProjectTypeNameError(opts.name);
+
+      const now = Math.floor(Date.now() / 1000);
+      const result = db.prepare(
+        `INSERT INTO project_types (name, default_directory, git_init, template_directory, color, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?)`
+      ).run(
+        opts.name,
+        opts.default_directory,
+        opts.git_init ? 1 : 0,
+        opts.template_directory ?? null,
+        opts.color ?? null,
+        now,
+        now,
+      );
+
+      const row = db.prepare(
+        `SELECT id, name, default_directory, git_init, template_directory, color, created_at, updated_at
+         FROM project_types WHERE id = ?`
+      ).get(result.lastInsertRowid) as ProjectTypeRow;
+      return rowToProjectType(row);
+    } finally {
+      db.close();
+    }
+  }
+
+  /** Update a project type. Patch-style. */
+  updateProjectType(id: number, patch: {
+    name?: string;
+    default_directory?: string;
+    git_init?: boolean;
+    template_directory?: string | null;
+    color?: string | null;
+  }): UserProjectType {
+    const db = this.open();
+    try {
+      const current = db.prepare(
+        `SELECT id, name, default_directory, git_init, template_directory, color, created_at, updated_at
+         FROM project_types WHERE id = ?`
+      ).get(id) as ProjectTypeRow | undefined;
+      if (!current) throw new InvalidProjectTypeError(id);
+
+      if (patch.color !== undefined && patch.color != null && !isValidAreaColor(patch.color)) {
+        throw new InvalidAreaColorError(patch.color);
+      }
+      if (patch.name !== undefined && patch.name !== current.name) {
+        const conflict = db.prepare('SELECT id FROM project_types WHERE name = ? AND id != ?').get(patch.name, id) as { id: number } | undefined;
+        if (conflict) throw new DuplicateProjectTypeNameError(patch.name);
+      }
+
+      const now = Math.floor(Date.now() / 1000);
+      const next = {
+        name: patch.name ?? current.name,
+        default_directory: patch.default_directory ?? current.default_directory,
+        git_init: patch.git_init !== undefined ? (patch.git_init ? 1 : 0) : current.git_init,
+        template_directory: patch.template_directory !== undefined ? patch.template_directory : current.template_directory,
+        color: patch.color !== undefined ? patch.color : current.color,
+      };
+      db.prepare(
+        `UPDATE project_types SET name = ?, default_directory = ?, git_init = ?,
+                                  template_directory = ?, color = ?, updated_at = ?
+         WHERE id = ?`
+      ).run(
+        next.name, next.default_directory, next.git_init,
+        next.template_directory, next.color, now, id,
+      );
+
+      const row = db.prepare(
+        `SELECT id, name, default_directory, git_init, template_directory, color, created_at, updated_at
+         FROM project_types WHERE id = ?`
+      ).get(id) as ProjectTypeRow;
+      return rowToProjectType(row);
+    } finally {
+      db.close();
+    }
+  }
+
+  /**
+   * Delete a project type. Throws ProjectTypeHasProjectsError if any
+   * project references it.
+   */
+  deleteProjectType(id: number): void {
+    const db = this.open();
+    try {
+      const t = db.prepare('SELECT name FROM project_types WHERE id = ?').get(id) as { name: string } | undefined;
+      if (!t) throw new InvalidProjectTypeError(id);
+
+      const count = (db.prepare('SELECT COUNT(*) AS c FROM projects WHERE project_type_id = ?').get(id) as { c: number }).c;
+      if (count > 0) throw new ProjectTypeHasProjectsError(t.name, count);
+
+      db.prepare('DELETE FROM project_types WHERE id = ?').run(id);
+    } finally {
+      db.close();
+    }
   }
 
   /** S74: Assign or clear a project's area. Null clears to Unassigned. */
