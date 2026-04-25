@@ -1,9 +1,10 @@
 import { existsSync, mkdirSync, cpSync, readdirSync, statSync, rmSync, renameSync, readFileSync, writeFileSync } from 'node:fs';
 import { basename, dirname, join } from 'node:path';
+import { homedir } from 'node:os';
 import { execSync } from 'node:child_process';
 import { connect, getDbPath, initDb } from './db.js';
 import { Registry } from './registry.js';
-import { RegistryError } from './errors.js';
+import { InvalidProjectTypeError, RegistryError } from './errors.js';
 import type { ProjectType } from './models.js';
 
 // spec 0.13 retired 'area_of_focus' — bootstrap only creates 'project' rows now.
@@ -22,6 +23,17 @@ function resolveBootstrapType(type: BootstrapType): {
   return { pathRootKey: 'project', dbType: 'project', isCodeProject: true };
 }
 
+/**
+ * Spec 0.26: expand a "~/" prefix to the user's home directory. The user-managed
+ * project_types table stores default_directory as "~/Code" or "~/Projects" so
+ * a fresh registry works out of the box on any machine.
+ */
+function expandHome(p: string): string {
+  if (p.startsWith('~/')) return join(homedir(), p.slice(2));
+  if (p === '~') return homedir();
+  return p;
+}
+
 export interface BootstrapConfig {
   path_roots: Record<string, string>;
   template_dir?: string;
@@ -30,7 +42,18 @@ export interface BootstrapConfig {
 
 export interface BootstrapProjectOpts {
   name: string;
-  type: BootstrapType;
+  /**
+   * Legacy discriminator (spec 0.13–0.25). Either pass `type` (string) for the
+   * legacy path-roots config-driven flow, or pass `project_type_id` (spec 0.26)
+   * to drive bootstrap from the user-managed project_types table. When both
+   * are provided, project_type_id wins.
+   */
+  type?: BootstrapType;
+  /**
+   * spec 0.26: id of a row in the user-managed project_types table.
+   * Drives default_directory (root for the new folder) and git_init.
+   */
+  project_type_id?: number;
   status?: string;
   description?: string;
   goals?: string | string[];
@@ -191,29 +214,53 @@ export class Bootstrap {
   bootstrapProject(opts: BootstrapProjectOpts): BootstrapResult {
     const db = this.open();
     try {
-      const config = this._getConfig(db);
+      // Spec 0.26 path: project_type_id drives bootstrap from the user-managed
+      // project_types table. Default_directory and git_init come from the
+      // referenced row. No bootstrap-level config required.
+      let pathRootKey: string;
+      let dbType: ProjectType = 'project';
+      let isCodeProject: boolean;
+      let typeRoot: string | null = null;
+      let projectTypeId: number | null = null;
 
-      // Check configuration exists
-      if (Object.keys(config.path_roots).length === 0) {
-        throw new BootstrapNotConfiguredError();
+      if (opts.project_type_id !== undefined) {
+        const trow = db.prepare(
+          `SELECT id, name, default_directory, git_init FROM project_types WHERE id = ?`
+        ).get(opts.project_type_id) as
+          { id: number; name: string; default_directory: string; git_init: number } | undefined;
+        if (!trow) throw new InvalidProjectTypeError(opts.project_type_id);
+        projectTypeId = trow.id;
+        typeRoot = expandHome(trow.default_directory);
+        isCodeProject = trow.git_init === 1;
+        pathRootKey = trow.name; // for template-subdir lookup
+      } else {
+        // Legacy spec 0.13 path: BootstrapConfig path_roots must be configured.
+        const config = this._getConfig(db);
+        if (Object.keys(config.path_roots).length === 0) {
+          throw new BootstrapNotConfiguredError();
+        }
+        const resolved = resolveBootstrapType(opts.type ?? 'project');
+        pathRootKey = resolved.pathRootKey;
+        dbType = resolved.dbType;
+        isCodeProject = resolved.isCodeProject;
+        typeRoot = config.path_roots[pathRootKey] ?? null;
       }
 
-      const { pathRootKey, dbType, isCodeProject } = resolveBootstrapType(opts.type);
+      const config = this._getConfig(db);
 
       // Resolve target path
       let targetPath: string;
       if (opts.path_override) {
         targetPath = opts.path_override;
       } else {
-        const root = config.path_roots[pathRootKey];
-        if (!root) {
+        if (!typeRoot) {
           throw new RegistryError(
             'BOOTSTRAP_NOT_CONFIGURED',
             `No path root configured for type '${pathRootKey}'.`,
-            `Call configure_bootstrap to set a path root for '${pathRootKey}'.`,
+            `Call configure_bootstrap to set a path root for '${pathRootKey}', or pass project_type_id.`,
           );
         }
-        targetPath = join(root, opts.name);
+        targetPath = join(typeRoot, opts.name);
       }
 
       // Check folder doesn't already exist
@@ -272,6 +319,14 @@ export class Bootstrap {
           area: opts.area ?? undefined,
           parent_project: opts.parent_project ?? undefined,
         });
+
+        // Spec 0.26: stamp project_type_id onto the new row (the public
+        // register() API doesn't take it yet, so write it here).
+        if (projectTypeId != null) {
+          db.prepare(
+            `UPDATE projects SET project_type_id = ?, updated_at = datetime('now') WHERE name = ?`
+          ).run(projectTypeId, opts.name);
+        }
       } catch (err) {
         // Atomicity: clean up folder if something failed after creation
         try {
