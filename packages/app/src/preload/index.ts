@@ -4,6 +4,8 @@ import { contextBridge, ipcRenderer } from 'electron';
 
 // Channel name for main → renderer update event broadcasts.
 const UPDATE_EVENT_CHANNEL = 'update-event';
+// Spec 0.26 §S123: Cmd-, fires this from the menu accelerator.
+const NAVIGATE_TO_SETTINGS_CHANNEL = 'navigate-to-settings';
 
 const api = {
   // Project Identity
@@ -136,6 +138,16 @@ const api = {
     // Return an unsubscribe fn — renderer useEffect cleanup calls it.
     return () => {
       ipcRenderer.removeListener(UPDATE_EVENT_CHANNEL, wrapped);
+    };
+  },
+
+  // Spec 0.26 §S123: subscribe to navigate-to-settings (fired by the Cmd-,
+  // menu accelerator). Returns an unsubscribe fn.
+  onNavigateToSettings: (handler: () => void) => {
+    const wrapped = () => handler();
+    ipcRenderer.on(NAVIGATE_TO_SETTINGS_CHANNEL, wrapped);
+    return () => {
+      ipcRenderer.removeListener(NAVIGATE_TO_SETTINGS_CHANNEL, wrapped);
     };
   },
 } as const;
