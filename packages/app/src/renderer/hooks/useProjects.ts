@@ -20,11 +20,13 @@ const HEALTH_RANK: Record<HealthTier, number> = {
 };
 
 function displayType(p: ProjectSummary): string {
-  // spec 0.13: 'area_of_focus' retired — type is always 'project'. Fall back
-  // to path-based code-vs-non-code classification.
+  // Spec 0.26: project_type comes from the user-managed project_types table.
+  // Fall back to the legacy path heuristic only when the record predates v13
+  // or carries no project_type_id (defensive for partially-migrated registries).
+  if (p.project_type) return p.project_type;
   const paths = Array.isArray(p.paths) ? (p.paths as string[]) : [];
-  if (paths.some((path) => path.includes('/Code/'))) return 'Code';
-  return 'Project';
+  if (paths.some((path) => path.includes('/Code/'))) return 'Code project';
+  return 'Non-code project';
 }
 
 export function useProjects({ filter, statusFilters, sort, sortDir = 'asc', healthMap }: UseProjectsOpts) {
