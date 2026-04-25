@@ -5,8 +5,8 @@ import { MCP_TOOL_DEFINITIONS } from '../src/server.js';
 describe('introspectMcpTools (S112)', () => {
   const caps = introspectMcpTools();
 
-  it('produces exactly 39 capability declarations — one per MCP tool', () => {
-    expect(caps).toHaveLength(39);
+  it('produces exactly 47 capability declarations — one per MCP tool', () => {
+    expect(caps).toHaveLength(47);
     expect(caps).toHaveLength(MCP_TOOL_DEFINITIONS.length);
   });
 

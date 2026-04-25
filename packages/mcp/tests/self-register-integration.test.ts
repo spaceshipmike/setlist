@@ -61,11 +61,11 @@ describe('MCP server startup self-registration (goal gate — S112, S113, S114, 
 
   // ── S112: Each type filter returns the expected set by surface ──
 
-  it('S112: query_capabilities returns exactly 39 tool rows, all CLI commands, and all library exports', async () => {
+  it('S112: query_capabilities returns exactly 47 tool rows, all CLI commands, and all library exports', async () => {
     const server = createServer(dbPath);
 
     const tools = await callTool(server, 'query_capabilities', { project_name: SELF_REGISTER_PROJECT, type: 'tool' }) as Array<Record<string, unknown>>;
-    expect(tools).toHaveLength(39);
+    expect(tools).toHaveLength(47);
     expect(tools.every(r => r.type === 'tool')).toBe(true);
 
     const cmds = await callTool(server, 'query_capabilities', { project_name: SELF_REGISTER_PROJECT, type: 'cli-command' }) as Array<Record<string, unknown>>;
@@ -164,7 +164,7 @@ describe('MCP server startup self-registration (goal gate — S112, S113, S114, 
     const registry = new Registry(dbPath);
     const before = registry.queryCapabilities({ project_name: SELF_REGISTER_PROJECT, capability_type: 'tool' });
     const beforeCount = before.length;
-    expect(beforeCount).toBe(39);
+    expect(beforeCount).toBe(47);
 
     // Simulate a code change: temporarily splice an extra tool into MCP_TOOL_DEFINITIONS,
     // remove an existing one, then re-create the server.
@@ -196,7 +196,7 @@ describe('MCP server startup self-registration (goal gate — S112, S113, S114, 
     // After "fixing" the code (restoring the list), the next boot heals the gap.
     createServer(dbPath);
     const healed = registry.queryCapabilities({ project_name: SELF_REGISTER_PROJECT, capability_type: 'tool' });
-    expect(healed.length).toBe(39);
+    expect(healed.length).toBe(47);
     const healedNames = new Set(healed.map(r => r.name));
     expect(healedNames.has('memory_status')).toBe(true);
     expect(healedNames.has('__fake_debug_tool')).toBe(false);
@@ -217,8 +217,8 @@ describe('MCP server startup self-registration (goal gate — S112, S113, S114, 
     ]);
 
     const allTools = registry.queryCapabilities({ capability_type: 'tool' });
-    // setlist 39 + chorus 1 = 40
-    expect(allTools.length).toBe(40);
+    // setlist 47 + chorus 1 = 48 (spec 0.26: +8 area/project_type CRUD tools)
+    expect(allTools.length).toBe(48);
     expect(allTools.some(r => r.project === SELF_REGISTER_PROJECT && r.name === 'list_projects')).toBe(true);
     expect(allTools.some(r => r.project === 'chorus-app' && r.name === 'chorus_tool')).toBe(true);
 
@@ -322,7 +322,7 @@ describe('MCP server startup self-registration (goal gate — S112, S113, S114, 
 
     // Other two surfaces landed.
     const tools = registry.queryCapabilities({ project_name: SELF_REGISTER_PROJECT, capability_type: 'tool' });
-    expect(tools.length).toBe(39);
+    expect(tools.length).toBe(47);
 
     // The failing surface's prior-good rows are preserved.
     const cli = registry.queryCapabilities({ project_name: SELF_REGISTER_PROJECT, capability_type: 'cli-command' });
