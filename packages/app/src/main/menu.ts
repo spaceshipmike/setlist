@@ -1,18 +1,20 @@
 // @fctry: #auto-update
-// macOS app menu. Sets up the standard menu template so "About Setlist"
-// and "Check for Updates…" appear in the app menu (first menu, to the
-// right of the apple icon). Also configures the About panel's text so
-// S86 — "dialog displays the app name and the current version string" —
-// is satisfied without a custom dialog.
+// @fctry: #desktop-app
+// macOS app menu. Sets up the standard menu template so "About Setlist",
+// "Settings…" (Cmd-,), and "Check for Updates…" appear in the app menu
+// (first menu, to the right of the apple icon). Configures the About panel's
+// text so S86 — "dialog displays the app name and the current version
+// string" — is satisfied without a custom dialog.
 //
-// The "Check for Updates…" item triggers an immediate update check via
-// the main-process API (not an IPC round-trip) and is disabled in dev
-// mode (S81: "either absent in dev or shows a clear 'not available in
-// development' message").
+// Settings…  (spec 0.26 §S123): the Cmd-, accelerator sends a
+// "navigate-to-settings" IPC message to the focused renderer; App.tsx
+// listens and routes the user to the Settings view.
 
-import { Menu, type MenuItemConstructorOptions, app } from 'electron';
+import { BrowserWindow, Menu, type MenuItemConstructorOptions, app } from 'electron';
 import { getChannel } from './prefs.js';
 import { checkForUpdates, isCheckInFlight } from './auto-update.js';
+
+const NAVIGATE_TO_SETTINGS_CHANNEL = 'navigate-to-settings';
 
 function isDev(): boolean {
   return Boolean(process.env.ELECTRON_RENDERER_URL);
@@ -58,6 +60,17 @@ export function installAppMenu(
 
   const appSubmenu: MenuItemConstructorOptions[] = [
     { role: 'about', label: 'About Setlist' },
+    { type: 'separator' },
+    {
+      label: 'Settings…',
+      accelerator: 'CmdOrCtrl+,',
+      click: () => {
+        // Send to whichever window currently has focus, falling back to the
+        // first window if none is focused. App.tsx routes to Settings.
+        const target = BrowserWindow.getFocusedWindow() ?? BrowserWindow.getAllWindows()[0];
+        target?.webContents.send(NAVIGATE_TO_SETTINGS_CHANNEL);
+      },
+    },
     { type: 'separator' },
     dev
       ? {

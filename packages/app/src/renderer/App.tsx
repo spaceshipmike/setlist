@@ -29,12 +29,13 @@ export function App(): JSX.Element {
   useEffect(() => { setSortKey(sort); }, [sort]);
   useEffect(() => { savePrefSortDir(sortDir); }, [sortDir]);
 
-  // Spec 0.26 §S123: Cmd-, navigates to Settings when on Home.
-  // The IPC channel is registered by Step 8 once the menu accelerator lands.
+  // Spec 0.26 §S123: Cmd-, fires the menu accelerator → main process sends
+  // navigate-to-settings → preload forwards to this listener.
   useEffect(() => {
-    const onNavSettings = () => setView({ kind: 'settings' });
-    const w = window.setlist as unknown as { onNavigateToSettings?: (h: () => void) => void };
-    w.onNavigateToSettings?.(onNavSettings);
+    const unsubscribe = window.setlist.onNavigateToSettings(() => {
+      setView({ kind: 'settings' });
+    });
+    return unsubscribe;
   }, []);
 
   const navigateToProject = (name: string) => setView({ kind: 'detail', projectName: name });
