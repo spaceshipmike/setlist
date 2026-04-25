@@ -4,22 +4,39 @@ export const PROJECT_STATUSES = new Set([
 ] as const);
 
 // spec 0.13: area_of_focus retired as a type; area is now a structural attribute
-// (projects.area_id). area_of_focus is still accepted by validateStatus only as a
-// legacy alias that maps to PROJECT_STATUSES, so historical callers fail loudly
-// elsewhere (register narrows to 'project') but don't explode on status validation.
+// (projects.area_id). spec 0.26: project type is now a structural attribute too
+// (projects.project_type_id). The `type` column on projects is held at the literal
+// 'project' for schema compatibility — the user-facing project_type lives in
+// project_types and is referenced via project_type_id.
 export const STATUS_BY_TYPE: Record<string, Set<string>> = {
   project: PROJECT_STATUSES as Set<string>,
 };
 
+/**
+ * spec 0.13: only 'project' is allowed in the projects.type CHECK constraint.
+ * spec 0.26: this remains the structural value; user-defined kinds live in
+ * the project_types table and are referenced via project_type_id.
+ */
 export type ProjectType = 'project';
 export type ProjectStatus = 'idea' | 'draft' | 'active' | 'paused' | 'archived' | 'complete';
 export type QueryDepth = 'minimal' | 'summary' | 'standard' | 'full';
 
-// spec 0.13: canonical seven areas. Must match db.ts CANONICAL_AREAS.
-export const AREA_NAMES = [
+/**
+ * Spec 0.26: areas are user-managed entities (CRUD via Settings). The legacy
+ * literal-union AreaName has been relaxed to a free-form string; validation
+ * is performed at runtime against the `areas` table, not at the type level.
+ */
+export type AreaName = string;
+
+/**
+ * Legacy compile-time set of seed area names. Spec 0.26 made areas
+ * user-managed, so callers should validate against the live `areas` table
+ * rather than this constant. Retained for backward compatibility with
+ * registry-stats by_area scaffolding (which needs a stable initial-keys list).
+ */
+export const AREA_NAMES: readonly string[] = [
   'Work', 'Family', 'Home', 'Health', 'Finance', 'Personal', 'Infrastructure',
 ] as const;
-export type AreaName = (typeof AREA_NAMES)[number];
 export const AREA_NAME_SET: Set<string> = new Set(AREA_NAMES);
 
 /** Sentinel accepted by list/search filters to match area_id IS NULL. */
@@ -77,6 +94,10 @@ export interface ProjectRecord {
   parent_project_id: number | null;
   parent_archived: boolean;
   children: string[];
+  // spec 0.26: project_type_id references the user-managed project_types table.
+  // project_type_name is the resolved display name (joined at read time).
+  project_type_id: number | null;
+  project_type_name: string | null;
   created_at: string;
   updated_at: string;
 }

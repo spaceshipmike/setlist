@@ -1284,8 +1284,17 @@ export class Registry {
 
     let areaName: AreaName | null = null;
     if (areaId != null) {
+      // spec 0.26: areas are user-managed; resolve by id, no allowlist check
       const arow = db.prepare('SELECT name FROM areas WHERE id = ?').get(areaId) as { name: string } | undefined;
-      if (arow && AREA_NAME_SET.has(arow.name)) areaName = arow.name as AreaName;
+      if (arow) areaName = arow.name;
+    }
+
+    // spec 0.26: project_type_id resolves to the user-managed project_types row
+    const projectTypeId = (row.project_type_id as number | null) ?? null;
+    let projectTypeName: string | null = null;
+    if (projectTypeId != null) {
+      const trow = db.prepare('SELECT name FROM project_types WHERE id = ?').get(projectTypeId) as { name: string } | undefined;
+      if (trow) projectTypeName = trow.name;
     }
 
     let parentName: string | null = null;
@@ -1352,6 +1361,8 @@ export class Registry {
       parent_project_id: parentId,
       parent_archived: parentArchived,
       children,
+      project_type_id: projectTypeId,
+      project_type_name: projectTypeName,
       created_at: row.created_at as string,
       updated_at: row.updated_at as string,
     };

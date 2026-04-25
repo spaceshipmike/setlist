@@ -2,21 +2,17 @@ import Database from 'better-sqlite3';
 import { existsSync, mkdirSync, copyFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { homedir } from 'node:os';
+import { seedAreas as seedAreasFromModule, SEED_AREAS } from './areas.js';
+import { seedProjectTypes } from './project-types.js';
 
-export const SCHEMA_VERSION = 12;
+export const SCHEMA_VERSION = 13;
 
-/** Canonical seven areas (spec 0.13, schema v11). System-owned; no tool may mutate. */
-export const CANONICAL_AREAS: { name: string; display_name: string; description: string; color: string }[] = [
-  { name: 'Work',           display_name: 'Work',           description: 'Professional, client, and advisory projects.',          color: '#3b82f6' },
-  { name: 'Family',         display_name: 'Family',         description: 'Household family coordination and planning.',           color: '#ec4899' },
-  { name: 'Home',           display_name: 'Home',           description: 'Property, maintenance, and home operations.',           color: '#10b981' },
-  { name: 'Health',         display_name: 'Health',         description: 'Physical and mental health, fitness, medical.',          color: '#ef4444' },
-  { name: 'Finance',        display_name: 'Finance',        description: 'Money, banking, investment, tax, and accounting.',      color: '#f59e0b' },
-  { name: 'Personal',       display_name: 'Personal',       description: 'Personal development, hobbies, and creative work.',     color: '#a855f7' },
-  { name: 'Infrastructure', display_name: 'Infrastructure', description: 'Tooling, devops, and shared portfolio plumbing.',       color: '#6b7280' },
-];
-
-export type AreaName = 'Work' | 'Family' | 'Home' | 'Health' | 'Finance' | 'Personal' | 'Infrastructure';
+/**
+ * Legacy alias kept for any callers that still expect the constant name.
+ * Spec 0.26 retired the "canonical seven" — these names are now seed defaults
+ * for a fresh database, not system-owned. Areas are user-managed via Settings.
+ */
+export const CANONICAL_AREAS = SEED_AREAS;
 
 const DEFAULT_DB_DIR = join(homedir(), '.local', 'share', 'project-registry');
 const DEFAULT_DB_NAME = 'registry.db';
@@ -34,6 +30,17 @@ CREATE TABLE IF NOT EXISTS areas (
     color TEXT NOT NULL DEFAULT ''
 );
 
+CREATE TABLE IF NOT EXISTS project_types (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL UNIQUE,
+    default_directory TEXT NOT NULL,
+    git_init INTEGER NOT NULL,
+    template_directory TEXT,
+    color TEXT,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS projects (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL UNIQUE,
@@ -44,6 +51,7 @@ CREATE TABLE IF NOT EXISTS projects (
     goals TEXT NOT NULL DEFAULT '',
     area_id INTEGER REFERENCES areas(id),
     parent_project_id INTEGER REFERENCES projects(id) ON DELETE SET NULL,
+    project_type_id INTEGER REFERENCES project_types(id),
     created_at TEXT NOT NULL DEFAULT (datetime('now')),
     updated_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
@@ -278,6 +286,8 @@ CREATE INDEX IF NOT EXISTS idx_sources_memory ON memory_sources(memory_id);
 CREATE INDEX IF NOT EXISTS idx_enrichment_memory ON enrichment_log(memory_id, engine_kind);
 CREATE INDEX IF NOT EXISTS idx_memories_pinned ON memories(is_pinned, status);
 CREATE INDEX IF NOT EXISTS idx_project_digests_project ON project_digests(project_id);
+-- v13 project_type_id index is created after ensureColumns runs in case the
+-- projects table was created by an older schema (no project_type_id column).
 `;
 
 // FTS5 triggers for keeping the index in sync
@@ -347,13 +357,15 @@ function createFtsTriggers(db: Database.Database): void {
   }
 }
 
+/**
+ * Idempotent area seed. Spec 0.26: seed defaults only on a fresh row;
+ * never updates existing entries (the user owns areas after init).
+ *
+ * Local wrapper kept for migration code that references it by this name;
+ * delegates to `seedAreas` in `./areas.ts`.
+ */
 function seedAreas(db: Database.Database): void {
-  const stmt = db.prepare(
-    `INSERT OR IGNORE INTO areas (name, display_name, description, color) VALUES (?, ?, ?, ?)`
-  );
-  for (const area of CANONICAL_AREAS) {
-    stmt.run(area.name, area.display_name, area.description, area.color);
-  }
+  seedAreasFromModule(db);
 }
 
 function seedFieldCatalog(db: Database.Database): void {
@@ -416,10 +428,17 @@ function ensureColumns(db: Database.Database): void {
   if (!projColNames.has('parent_project_id')) {
     db.exec(`ALTER TABLE projects ADD COLUMN parent_project_id INTEGER REFERENCES projects(id) ON DELETE SET NULL`);
   }
-  // Indexes that depend on v11 columns must be created after the columns exist
+  // v13: project_type_id column. Backfill happens in the v12→v13 migration;
+  // this guard handles fresh-install edge cases where the table was created
+  // by SCHEMA_SQL (which already includes the column) and where it wasn't.
+  if (!projColNames.has('project_type_id')) {
+    db.exec(`ALTER TABLE projects ADD COLUMN project_type_id INTEGER REFERENCES project_types(id)`);
+  }
+  // Indexes that depend on v11/v13 columns must be created after the columns exist
   // (SCHEMA_SQL can't assume the columns are present when upgrading from v0).
   db.exec(`CREATE INDEX IF NOT EXISTS idx_projects_area_id ON projects(area_id)`);
   db.exec(`CREATE INDEX IF NOT EXISTS idx_projects_parent_project_id ON projects(parent_project_id)`);
+  db.exec(`CREATE INDEX IF NOT EXISTS idx_projects_project_type_id ON projects(project_type_id)`);
 }
 
 function upgradeSchema(db: Database.Database): void {
@@ -654,6 +673,44 @@ function upgradeSchema(db: Database.Database): void {
     db.exec(`CREATE INDEX IF NOT EXISTS idx_project_digests_project ON project_digests(project_id)`);
   }
 
+  if (currentVersion >= 12 && currentVersion < 13) {
+    // v12 → v13: project_types as first-class user-managed entities, and
+    // projects.project_type_id FK. The project_types table is already
+    // created by SCHEMA_SQL above (CREATE IF NOT EXISTS), and the
+    // project_type_id column is added by ensureColumns. This migration
+    // block seeds the two default types and backfills existing projects:
+    //   - paths containing /Code/  → "Code project"
+    //   - everything else          → "Non-code project"
+    //
+    // Idempotent: re-running on a v13 database is a no-op (the seed uses
+    // INSERT OR IGNORE; backfill only updates rows where project_type_id
+    // is NULL).
+    seedProjectTypes(db);
+
+    const codeTypeRow = db.prepare(`SELECT id FROM project_types WHERE name = ?`).get('Code project') as { id: number } | undefined;
+    const nonCodeTypeRow = db.prepare(`SELECT id FROM project_types WHERE name = ?`).get('Non-code project') as { id: number } | undefined;
+
+    if (codeTypeRow && nonCodeTypeRow) {
+      // For each project that has no project_type_id yet, assign by path heuristic.
+      const toBackfill = db.prepare(
+        `SELECT p.id AS project_id,
+                (SELECT pp.path FROM project_paths pp WHERE pp.project_id = p.id LIMIT 1) AS path
+         FROM projects p
+         WHERE p.project_type_id IS NULL`
+      ).all() as { project_id: number; path: string | null }[];
+
+      const update = db.prepare(`UPDATE projects SET project_type_id = ?, updated_at = datetime('now') WHERE id = ?`);
+      for (const row of toBackfill) {
+        const isCode = row.path && row.path.includes('/Code/');
+        update.run(isCode ? codeTypeRow.id : nonCodeTypeRow.id, row.project_id);
+      }
+    }
+
+    // Defensive: if any residual rows still claim type='area_of_focus'
+    // (from a registry that skipped the v10→v11 path), demote them now.
+    db.prepare(`UPDATE projects SET type = 'project', updated_at = datetime('now') WHERE type = 'area_of_focus'`).run();
+  }
+
   db.prepare("INSERT OR REPLACE INTO schema_meta (key, value) VALUES ('schema_version', ?)").run(String(SCHEMA_VERSION));
 }
 
@@ -857,6 +914,7 @@ export function initDb(dbPath?: string): string {
     createFtsTriggers(db);
     upgradeSchema(db);
     seedAreas(db);
+    seedProjectTypes(db);
     seedFieldCatalog(db);
     seedTemplates(db);
   } finally {
