@@ -90,6 +90,16 @@ export {
   type McpCallSuccess,
   type McpCallFailure,
 } from './recipes/mcp-caller.js';
+export { filesystemExecutor } from './recipes/executors/filesystem.js';
+export { shellExecutor, firstBinary, binaryOnPath } from './recipes/executors/shell.js';
+export { mcpExecutor } from './recipes/executors/mcp.js';
+export {
+  walkRecipe,
+  resumeWalk,
+  preflight,
+  pickExecutor,
+  type WalkOpts,
+} from './recipes/walk.js';
 export { HealthAssessor, HEALTH_CACHE_TTL_MS, type HealthTier, type HealthDimension, type DimensionResult, type HealthAssessment, type PortfolioHealth } from './health.js';
 export { computeProjectVersion, listProjectDocuments, type ProjectVersion } from './project-version.js';
 export { introspectLibraryExports } from './introspect-exports.js';

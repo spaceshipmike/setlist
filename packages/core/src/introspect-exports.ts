@@ -494,6 +494,51 @@ const LIBRARY_EXPORTS_MANIFEST: LibraryExportManifestEntry[] = [
     kind: 'constant',
     description: 'No-op McpToolCaller — surfaces every tool call as "not registered". Used by tests, library callers without a host MCP session, and as a fail-safe default.',
   },
+  {
+    name: 'filesystemExecutor',
+    kind: 'constant',
+    description: 'ShapeExecutor for filesystem-op primitives (create-folder, copy-template, append-to-file). Operations are idempotent on retry — mkdir-p, skip-existing-files, line-presence-check.',
+  },
+  {
+    name: 'shellExecutor',
+    kind: 'constant',
+    description: 'ShapeExecutor for shell-command primitives. Runs verbatim commands with the user\'s inherited environment (PATH, keychain, gh auth, op session) — no sandboxing, no managed credentials.',
+  },
+  {
+    name: 'firstBinary',
+    kind: 'function',
+    description: 'Heuristic extraction of the first executable token from a shell command — used by the shell-command pre-flight check to verify PATH presence before running.',
+  },
+  {
+    name: 'binaryOnPath',
+    kind: 'function',
+    description: 'PATH lookup helper — true when a binary name is on PATH or is an absolute path that exists. Mirrors `command -v` semantics.',
+  },
+  {
+    name: 'mcpExecutor',
+    kind: 'constant',
+    description: 'ShapeExecutor for mcp-tool primitives. Delegates to the host MCP client through an injected McpToolCaller. Pre-flight verifies the named tool is currently registered with the session.',
+  },
+  {
+    name: 'walkRecipe',
+    kind: 'function',
+    description: 'Walk a recipe snapshot: pre-flight every step, then execute in order. On step failure, returns failed_at + a populated cleanup log; the trailer is left for the Bootstrap engine to run on success.',
+  },
+  {
+    name: 'resumeWalk',
+    kind: 'function',
+    description: 'Resume a walk from a specific step (Retry — S145) or with the failed step skipped (Skip — S146). Carries forward succeeded steps without re-running them; mcp-tool/shell-command steps with side effects are not re-invoked.',
+  },
+  {
+    name: 'preflight',
+    kind: 'function',
+    description: 'Run pre-flight over every step in a recipe snapshot — the structural ✓/✗ check that decides whether the walker proceeds to execution. Used independently for Dry run / Preview (S148, S149).',
+  },
+  {
+    name: 'pickExecutor',
+    kind: 'function',
+    description: 'Map a primitive\'s shape to the matching ShapeExecutor (filesystem-op → filesystemExecutor, etc.).',
+  },
 ];
 
 /**

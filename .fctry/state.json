@@ -40,7 +40,7 @@
       "totalChunks": 7
     },
     "chunkProgress": {
-      "completed": 1,
+      "completed": 2,
       "total": 7
     },
     "chunks": [
@@ -64,28 +64,33 @@
       {
         "id": 2,
         "name": "Primitives registry + token resolver + runner shell",
-        "status": "running",
+        "status": "completed",
         "startedAt": "2026-04-26T00:35:00Z",
+        "completedAt": "2026-04-26T00:55:00Z",
+        "specVersionAtBuild": "0.28",
         "scenarios": ["S140", "S153"],
         "sections": ["#bootstrap-primitive-composition", "#project-bootstrap"],
         "files": [
           "packages/core/src/recipes/registry.ts",
           "packages/core/src/recipes/templates.ts",
           "packages/core/src/recipes/runner.ts",
+          "packages/core/src/recipes/mcp-caller.ts",
           "packages/core/src/index.ts"
         ]
       },
       {
         "id": 3,
-        "name": "Three primitive shape executors",
-        "status": "planned",
-        "scenarios": ["S142", "S143", "S144"],
+        "name": "Three primitive shape executors + recipe walker",
+        "status": "running",
+        "startedAt": "2026-04-26T01:00:00Z",
+        "scenarios": ["S142", "S143", "S144", "S152"],
         "sections": ["#bootstrap-primitive-composition", "#rules", "#connections"],
         "files": [
           "packages/core/src/recipes/executors/filesystem.ts",
           "packages/core/src/recipes/executors/shell.ts",
           "packages/core/src/recipes/executors/mcp.ts",
-          "packages/core/src/recipes/runner.ts"
+          "packages/core/src/recipes/walk.ts",
+          "packages/core/src/index.ts"
         ]
       },
       {
