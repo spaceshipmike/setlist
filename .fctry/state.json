@@ -1,6 +1,43 @@
 {
-  "upgradeApplied": {
-    "from": "0.84.6",
-    "to": "0.85.0"
+  "currentCommand": "execute",
+  "completedSteps": ["state-owner-scan", "executor-plan"],
+  "workflowStep": "executor-build",
+  "buildRun": {
+    "id": "run-20260426-onboarding",
+    "status": "running",
+    "startedAt": "2026-04-26T16:30:00Z",
+    "lastCheckpoint": "2026-04-26T16:30:00Z",
+    "plan": {
+      "specVersion": "0.27",
+      "externalVersionAtStart": "0.3.6",
+      "summary": "Build the four MCP-native client-independent agent onboarding mechanisms (S135-S138)."
+    },
+    "chunks": [
+      {
+        "id": "chunk-1",
+        "name": "Server instructions + onboarding resource",
+        "status": "planned",
+        "scenarios": ["S135", "S137"],
+        "sections": ["#capability-declarations"]
+      },
+      {
+        "id": "chunk-2",
+        "name": "next_steps across five registration surfaces",
+        "status": "planned",
+        "scenarios": ["S136"],
+        "sections": ["#registration", "#project-bootstrap", "#capability-declarations"]
+      },
+      {
+        "id": "chunk-3",
+        "name": "enrichment_gaps in portfolio_brief",
+        "status": "planned",
+        "scenarios": ["S138"],
+        "sections": ["#portfolio-memory", "#capability-declarations"]
+      }
+    ],
+    "chunkProgress": {
+      "completed": 0,
+      "total": 3
+    }
   }
 }

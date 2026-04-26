@@ -1,11 +1,24 @@
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
-import { CallToolRequestSchema, ListToolsRequestSchema } from '@modelcontextprotocol/sdk/types.js';
+import {
+  CallToolRequestSchema,
+  ListResourcesRequestSchema,
+  ListToolsRequestSchema,
+  ReadResourceRequestSchema,
+} from '@modelcontextprotocol/sdk/types.js';
 import {
   Registry, MemoryStore, MemoryRetrieval, MemoryReflection, CrossQuery, Bootstrap,
   HealthAssessor,
   type CapabilityDeclaration, type QueryDepth,
 } from '@setlist/core';
 import { selfRegisterCapabilities, stderrLogger, SELF_REGISTER_PROJECT, type Logger } from './self-register.js';
+import {
+  ONBOARDING_DOC,
+  ONBOARDING_INSTRUCTIONS,
+  ONBOARDING_RESOURCE_DESCRIPTION,
+  ONBOARDING_RESOURCE_MIME_TYPE,
+  ONBOARDING_RESOURCE_NAME,
+  ONBOARDING_RESOURCE_URI,
+} from './onboarding.js';
 
 /**
  * Shape of one MCP tool registration — a name, human description, and JSON
@@ -41,7 +54,7 @@ export const MCP_TOOL_DEFINITIONS: McpToolDefinition[] = [
       { name: 'enrich_project', description: 'Add structured profile data (goals, topics, entities, concerns) to a project. Union semantics — new items are merged with existing.', inputSchema: { type: 'object' as const, properties: { name: { type: 'string' }, goals: { type: 'array', items: { type: 'string' } }, topics: { type: 'array', items: { type: 'string' } }, entities: { type: 'array', items: { type: 'string' } }, concerns: { type: 'array', items: { type: 'string' } } }, required: ['name'] } },
       { name: 'write_fields', description: 'Write extended fields to a project (short_description, medium_description, tech_stack, etc.). Producer-owned: fields written by one producer are not overwritten by another.', inputSchema: { type: 'object' as const, properties: { project_name: { type: 'string' }, fields: { type: 'object', description: 'Key-value pairs of field names to values. Values can be strings or arrays.' }, producer: { type: 'string', default: 'system', description: 'Producer identity (e.g., "fctry", "chorus", "user")' } }, required: ['project_name', 'fields'] } },
       // Capabilities (2)
-      { name: 'register_capabilities', description: 'Write a project\'s complete capability set (replace semantics).', inputSchema: { type: 'object' as const, properties: { project_name: { type: 'string' }, capabilities: { type: 'array' } }, required: ['project_name', 'capabilities'] } },
+      { name: 'register_capabilities', description: 'Write a project\'s complete capability set (replace semantics).', inputSchema: { type: 'object' as const, properties: { project_name: { type: 'string' }, capabilities: { type: 'array', items: { type: 'object', properties: { name: { type: 'string', description: 'Capability identifier, unique within project + capability_type' }, capability_type: { type: 'string', description: 'Kind of capability, e.g. "mcp-tool", "cli-command", "library-export"' }, description: { type: 'string' }, inputs: { type: 'string', description: 'Optional input contract' }, outputs: { type: 'string', description: 'Optional output contract' }, requires_auth: { type: 'boolean' }, invocation_model: { type: 'string' }, audience: { type: 'string' } }, required: ['name', 'capability_type', 'description'] } } }, required: ['project_name', 'capabilities'] } },
       { name: 'query_capabilities', description: 'Discover capabilities across the ecosystem by project, type, or keyword.', inputSchema: { type: 'object' as const, properties: { project_name: { type: 'string' }, type: { type: 'string' }, keyword: { type: 'string' } } } },
       // Memory Agent (5)
       { name: 'retain', description: 'Store a memory. Suggestion: use recall() to retrieve.', inputSchema: { type: 'object' as const, properties: { content: { type: 'string' }, type: { type: 'string', enum: ['decision', 'outcome', 'pattern', 'preference', 'dependency', 'correction', 'learning', 'context', 'procedural', 'observation'] }, project: { type: 'string' }, scope: { type: 'string', enum: ['project', 'area', 'portfolio', 'global'] }, tags: { type: 'array', items: { type: 'string' } }, session_id: { type: 'string' }, agent_role: { type: 'string' }, belief: { type: 'string', enum: ['fact', 'opinion', 'hypothesis'] }, extraction_confidence: { type: 'number' }, valid_from: { type: 'string' }, valid_until: { type: 'string' }, entities: { type: 'array', items: { type: 'object', properties: { name: { type: 'string' }, type: { type: 'string' } }, required: ['name', 'type'] } }, parent_version_id: { type: 'string' } }, required: ['content', 'type'] } },
@@ -145,7 +158,10 @@ export function createServer(dbPath?: string, options: CreateServerOptions = {})
 
   const server = new Server(
     { name: 'setlist', version: '0.1.0' },
-    { capabilities: { tools: {} } },
+    {
+      capabilities: { tools: {}, resources: {} },
+      instructions: ONBOARDING_INSTRUCTIONS,
+    },
   );
 
   // ── Tool Definitions ──────────────────────────────────────
@@ -153,6 +169,38 @@ export function createServer(dbPath?: string, options: CreateServerOptions = {})
   server.setRequestHandler(ListToolsRequestSchema, async () => ({
     tools: MCP_TOOL_DEFINITIONS,
   }));
+
+  // ── Onboarding Resource (S137) ────────────────────────────
+  // Single source of truth for the agent-facing enrichment guide. The
+  // resource is fetched on demand only — it is never loaded as ambient
+  // context and is not duplicated into tool descriptions.
+
+  server.setRequestHandler(ListResourcesRequestSchema, async () => ({
+    resources: [
+      {
+        uri: ONBOARDING_RESOURCE_URI,
+        name: ONBOARDING_RESOURCE_NAME,
+        description: ONBOARDING_RESOURCE_DESCRIPTION,
+        mimeType: ONBOARDING_RESOURCE_MIME_TYPE,
+      },
+    ],
+  }));
+
+  server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
+    const uri = request.params.uri;
+    if (uri !== ONBOARDING_RESOURCE_URI) {
+      throw new Error(`Unknown resource URI: ${uri}`);
+    }
+    return {
+      contents: [
+        {
+          uri: ONBOARDING_RESOURCE_URI,
+          mimeType: ONBOARDING_RESOURCE_MIME_TYPE,
+          text: ONBOARDING_DOC,
+        },
+      ],
+    };
+  });
 
   // ── Tool Handlers ─────────────────────────────────────────
 
