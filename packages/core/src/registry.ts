@@ -21,6 +21,7 @@ import {
 } from './project-types.js';
 import { writeFields, deserializeFieldValue } from './fields.js';
 import { discoverPortsInPath, type DiscoveredPort } from './port-discovery.js';
+import { computeNextSteps, type NextStep, type ProjectEnrichmentSnapshot } from './next-steps.js';
 
 export const PORT_RANGE_MIN = 3000;
 export const PORT_RANGE_MAX = 9999;
@@ -1401,6 +1402,93 @@ export class Registry {
     } finally {
       db.close();
     }
+  }
+
+  // ── Next steps recipe (spec 0.27, S136) ───────────────────────
+
+  /**
+   * Build the field-presence snapshot used by `computeNextSteps`. Combines
+   * the projects row, extended fields, capability count, digest existence,
+   * and the project_type row's `git_init` flag. Returns null when the
+   * project does not exist (caller is expected to have the name from a
+   * registration response, so absence is a programming error rather than
+   * an exception path).
+   */
+  getEnrichmentSnapshot(name: string): ProjectEnrichmentSnapshot | null {
+    const db = this.open();
+    try {
+      const project = db.prepare(`
+        SELECT p.id, p.description, p.goals, p.topics, p.entities,
+               p.project_type_id,
+               pt.git_init AS pt_git_init
+        FROM projects p
+        LEFT JOIN project_types pt ON pt.id = p.project_type_id
+        WHERE p.name = ?
+      `).get(name) as
+        | { id: number; description: string | null; goals: string | null; topics: string | null; entities: string | null; project_type_id: number | null; pt_git_init: number | null }
+        | undefined;
+      if (!project) return null;
+
+      const fieldRows = db.prepare(
+        'SELECT field_name, field_value FROM project_fields WHERE project_id = ?'
+      ).all(project.id) as { field_name: string; field_value: string }[];
+      const fields: Record<string, string> = {};
+      for (const row of fieldRows) fields[row.field_name] = row.field_value;
+
+      const capCountRow = db.prepare(
+        'SELECT COUNT(*) AS n FROM project_capabilities WHERE project_id = ?'
+      ).get(project.id) as { n: number };
+
+      const digestRow = db.prepare(
+        'SELECT 1 FROM project_digests WHERE project_id = ? LIMIT 1'
+      ).get(project.id) as { 1?: number } | undefined;
+
+      const hasNonEmpty = (value: string | null | undefined): boolean =>
+        value != null && value !== '' && value !== '[]';
+
+      // Description is present when any prose surface carries text: the
+      // projects.description column (set by register_project) or one of the
+      // structured-field aliases (set by write_fields). All four enrich the
+      // same agent-facing surface; any one of them satisfies the recipe.
+      const hasDescription =
+        hasNonEmpty(project.description)
+        || hasNonEmpty(fields.description)
+        || hasNonEmpty(fields.short_description)
+        || hasNonEmpty(fields.medium_description);
+
+      // For non-code projects (project_type.git_init === 0), tech_stack and
+      // patterns aren't part of the recipe. When project_type_id is null
+      // (legacy register_project call), default to code-project semantics.
+      const isCodeProject = project.project_type_id == null
+        ? true
+        : project.pt_git_init === 1;
+
+      return {
+        has_description: hasDescription,
+        has_tech_stack: hasNonEmpty(fields.tech_stack),
+        has_patterns: hasNonEmpty(fields.patterns),
+        has_goals: hasNonEmpty(project.goals),
+        has_topics: hasNonEmpty(project.topics),
+        has_entities: hasNonEmpty(project.entities),
+        has_capabilities: capCountRow.n > 0,
+        has_digest: digestRow != null,
+        is_code_project: isCodeProject,
+      };
+    } finally {
+      db.close();
+    }
+  }
+
+  /**
+   * Compute the next_steps recipe for the project's current state. Returns
+   * `[]` when the project is fully enriched (or when the project does not
+   * exist — callers always have a freshly-registered name so this case
+   * never occurs in normal flow).
+   */
+  getNextSteps(name: string): NextStep[] {
+    const snapshot = this.getEnrichmentSnapshot(name);
+    if (!snapshot) return [];
+    return computeNextSteps(snapshot);
   }
 
   // ── Tasks ─────────────────────────────────────────────────────

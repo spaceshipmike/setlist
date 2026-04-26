@@ -354,6 +354,13 @@ const LIBRARY_EXPORTS_MANIFEST: LibraryExportManifestEntry[] = [
     kind: 'error-class',
     description: 'Thrown when creating or renaming a project type would collide with an existing project-type name.',
   },
+
+  // Spec 0.27: client-independent agent onboarding.
+  {
+    name: 'computeNextSteps',
+    kind: 'function',
+    description: 'Compute the ordered enrichment recipe for a project from its field-presence snapshot. Powers the next_steps array returned by register_project, bootstrap_project, enrich_project, write_fields, and register_capabilities responses.',
+  },
 ];
 
 /**

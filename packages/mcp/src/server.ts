@@ -240,8 +240,9 @@ export function createServer(dbPath?: string, options: CreateServerOptions = {})
           break;
         case 'register_project': {
           const paths = typeof a.paths === 'string' ? a.paths.split(',').map(p => p.trim()).filter(Boolean) : undefined;
+          const projectName = a.name as string;
           registry.register({
-            name: a.name as string,
+            name: projectName,
             type: 'project',
             status: a.status as string ?? 'active',
             description: a.description as string ?? '',
@@ -253,7 +254,10 @@ export function createServer(dbPath?: string, options: CreateServerOptions = {})
             area: a.area as string | null | undefined,
             parent_project: a.parent_project as string | null | undefined,
           });
-          result = { result: `Project '${a.name}' registered successfully.` };
+          result = {
+            result: `Project '${projectName}' registered successfully.`,
+            next_steps: registry.getNextSteps(projectName),
+          };
           break;
         }
         case 'update_project':
@@ -290,21 +294,29 @@ export function createServer(dbPath?: string, options: CreateServerOptions = {})
           result = { result: `Project '${a.name}' renamed to '${a.new_name}'.` };
           break;
         case 'enrich_project': {
-          const enrichResult = registry.enrichProject(a.name as string, {
+          const projectName = a.name as string;
+          const enrichResult = registry.enrichProject(projectName, {
             goals: a.goals as string[] | undefined,
             topics: a.topics as string[] | undefined,
             entities: a.entities as string[] | undefined,
             concerns: a.concerns as string[] | undefined,
           });
-          result = enrichResult;
+          result = {
+            ...enrichResult,
+            next_steps: registry.getNextSteps(projectName),
+          };
           break;
         }
         case 'write_fields': {
           const fields = a.fields as Record<string, unknown>;
           const producer = (a.producer as string) ?? 'system';
-          registry.updateFields(a.project_name as string, fields, producer);
+          const projectName = a.project_name as string;
+          registry.updateFields(projectName, fields, producer);
           const fieldCount = Object.keys(fields).length;
-          result = { result: `${fieldCount} field(s) written to '${a.project_name}' by producer '${producer}'.` };
+          result = {
+            result: `${fieldCount} field(s) written to '${projectName}' by producer '${producer}'.`,
+            next_steps: registry.getNextSteps(projectName),
+          };
           break;
         }
         case 'batch_update':
@@ -321,6 +333,7 @@ export function createServer(dbPath?: string, options: CreateServerOptions = {})
 
         // Capabilities
         case 'register_capabilities': {
+          const projectName = a.project_name as string;
           const caps = (a.capabilities as Record<string, unknown>[]).map(c => ({
             name: c.name as string,
             capability_type: (c.capability_type ?? c.type) as string,
@@ -331,8 +344,11 @@ export function createServer(dbPath?: string, options: CreateServerOptions = {})
             invocation_model: c.invocation_model as string | undefined,
             audience: c.audience as string | undefined,
           }));
-          const count = registry.registerCapabilities(a.project_name as string, caps);
-          result = { result: `${count} capabilities registered for '${a.project_name}'.` };
+          const count = registry.registerCapabilities(projectName, caps);
+          result = {
+            result: `${count} capabilities registered for '${projectName}'.`,
+            next_steps: registry.getNextSteps(projectName),
+          };
           break;
         }
         case 'query_capabilities':
@@ -457,9 +473,10 @@ export function createServer(dbPath?: string, options: CreateServerOptions = {})
         }
 
         // Bootstrap
-        case 'bootstrap_project':
-          result = bootstrapManager.bootstrapProject({
-            name: a.name as string,
+        case 'bootstrap_project': {
+          const projectName = a.name as string;
+          const bootstrapResult = bootstrapManager.bootstrapProject({
+            name: projectName,
             project_type_id: a.project_type_id as number | undefined,
             type: a.project_type as 'project' | 'non_code_project' | undefined,
             status: a.status as string | undefined,
@@ -472,7 +489,12 @@ export function createServer(dbPath?: string, options: CreateServerOptions = {})
             area: a.area as string | undefined,
             parent_project: a.parent_project as string | undefined,
           });
+          result = {
+            ...bootstrapResult,
+            next_steps: registry.getNextSteps(projectName),
+          };
           break;
+        }
         case 'configure_bootstrap':
           result = bootstrapManager.configureBootstrap({
             path_roots: a.path_roots as Record<string, string> | undefined,

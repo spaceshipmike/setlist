@@ -6,7 +6,7 @@
     "id": "run-20260426-onboarding",
     "status": "running",
     "startedAt": "2026-04-26T16:30:00Z",
-    "lastCheckpoint": "2026-04-26T16:30:00Z",
+    "lastCheckpoint": "2026-04-26T17:15:00Z",
     "plan": {
       "specVersion": "0.27",
       "externalVersionAtStart": "0.3.6",
@@ -16,16 +16,22 @@
       {
         "id": "chunk-1",
         "name": "Server instructions + onboarding resource",
-        "status": "planned",
+        "status": "completed",
         "scenarios": ["S135", "S137"],
-        "sections": ["#capability-declarations"]
+        "sections": ["#capability-declarations"],
+        "specVersionAtBuild": "0.27",
+        "completedAt": "2026-04-26T17:15:00Z",
+        "tag": "v0.3.7"
       },
       {
         "id": "chunk-2",
         "name": "next_steps across five registration surfaces",
-        "status": "planned",
+        "status": "completed",
         "scenarios": ["S136"],
-        "sections": ["#registration", "#project-bootstrap", "#capability-declarations"]
+        "sections": ["#registration", "#project-bootstrap", "#capability-declarations"],
+        "specVersionAtBuild": "0.27",
+        "completedAt": "2026-04-26T17:45:00Z",
+        "tag": "v0.3.8"
       },
       {
         "id": "chunk-3",
@@ -36,7 +42,7 @@
       }
     ],
     "chunkProgress": {
-      "completed": 0,
+      "completed": 2,
       "total": 3
     }
   }

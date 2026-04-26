@@ -22,3 +22,4 @@ export { Bootstrap, BootstrapNotConfiguredError, BootstrapFolderExistsError, typ
 export { HealthAssessor, HEALTH_CACHE_TTL_MS, type HealthTier, type HealthDimension, type DimensionResult, type HealthAssessment, type PortfolioHealth } from './health.js';
 export { computeProjectVersion, listProjectDocuments, type ProjectVersion } from './project-version.js';
 export { introspectLibraryExports } from './introspect-exports.js';
+export { computeNextSteps, type NextStep, type ProjectEnrichmentSnapshot } from './next-steps.js';
