@@ -1,6 +1,9 @@
 {
   "currentCommand": "execute",
-  "completedSteps": ["state-owner-scan", "executor-plan"],
+  "completedSteps": [
+    "state-owner-scan",
+    "executor-plan"
+  ],
   "workflowStep": "executor-build",
   "buildRun": {
     "id": "run-20260426-onboarding",
@@ -17,8 +20,13 @@
         "id": "chunk-1",
         "name": "Server instructions + onboarding resource",
         "status": "completed",
-        "scenarios": ["S135", "S137"],
-        "sections": ["#capability-declarations"],
+        "scenarios": [
+          "S135",
+          "S137"
+        ],
+        "sections": [
+          "#capability-declarations"
+        ],
         "specVersionAtBuild": "0.27",
         "completedAt": "2026-04-26T17:15:00Z",
         "tag": "v0.3.7"
@@ -27,8 +35,14 @@
         "id": "chunk-2",
         "name": "next_steps across five registration surfaces",
         "status": "completed",
-        "scenarios": ["S136"],
-        "sections": ["#registration", "#project-bootstrap", "#capability-declarations"],
+        "scenarios": [
+          "S136"
+        ],
+        "sections": [
+          "#registration",
+          "#project-bootstrap",
+          "#capability-declarations"
+        ],
         "specVersionAtBuild": "0.27",
         "completedAt": "2026-04-26T17:45:00Z",
         "tag": "v0.3.8"
@@ -37,8 +51,13 @@
         "id": "chunk-3",
         "name": "enrichment_gaps in portfolio_brief",
         "status": "completed",
-        "scenarios": ["S138"],
-        "sections": ["#portfolio-memory", "#capability-declarations"],
+        "scenarios": [
+          "S138"
+        ],
+        "sections": [
+          "#portfolio-memory",
+          "#capability-declarations"
+        ],
         "specVersionAtBuild": "0.27",
         "completedAt": "2026-04-26T18:00:00Z",
         "tag": "v0.3.9"
@@ -47,6 +66,14 @@
     "chunkProgress": {
       "completed": 3,
       "total": 3
+    },
+    "completionGate": {
+      "retro": true,
+      "capabilities": true,
+      "experienceReport": true,
+      "memoryDigest": true,
+      "buildTrace": true,
+      "codebaseIndex": true
     }
   }
 }
