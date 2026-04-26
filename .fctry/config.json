@@ -2,7 +2,7 @@
   "versions": {
     "external": {
       "type": "external",
-      "current": "0.3.8",
+      "current": "0.3.9",
       "propagationTargets": [
         {
           "file": "package.json",

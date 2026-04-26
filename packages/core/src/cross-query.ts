@@ -173,6 +173,7 @@ export class CrossQuery {
     portfolio_memories: RecallResult[];
     pending_observations: RecallResult[];
     health_indicators: { project: string; issue: string }[];
+    enrichment_gaps: { project: string; missing: string[] }[];
   } {
     const db = this.open();
     try {
@@ -227,6 +228,60 @@ export class CrossQuery {
         healthIndicators.push({ project: row.name, issue: 'no capabilities registered' });
       }
 
+      // Enrichment gaps (spec 0.27, S138). Compact field-presence annotations
+      // for registered-but-incomplete projects — agents iterate this to drive
+      // enrich_project / write_fields / refresh_project_digest calls. No prose,
+      // no scoring, no severity ranking. Single SQL projection, not a scan.
+      const enrichmentRows = db.prepare(`
+        SELECT p.name AS project_name,
+               p.description AS desc_col,
+               pt.git_init AS pt_git_init,
+               EXISTS (
+                 SELECT 1 FROM project_fields pf
+                 WHERE pf.project_id = p.id
+                   AND pf.field_name IN ('description', 'short_description', 'medium_description')
+                   AND pf.field_value != ''
+               ) AS has_field_description,
+               EXISTS (
+                 SELECT 1 FROM project_fields pf
+                 WHERE pf.project_id = p.id
+                   AND pf.field_name = 'tech_stack'
+                   AND pf.field_value != ''
+               ) AS has_tech_stack,
+               EXISTS (
+                 SELECT 1 FROM project_digests pd
+                 WHERE pd.project_id = p.id
+               ) AS has_digest
+        FROM projects p
+        LEFT JOIN project_types pt ON pt.id = p.project_type_id
+        WHERE p.status != 'archived'
+        ORDER BY p.name
+      `).all() as {
+        project_name: string;
+        desc_col: string | null;
+        pt_git_init: number | null;
+        has_field_description: number;
+        has_tech_stack: number;
+        has_digest: number;
+      }[];
+
+      const enrichmentGaps: { project: string; missing: string[] }[] = [];
+      for (const row of enrichmentRows) {
+        const missing: string[] = [];
+        const hasDescription =
+          (row.desc_col != null && row.desc_col !== '') || row.has_field_description === 1;
+        if (!hasDescription) missing.push('description');
+        // tech_stack only applies to code projects. project_type_id null →
+        // legacy registration → assume code-project semantics, matching the
+        // next_steps recipe.
+        const isCodeProject = row.pt_git_init == null ? true : row.pt_git_init === 1;
+        if (isCodeProject && row.has_tech_stack !== 1) missing.push('tech_stack');
+        if (row.has_digest !== 1) missing.push('digest');
+        if (missing.length > 0) {
+          enrichmentGaps.push({ project: row.project_name, missing });
+        }
+      }
+
       return {
         projects: projects.map(p => ({
           name: p.name,
@@ -238,6 +293,7 @@ export class CrossQuery {
         portfolio_memories: portfolioMemories,
         pending_observations: pendingObservations,
         health_indicators: healthIndicators,
+        enrichment_gaps: enrichmentGaps,
       };
     } finally {
       db.close();
