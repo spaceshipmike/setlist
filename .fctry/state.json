@@ -40,15 +40,17 @@
       "totalChunks": 7
     },
     "chunkProgress": {
-      "completed": 0,
+      "completed": 1,
       "total": 7
     },
     "chunks": [
       {
         "id": 1,
         "name": "Schema v14 + recipe data model",
-        "status": "running",
+        "status": "completed",
         "startedAt": "2026-04-26T00:05:00Z",
+        "completedAt": "2026-04-26T00:30:00Z",
+        "specVersionAtBuild": "0.28",
         "isGate": true,
         "scenarios": ["S139"],
         "sections": ["#schema", "#bootstrap-primitive-composition", "#entities"],
@@ -61,17 +63,16 @@
       },
       {
         "id": 2,
-        "name": "Built-in primitive registry",
-        "status": "planned",
-        "scenarios": ["S140", "S141", "S153"],
+        "name": "Primitives registry + token resolver + runner shell",
+        "status": "running",
+        "startedAt": "2026-04-26T00:35:00Z",
+        "scenarios": ["S140", "S153"],
         "sections": ["#bootstrap-primitive-composition", "#project-bootstrap"],
         "files": [
-          "packages/core/src/recipes/builtins/create-directory.ts",
-          "packages/core/src/recipes/builtins/git-init.ts",
-          "packages/core/src/recipes/builtins/copy-template.ts",
-          "packages/core/src/recipes/builtins/register-in-registry.ts",
-          "packages/core/src/recipes/builtins/claim-port.ts",
-          "packages/core/src/bootstrap/runner.ts"
+          "packages/core/src/recipes/registry.ts",
+          "packages/core/src/recipes/templates.ts",
+          "packages/core/src/recipes/runner.ts",
+          "packages/core/src/index.ts"
         ]
       },
       {

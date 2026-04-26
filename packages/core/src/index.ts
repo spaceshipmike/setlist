@@ -55,6 +55,41 @@ export {
   type CreatePrimitiveOpts,
   type UpdatePrimitiveOpts,
 } from './recipes/store.js';
+export { PrimitivesRegistry } from './recipes/registry.js';
+export {
+  resolveTemplate,
+  resolveParams,
+  EXAMPLE_CONTEXT,
+  SUPPORTED_TOKENS,
+  type ProjectContext,
+  type ResolveResult,
+  type ResolveSuccess,
+  type ResolveFailure,
+  type ResolveMapResult,
+  type ResolveMapSuccess,
+  type ResolveMapFailure,
+} from './recipes/templates.js';
+export {
+  newCleanupLog,
+  TRAILER_NAME,
+  TRAILER_LABEL,
+  type StepStatus,
+  type StepResult,
+  type PreflightResult,
+  type PreflightEnvelope,
+  type ExecutorContext,
+  type ShapeExecutor,
+  type CleanupLog,
+  type RunnerEnvelope,
+} from './recipes/runner.js';
+export {
+  NULL_MCP_CALLER,
+  type McpToolCaller,
+  type McpToolDescriptor,
+  type McpCallResult,
+  type McpCallSuccess,
+  type McpCallFailure,
+} from './recipes/mcp-caller.js';
 export { HealthAssessor, HEALTH_CACHE_TTL_MS, type HealthTier, type HealthDimension, type DimensionResult, type HealthAssessment, type PortfolioHealth } from './health.js';
 export { computeProjectVersion, listProjectDocuments, type ProjectVersion } from './project-version.js';
 export { introspectLibraryExports } from './introspect-exports.js';

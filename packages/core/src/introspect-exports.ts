@@ -448,6 +448,52 @@ const LIBRARY_EXPORTS_MANIFEST: LibraryExportManifestEntry[] = [
     kind: 'function',
     description: 'Take an immutable snapshot of a recipe at bootstrap start — used to honor mid-flight recipe edits without affecting an in-flight Retry.',
   },
+  {
+    name: 'PrimitivesRegistry',
+    kind: 'class',
+    description: 'Public class wrapping primitive + recipe storage for MCP/library/CLI callers — the API entry point for the bootstrap recipe runner (spec 0.28).',
+    detail: 'listPrimitives, getPrimitive, getBuiltinByKey, createPrimitive, updatePrimitive, deletePrimitive, countReferences, listReferencingTypes, getRecipe, replaceRecipe, appendStep, snapshotRecipe',
+  },
+  {
+    name: 'resolveTemplate',
+    kind: 'function',
+    description: 'Resolve template tokens ({project.name}, {project.path}, {project.type}, {project.parent_path}) in one string against a project context.',
+  },
+  {
+    name: 'resolveParams',
+    kind: 'function',
+    description: 'Resolve every value in a parameter map against a project context — surfaces the first key whose value fails to resolve for pre-flight ✗ rendering.',
+  },
+  {
+    name: 'EXAMPLE_CONTEXT',
+    kind: 'constant',
+    description: 'Placeholder ProjectContext used by Preview recipe (S149) — substitutes <example-name>, <example-path>, etc.',
+  },
+  {
+    name: 'SUPPORTED_TOKENS',
+    kind: 'constant',
+    description: 'List of template token names the resolver recognizes (project.name, project.path, project.type, project.parent_path, project.type.template_directory).',
+  },
+  {
+    name: 'newCleanupLog',
+    kind: 'function',
+    description: 'Construct an empty CleanupLog used by the runner to track filesystem and git work for Abandon (S147) and to label external side effects as "left in place".',
+  },
+  {
+    name: 'TRAILER_NAME',
+    kind: 'constant',
+    description: 'Display name for the structural register-in-registry trailer (\'Register in setlist\') — rendered at the bottom of every recipe.',
+  },
+  {
+    name: 'TRAILER_LABEL',
+    kind: 'constant',
+    description: 'Full UI label for the trailer ([final, automatic] Register in setlist) — used by the desktop Settings panel and the Dry run / Preview trace.',
+  },
+  {
+    name: 'NULL_MCP_CALLER',
+    kind: 'constant',
+    description: 'No-op McpToolCaller — surfaces every tool call as "not registered". Used by tests, library callers without a host MCP session, and as a fail-safe default.',
+  },
 ];
 
 /**
