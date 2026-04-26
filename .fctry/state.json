@@ -40,7 +40,7 @@
       "totalChunks": 7
     },
     "chunkProgress": {
-      "completed": 3,
+      "completed": 4,
       "total": 7
     },
     "chunks": [
@@ -98,10 +98,12 @@
       {
         "id": 4,
         "name": "Bootstrap engine wires the recipe runner — S145 + S151 (bootstrap-time-only) + S147 Abandon",
-        "status": "running",
+        "status": "completed",
         "startedAt": "2026-04-26T01:40:00Z",
+        "completedAt": "2026-04-26T02:15:00Z",
+        "specVersionAtBuild": "0.28",
         "isGate": true,
-        "scenarios": ["S145", "S147", "S151"],
+        "scenarios": ["S145", "S146", "S147", "S148", "S151"],
         "sections": ["#project-bootstrap", "#bootstrap-primitive-composition"],
         "files": [
           "packages/core/src/bootstrap.ts",
@@ -110,14 +112,14 @@
       },
       {
         "id": 5,
-        "name": "Combined dry-run + pre-flight",
-        "status": "planned",
-        "scenarios": ["S146", "S147"],
-        "sections": ["#bootstrap-primitive-composition", "#project-bootstrap"],
+        "name": "MCP surface — primitives/recipes/bootstrap-envelope tools + S154 tool palette",
+        "status": "running",
+        "startedAt": "2026-04-26T02:20:00Z",
+        "scenarios": ["S148", "S149", "S150", "S154"],
+        "sections": ["#bootstrap-primitive-composition", "#project-bootstrap", "#capability-declarations"],
         "files": [
-          "packages/core/src/recipes/preflight.ts",
-          "packages/core/src/bootstrap/index.ts",
-          "packages/mcp/src/tools/bootstrap_project.ts"
+          "packages/mcp/src/server.ts",
+          "packages/mcp/src/onboarding.ts"
         ]
       },
       {

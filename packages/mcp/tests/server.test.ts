@@ -44,24 +44,25 @@ describe('MCP Server (S21)', () => {
   // ── Tool Registration ──────────────────────────────────────
 
   // spec 0.26: 39 base tools + 8 area/project_type CRUD tools = 47 total
-  it('registers exactly 47 tools', async () => {
+  it('registers exactly 56 tools', async () => {
     const tools = await listTools(server);
-    expect(tools).toHaveLength(47);
+    expect(tools).toHaveLength(56);
   });
 
   it('registers all expected tool names', async () => {
     const tools = await listTools(server);
     const names = tools.map(t => t.name).sort();
     expect(names).toEqual([
-      'archive_project', 'assess_health', 'batch_update', 'bootstrap_project', 'check_port', 'claim_port',
-      'configure_bootstrap', 'configure_memory', 'correct', 'create_area', 'create_project_type', 'cross_query',
-      'delete_area', 'delete_project_type', 'discover_ports',
-      'enrich_project', 'feedback', 'forget', 'get_project', 'get_project_digest', 'get_project_digests',
-      'get_registry_stats', 'inspect_memory', 'list_areas', 'list_project_types', 'list_projects', 'list_tasks', 'memory_status',
+      'append_recipe_step', 'archive_project', 'assess_health', 'batch_update', 'bootstrap_project',
+      'bootstrap_resolve', 'check_port', 'claim_port',
+      'configure_bootstrap', 'configure_memory', 'correct', 'create_area', 'create_primitive', 'create_project_type', 'cross_query',
+      'delete_area', 'delete_primitive', 'delete_project_type', 'discover_ports',
+      'enrich_project', 'feedback', 'forget', 'get_primitive', 'get_project', 'get_project_digest', 'get_project_digests',
+      'get_recipe', 'get_registry_stats', 'inspect_memory', 'list_areas', 'list_primitives', 'list_project_types', 'list_projects', 'list_tasks', 'memory_status',
       'portfolio_brief', 'queue_task', 'recall', 'reflect', 'refresh_project_digest', 'register_capabilities',
-      'register_project', 'release_port', 'rename_project', 'retain',
+      'register_project', 'release_port', 'rename_project', 'replace_recipe', 'retain',
       'search_projects', 'set_parent_project', 'set_project_area', 'switch_project',
-      'update_area', 'update_project', 'update_project_type', 'query_capabilities', 'write_fields',
+      'update_area', 'update_primitive', 'update_project', 'update_project_type', 'query_capabilities', 'write_fields',
     ].sort());
   });
 

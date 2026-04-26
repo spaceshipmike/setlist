@@ -45,7 +45,7 @@ describe('selfRegisterCapabilities (S117)', () => {
       const t = row.type as string;
       byType[t] = (byType[t] ?? 0) + 1;
     }
-    expect(byType.tool).toBe(47); // 39 base + 8 area/project_type CRUD (spec 0.26)
+    expect(byType.tool).toBe(56); // 39 base + 8 area/project_type CRUD (spec 0.26)
     expect(byType['cli-command']).toBeGreaterThan(0);
     expect(byType.library).toBeGreaterThan(0);
   });
@@ -100,7 +100,7 @@ describe('selfRegisterCapabilities (S117)', () => {
 
     // Other two surfaces wrote their rows.
     const tools = registry.queryCapabilities({ project_name: SELF_REGISTER_PROJECT, capability_type: 'tool' });
-    expect(tools.length).toBe(47);
+    expect(tools.length).toBe(56);
     const libs = registry.queryCapabilities({ project_name: SELF_REGISTER_PROJECT, capability_type: 'library' });
     expect(libs.length).toBeGreaterThan(0);
 

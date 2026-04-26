@@ -8,7 +8,10 @@ import {
 import {
   Registry, MemoryStore, MemoryRetrieval, MemoryReflection, CrossQuery, Bootstrap,
   HealthAssessor,
+  PrimitivesRegistry,
   type CapabilityDeclaration, type QueryDepth,
+  type BootstrapPendingState,
+  type PrimitiveDefinition,
 } from '@setlist/core';
 import { selfRegisterCapabilities, stderrLogger, SELF_REGISTER_PROJECT, type Logger } from './self-register.js';
 import {
@@ -78,7 +81,7 @@ export const MCP_TOOL_DEFINITIONS: McpToolDefinition[] = [
       { name: 'list_tasks', description: 'List tasks with optional status and project filters.', inputSchema: { type: 'object' as const, properties: { status_filter: { type: 'string' }, project_name: { type: 'string' } } } },
       { name: 'cross_query', description: 'Search across all projects for a natural-language question.', inputSchema: { type: 'object' as const, properties: { query: { type: 'string' }, scope: { type: 'string', enum: ['registry', 'memories', 'all'], default: 'registry' } }, required: ['query'] } },
       // Bootstrap (2)
-      { name: 'bootstrap_project', description: 'Create a new project end-to-end: register in registry, create folder, apply templates, init git (code projects). Pass project_type_id (preferred, spec 0.26) to drive folder root and git_init from the user-managed project_types table; or pass project_type (legacy) to use the BootstrapConfig path_roots. Optional area assigns to an area at registration.', inputSchema: { type: 'object' as const, properties: { name: { type: 'string' }, project_type_id: { type: 'number', description: 'spec 0.26: id of a row in project_types. When set, drives default_directory and git_init.' }, project_type: { type: 'string', enum: ['project', 'non_code_project'], default: 'project', description: 'Legacy spec 0.13–0.25 discriminator.' }, status: { type: 'string', default: 'active' }, description: { type: 'string' }, goals: { type: 'string' }, display_name: { type: 'string' }, path_override: { type: 'string' }, skip_git: { type: 'boolean', default: false }, producer: { type: 'string', default: 'bootstrap' }, area: { type: 'string', description: 'Area name (case-sensitive against the live areas table).' }, parent_project: { type: 'string', description: 'Parent project name for sub-project linking' } }, required: ['name'] } },
+      { name: 'bootstrap_project', description: 'Create a new project end-to-end: register in registry, create folder, apply templates, init git (code projects), and run any user-authored steps in the project type\'s bootstrap recipe (spec 0.28). Pass project_type_id to drive folder root, git_init, and the recipe from the user-managed project_types table. When dry_run=true, returns a per-step trace without touching disk or registering the project (S148). When a step fails mid-run, returns kind=\'pending\' with a token that the caller passes to bootstrap_resolve for retry/skip/abandon (S144).', inputSchema: { type: 'object' as const, properties: { name: { type: 'string' }, project_type_id: { type: 'number', description: 'spec 0.26: id of a row in project_types. When set, drives default_directory, git_init, and the recipe.' }, project_type: { type: 'string', enum: ['project', 'non_code_project'], default: 'project', description: 'Legacy spec 0.13–0.25 discriminator.' }, status: { type: 'string', default: 'active' }, description: { type: 'string' }, goals: { type: 'string' }, display_name: { type: 'string' }, path_override: { type: 'string' }, skip_git: { type: 'boolean', default: false }, producer: { type: 'string', default: 'bootstrap' }, area: { type: 'string', description: 'Area name (case-sensitive against the live areas table).' }, parent_project: { type: 'string', description: 'Parent project name for sub-project linking' }, dry_run: { type: 'boolean', default: false, description: 'spec 0.28: when true, returns a per-step trace with resolved parameters and pre-flight ✓/✗ markers without touching disk, registering the project, or invoking external systems (S148).' } }, required: ['name'] } },
       { name: 'configure_bootstrap', description: 'Configure bootstrap: set path roots per project type and template directory. Call with no arguments to view current config.', inputSchema: { type: 'object' as const, properties: { path_roots: { type: 'object', description: 'Mapping of project type to default path root (e.g., {"project": "~/Code", "non_code_project": "~/Projects"})' }, template_dir: { type: 'string', description: 'Path to the template directory' }, archive_path_root: { type: 'string', description: 'Filesystem root where archived projects are moved (e.g., "~/Archive")' } } } },
       // Health (1)
       { name: 'assess_health', description: 'Assess project health. With a name, returns overall tier, per-dimension tiers (activity/completeness/outcomes), and reasons. Without a name, returns a portfolio-wide snapshot ordered worst-to-best plus summary counts. Cached briefly; pass fresh=true to bypass.', inputSchema: { type: 'object' as const, properties: { name: { type: 'string' }, fresh: { type: 'boolean', default: false } } } },
@@ -96,6 +99,16 @@ export const MCP_TOOL_DEFINITIONS: McpToolDefinition[] = [
       { name: 'create_project_type', description: 'Create a new user-managed project type. default_directory drives bootstrap; git_init controls whether bootstrap initializes a repository. template_directory and color are optional. Throws DUPLICATE_PROJECT_TYPE_NAME on a name collision.', inputSchema: { type: 'object' as const, properties: { name: { type: 'string' }, default_directory: { type: 'string' }, git_init: { type: 'boolean' }, template_directory: { type: ['string', 'null'] }, color: { type: ['string', 'null'] } }, required: ['name', 'default_directory', 'git_init'] } },
       { name: 'update_project_type', description: 'Update an existing project type. Patch-style.', inputSchema: { type: 'object' as const, properties: { id: { type: 'number' }, name: { type: 'string' }, default_directory: { type: 'string' }, git_init: { type: 'boolean' }, template_directory: { type: ['string', 'null'] }, color: { type: ['string', 'null'] } }, required: ['id'] } },
       { name: 'delete_project_type', description: 'Delete a user-managed project type. Throws TYPE_HAS_PROJECTS when projects still reference it.', inputSchema: { type: 'object' as const, properties: { id: { type: 'number' } }, required: ['id'] } },
+      // Bootstrap primitives (8) — spec 0.28 (S139, S140, S141, S150)
+      { name: 'list_primitives', description: 'List every bootstrap primitive (built-in first, then custom by name). Each entry includes id, name, description, shape (filesystem-op/shell-command/mcp-tool), is_builtin, and parsed definition. Built-ins are read-only in shape but bindable in parameters per recipe.', inputSchema: { type: 'object' as const, properties: {} } },
+      { name: 'get_primitive', description: 'Get one bootstrap primitive by id. Returns null when not found.', inputSchema: { type: 'object' as const, properties: { id: { type: 'number' } }, required: ['id'] } },
+      { name: 'create_primitive', description: 'Create a user-authored primitive of one of the three closed shapes (filesystem-op, shell-command, mcp-tool). The definition object is shape-specific: filesystem-op needs operation+defaults, shell-command needs command+optional workingDirectory, mcp-tool needs toolName+optional defaults. Throws on a name collision.', inputSchema: { type: 'object' as const, properties: { name: { type: 'string' }, description: { type: 'string', default: '' }, definition: { type: 'object', description: 'Shape-specific definition: { shape, ...other fields }. shape ∈ {filesystem-op, shell-command, mcp-tool}.' } }, required: ['name', 'definition'] } },
+      { name: 'update_primitive', description: 'Update a custom primitive (name, description, or definition). Throws on built-in primitives — they are read-only in shape (S140).', inputSchema: { type: 'object' as const, properties: { id: { type: 'number' }, name: { type: 'string' }, description: { type: 'string' }, definition: { type: 'object' } }, required: ['id'] } },
+      { name: 'delete_primitive', description: 'Delete a custom primitive. Throws on built-ins (S140) and throws when any recipe step still references the primitive — query list_referencing_types first to surface a delete-blocked dialog.', inputSchema: { type: 'object' as const, properties: { id: { type: 'number' } }, required: ['id'] } },
+      { name: 'get_recipe', description: 'Get a project type\'s ordered recipe. Returns user-droppable steps only — the structural register-in-registry trailer is not stored and is rendered separately by the UI (S150).', inputSchema: { type: 'object' as const, properties: { project_type_id: { type: 'number' } }, required: ['project_type_id'] } },
+      { name: 'replace_recipe', description: 'Atomically replace a project type\'s full ordered recipe. Steps array carries [{primitive_id, params}] — positions are renumbered 0..N-1. Empty arrays are valid (the trailer still runs). The trailer is structural and is NEVER part of this list (S150).', inputSchema: { type: 'object' as const, properties: { project_type_id: { type: 'number' }, steps: { type: 'array', items: { type: 'object', properties: { primitive_id: { type: 'number' }, params: { type: 'object' } }, required: ['primitive_id', 'params'] } } }, required: ['project_type_id', 'steps'] } },
+      { name: 'append_recipe_step', description: 'Append one step to the end of a project type\'s recipe at position MAX(position)+1.', inputSchema: { type: 'object' as const, properties: { project_type_id: { type: 'number' }, primitive_id: { type: 'number' }, params: { type: 'object' } }, required: ['project_type_id', 'primitive_id'] } },
+      { name: 'bootstrap_resolve', description: 'Resolve a pending bootstrap (one that hit a step failure and is awaiting Retry/Skip/Abandon). The token comes from a prior bootstrap_project response with kind=\'pending\'. Action retry resumes from the failed step (no re-running of succeeded mcp-tool/shell-command side effects, S145). Action skip marks the failed step skipped and continues (S146). Action abandon undoes filesystem and git work; external side effects are listed in left_in_place rather than rolled back (S147).', inputSchema: { type: 'object' as const, properties: { token: { type: 'string', description: 'Token returned by the prior bootstrap_project / bootstrap_resolve call.' }, action: { type: 'string', enum: ['retry', 'skip', 'abandon'] } }, required: ['token', 'action'] } },
 ];
 
 /**
@@ -125,6 +138,15 @@ export function createServer(dbPath?: string, options: CreateServerOptions = {})
   const memoryReflection = new MemoryReflection(dbPath);
   const bootstrapManager = new Bootstrap(dbPath);
   const healthAssessor = new HealthAssessor(dbPath);
+  const primitivesRegistry = new PrimitivesRegistry(dbPath);
+
+  // Spec 0.28: in-memory store for pending recipe bootstraps (S144 stop-and-
+  // report state). Keyed by attempt token returned to the caller, who then
+  // passes the same token back to bootstrap_resolve. The store is process-
+  // local — a server restart drops in-flight states by design (the user sees
+  // any half-built folder on disk and decides what to do manually).
+  const pendingBootstraps = new Map<string, BootstrapPendingState>();
+  let nextBootstrapToken = 1;
 
   // ── First-run auto-create + self-registration (§2.11, S115) ─
   //
@@ -475,9 +497,67 @@ export function createServer(dbPath?: string, options: CreateServerOptions = {})
         // Bootstrap
         case 'bootstrap_project': {
           const projectName = a.name as string;
+          const dryRun = Boolean(a.dry_run);
+          // Spec 0.28: when project_type_id is provided AND a recipe exists
+          // for that type, route through the recipe runner. Otherwise fall
+          // back to the legacy single-path bootstrap for backward compat.
+          let useRecipePath = false;
+          const ptid = a.project_type_id as number | undefined;
+          if (ptid !== undefined) {
+            const recipe = primitivesRegistry.getRecipe(ptid);
+            useRecipePath = recipe.steps.length > 0;
+          }
+
+          if (useRecipePath || dryRun) {
+            const env = await bootstrapManager.bootstrapWithRecipe({
+              name: projectName,
+              project_type_id: ptid,
+              status: a.status as string | undefined,
+              description: a.description as string | undefined,
+              goals: a.goals as string | undefined,
+              display_name: a.display_name as string | undefined,
+              path_override: a.path_override as string | undefined,
+              skip_git: a.skip_git as boolean | undefined,
+              producer: a.producer as string | undefined,
+              area: a.area as string | undefined,
+              parent_project: a.parent_project as string | undefined,
+              dry_run: dryRun,
+            });
+            // Pending bootstraps get tokenized so the caller can resolve
+            // them via bootstrap_resolve.
+            if (env.kind === 'pending') {
+              const token = `bootstrap-${nextBootstrapToken++}`;
+              pendingBootstraps.set(token, env);
+              result = {
+                kind: 'pending',
+                token,
+                name: env.name,
+                path: env.path,
+                failed_at: env.failed_at,
+                error_output: env.error_output,
+                executed_steps: env.executed_steps,
+                actions: ['retry', 'skip', 'abandon'],
+                action_descriptions: {
+                  retry: 'Re-run the failed step (and subsequent steps). Previously-succeeded mcp-tool/shell-command steps are NOT re-invoked.',
+                  skip: 'Mark the failed step skipped and continue with the remaining steps + register the project.',
+                  abandon: 'Undo filesystem and git work; leave external side effects in place; do not register.',
+                },
+              };
+            } else if (env.kind === 'success') {
+              result = {
+                ...env,
+                next_steps: registry.getNextSteps(projectName),
+              };
+            } else {
+              result = env;
+            }
+            break;
+          }
+
+          // Legacy path
           const bootstrapResult = bootstrapManager.bootstrapProject({
             name: projectName,
-            project_type_id: a.project_type_id as number | undefined,
+            project_type_id: ptid,
             type: a.project_type as 'project' | 'non_code_project' | undefined,
             status: a.status as string | undefined,
             description: a.description as string | undefined,
@@ -493,6 +573,53 @@ export function createServer(dbPath?: string, options: CreateServerOptions = {})
             ...bootstrapResult,
             next_steps: registry.getNextSteps(projectName),
           };
+          break;
+        }
+        case 'bootstrap_resolve': {
+          // Spec 0.28: resolve a pending bootstrap with retry, skip, or abandon.
+          const token = a.token as string;
+          const action = a.action as 'retry' | 'skip' | 'abandon';
+          const pending = pendingBootstraps.get(token);
+          if (!pending) {
+            throw new Error(`No pending bootstrap with token '${token}' (server may have restarted, or the bootstrap was already resolved)`);
+          }
+
+          if (action === 'abandon') {
+            const cleanup = bootstrapManager.abandonBootstrap(pending);
+            pendingBootstraps.delete(token);
+            result = cleanup;
+            break;
+          }
+
+          const env =
+            action === 'retry'
+              ? await bootstrapManager.retryBootstrap(pending)
+              : await bootstrapManager.skipFailedAndContinue(pending);
+
+          if (env.kind === 'pending') {
+            // Replace the prior pending state — the token is reused.
+            pendingBootstraps.set(token, env);
+            result = {
+              kind: 'pending',
+              token,
+              name: env.name,
+              path: env.path,
+              failed_at: env.failed_at,
+              error_output: env.error_output,
+              executed_steps: env.executed_steps,
+              actions: ['retry', 'skip', 'abandon'],
+            };
+          } else {
+            pendingBootstraps.delete(token);
+            if (env.kind === 'success') {
+              result = {
+                ...env,
+                next_steps: registry.getNextSteps(env.name),
+              };
+            } else {
+              result = env;
+            }
+          }
           break;
         }
         case 'configure_bootstrap':
@@ -592,6 +719,56 @@ export function createServer(dbPath?: string, options: CreateServerOptions = {})
         case 'delete_project_type':
           registry.deleteProjectType(a.id as number);
           result = { ok: true };
+          break;
+
+        // Bootstrap primitives + recipes (spec 0.28)
+        case 'list_primitives':
+          result = primitivesRegistry.listPrimitives();
+          break;
+        case 'get_primitive':
+          result = primitivesRegistry.getPrimitive(a.id as number);
+          break;
+        case 'create_primitive': {
+          const def = a.definition as PrimitiveDefinition;
+          if (!def || typeof def !== 'object' || !('shape' in def)) {
+            throw new Error('create_primitive: definition must be an object with a `shape` field');
+          }
+          result = primitivesRegistry.createPrimitive({
+            name: a.name as string,
+            description: (a.description as string | undefined) ?? '',
+            definition: def,
+          });
+          break;
+        }
+        case 'update_primitive': {
+          const opts: { name?: string; description?: string; definition?: PrimitiveDefinition } = {};
+          if (a.name !== undefined) opts.name = a.name as string;
+          if (a.description !== undefined) opts.description = a.description as string;
+          if (a.definition !== undefined) opts.definition = a.definition as PrimitiveDefinition;
+          result = primitivesRegistry.updatePrimitive(a.id as number, opts);
+          break;
+        }
+        case 'delete_primitive':
+          primitivesRegistry.deletePrimitive(a.id as number);
+          result = { ok: true };
+          break;
+        case 'get_recipe':
+          result = primitivesRegistry.getRecipe(a.project_type_id as number);
+          break;
+        case 'replace_recipe': {
+          const stepsRaw = a.steps as { primitive_id: number; params: Record<string, string> }[];
+          if (!Array.isArray(stepsRaw)) {
+            throw new Error('replace_recipe: steps must be an array of { primitive_id, params } objects');
+          }
+          result = primitivesRegistry.replaceRecipe(a.project_type_id as number, stepsRaw);
+          break;
+        }
+        case 'append_recipe_step':
+          result = primitivesRegistry.appendStep(
+            a.project_type_id as number,
+            a.primitive_id as number,
+            (a.params as Record<string, string> | undefined) ?? {},
+          );
           break;
 
         default:
