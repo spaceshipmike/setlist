@@ -6,6 +6,16 @@ import { connect, getDbPath, initDb } from './db.js';
 import { Registry } from './registry.js';
 import { InvalidProjectTypeError, RegistryError } from './errors.js';
 import type { ProjectType } from './models.js';
+import { snapshotRecipe } from './recipes/store.js';
+import { walkRecipe, resumeWalk } from './recipes/walk.js';
+import type { ProjectContext } from './recipes/templates.js';
+import type {
+  CleanupLog,
+  RunnerEnvelope,
+  StepResult,
+} from './recipes/runner.js';
+import type { McpToolCaller } from './recipes/mcp-caller.js';
+import type { RecipeSnapshot } from './recipes/types.js';
 
 // spec 0.13 retired 'area_of_focus' — bootstrap only creates 'project' rows now.
 // 'non_code_project' is still accepted for routing to a different pathRoot; it
@@ -64,16 +74,113 @@ export interface BootstrapProjectOpts {
   // spec 0.13: pass-through to Registry.register for area + parent linking
   area?: string | null;
   parent_project?: string | null;
+  /**
+   * Spec 0.28: optional dry-run mode — runs pre-flight + symbolic walk
+   * without touching disk, the registry, or external systems (S148).
+   */
+  dry_run?: boolean;
+  /**
+   * Spec 0.28: optional MCP host caller used by mcp-tool primitives. When
+   * absent and the recipe contains mcp-tool steps, those steps surface
+   * "no host MCP client connected" at pre-flight (S143).
+   */
+  mcp_caller?: McpToolCaller;
+}
+
+/**
+ * Per-step result entry for the BootstrapResult.executed_steps array.
+ * Mirrors the runner's StepResult but pruned to the public surface
+ * (no internal fields like primitive_id).
+ */
+export interface ExecutedStep {
+  position: number;
+  name: string;
+  shape: 'filesystem-op' | 'shell-command' | 'mcp-tool' | 'register-in-registry';
+  status: 'succeeded' | 'failed' | 'skipped' | 'not-run' | 'pending';
+  output?: string;
+  error_output?: string;
 }
 
 export interface BootstrapResult {
   name: string;
   path: string;
   type: ProjectType;
+  /** Convenience flag — true when the git-init built-in ran successfully. */
   git_initialized: boolean;
+  /** Convenience flag — true when the copy-template built-in ran successfully. */
   templates_applied: boolean;
+  /** Convenience flag — true when the update-parent-gitignore built-in ran. */
   parent_gitignore_updated: boolean;
+  /**
+   * Spec 0.28: per-step trace of every primitive that ran in the recipe,
+   * plus the final register-in-registry trailer. Replaces the
+   * boolean-only feedback loop the v0.27 result envelope offered.
+   */
+  executed_steps?: ExecutedStep[];
 }
+
+/**
+ * Spec 0.28: stop-and-report state returned when bootstrap fails mid-run
+ * (S144). The user (or calling agent) chooses Retry / Skip / Abandon and
+ * the engine resumes from the failed step (or cleans up).
+ */
+export interface BootstrapPendingState {
+  /** Marker discriminator — distinguishes from BootstrapResult and pre-flight failures. */
+  kind: 'pending';
+  /** Project name the bootstrap attempt is bound to. */
+  name: string;
+  /** Resolved project path (folder may or may not have been created). */
+  path: string;
+  /** Project type id (from the user-managed project_types table). */
+  project_type_id: number;
+  /** Snapshot of the recipe that was executed (immutable until resolved). */
+  snapshot: RecipeSnapshot;
+  /** Per-step status — same shape as BootstrapResult.executed_steps. */
+  executed_steps: ExecutedStep[];
+  /** Position of the failed step (1-based for surfacing, 0-based here). */
+  failed_at: number;
+  /** Verbatim error output from the failed step. */
+  error_output: string;
+  /** Cleanup log — the data Abandon walks to undo filesystem and git work. */
+  cleanup: CleanupLog;
+  /** Carry the original opts (used by Retry/Skip/Abandon to recover context). */
+  original_opts: BootstrapProjectOpts;
+}
+
+/**
+ * Spec 0.28: pre-flight failure envelope (S143). Returned when at least
+ * one step's pre-flight check fails — no side effects have occurred.
+ */
+export interface BootstrapPreflightFailure {
+  kind: 'pre-flight-failed';
+  name: string;
+  preflight_failures: { position: number; primitive_name: string; reason: string }[];
+}
+
+/**
+ * Spec 0.28: dry-run trace (S148). Per-step symbolic walk with pre-flight
+ * markers; no execution, no side effects.
+ */
+export interface BootstrapDryRunTrace {
+  kind: 'dry-run';
+  name: string;
+  path: string;
+  steps: {
+    position: number;
+    primitive_name: string;
+    shape: 'filesystem-op' | 'shell-command' | 'mcp-tool' | 'register-in-registry';
+    resolved_params: Record<string, string>;
+    preflight_ok: boolean;
+    preflight_reason?: string;
+  }[];
+}
+
+/** Discriminated union returned by bootstrapProject (spec 0.28). */
+export type BootstrapEnvelope =
+  | (BootstrapResult & { kind: 'success' })
+  | BootstrapPendingState
+  | BootstrapPreflightFailure
+  | BootstrapDryRunTrace;
 
 // If the new project's parent directory is itself a git repo with an existing
 // .gitignore, append the project's directory name so the parent repo ignores
@@ -449,5 +556,459 @@ export class Bootstrap {
     }
 
     return null;
+  }
+
+  // -------------------------------------------------------------------------
+  // Spec 0.28: recipe-driven bootstrap.
+  //
+  // bootstrapWithRecipe runs the user-composable recipe attached to a
+  // project type. The recipe is snapshotted at start (S151 — the snapshot
+  // is the recipe-of-record for this attempt; mid-flight edits to the
+  // type's recipe do not affect this attempt's Retry). On success, the
+  // engine runs the structural register-in-registry trailer. On failure,
+  // returns a BootstrapPendingState the caller resolves with retry/skip/
+  // abandon.
+  // -------------------------------------------------------------------------
+
+  /**
+   * Recipe-driven bootstrap (spec 0.28). Drives folder creation, template
+   * copy, git init, parent .gitignore append, and any user-authored steps
+   * through the configured recipe for the project type. Returns a
+   * BootstrapEnvelope: success, pending (failed mid-run, awaiting
+   * Retry/Skip/Abandon), pre-flight failure, or dry-run trace.
+   */
+  async bootstrapWithRecipe(opts: BootstrapProjectOpts): Promise<BootstrapEnvelope> {
+    if (opts.project_type_id === undefined) {
+      throw new RegistryError(
+        'INVALID_INPUT',
+        'bootstrapWithRecipe requires project_type_id (spec 0.28).',
+        'Pass project_type_id from the user-managed project_types table.',
+      );
+    }
+
+    const db = this.open();
+    let typeRow:
+      | { id: number; name: string; default_directory: string; git_init: number; template_directory: string | null }
+      | undefined;
+    try {
+      typeRow = db.prepare(
+        `SELECT id, name, default_directory, git_init, template_directory FROM project_types WHERE id = ?`,
+      ).get(opts.project_type_id) as typeof typeRow;
+    } finally {
+      db.close();
+    }
+    if (!typeRow) throw new InvalidProjectTypeError(opts.project_type_id);
+
+    // Resolve target path the same way the legacy path does.
+    const typeRoot = expandHome(typeRow.default_directory);
+    const targetPath = opts.path_override ?? join(typeRoot, opts.name);
+
+    // Build the project context the runner uses for token resolution.
+    const project: ProjectContext = {
+      name: opts.name,
+      path: targetPath,
+      type: typeRow.name,
+      parent_path: dirname(targetPath),
+      template_directory: typeRow.template_directory,
+    };
+
+    // Snapshot the recipe for this attempt (S151).
+    const conn = this.open();
+    let snapshot: RecipeSnapshot;
+    try {
+      snapshot = snapshotRecipe(conn, opts.project_type_id);
+    } finally {
+      conn.close();
+    }
+
+    // Dry-run path (S148): no side effects, no registration.
+    if (opts.dry_run) {
+      const env = await walkRecipe({
+        snapshot,
+        project,
+        mcp_caller: opts.mcp_caller,
+        dry_run: true,
+      });
+      return {
+        kind: 'dry-run',
+        name: opts.name,
+        path: targetPath,
+        steps: env.steps.map((s) => {
+          const pre = env.preflight.steps.find((p) => p.position === s.position);
+          return {
+            position: s.position,
+            primitive_name: s.primitive_name,
+            shape: s.shape,
+            resolved_params: s.resolved_params,
+            preflight_ok: pre?.ok ?? true,
+            preflight_reason: pre?.reason,
+          };
+        }),
+      };
+    }
+
+    // Pre-flight first — common-sense guard against double-registration.
+    // If the project name is already registered, fail fast before running
+    // the recipe. (The recipe runner does not know about the registry.)
+    const registry = new Registry(this._dbPath);
+    if (registry.getProject(opts.name)) {
+      throw new RegistryError(
+        'DUPLICATE',
+        `A project named '${opts.name}' is already registered.`,
+        `Use update_project() to modify it, or choose a different name.`,
+      );
+    }
+    if (existsSync(targetPath)) {
+      // Surface as pre-flight failure rather than throw — keeps behavior
+      // consistent with how the runner reports filesystem-op failures.
+      return {
+        kind: 'pre-flight-failed',
+        name: opts.name,
+        preflight_failures: [
+          {
+            position: 0,
+            primitive_name: 'create-folder',
+            reason: `target folder already exists: ${targetPath}`,
+          },
+        ],
+      };
+    }
+
+    // Run the recipe.
+    const env = await walkRecipe({
+      snapshot,
+      project,
+      mcp_caller: opts.mcp_caller,
+    });
+
+    if (env.status === 'pre-flight-failed') {
+      return {
+        kind: 'pre-flight-failed',
+        name: opts.name,
+        preflight_failures: env.preflight.steps
+          .filter((s) => !s.ok)
+          .map((s) => ({
+            position: s.position,
+            primitive_name: s.primitive_name,
+            reason: s.reason ?? 'unknown pre-flight failure',
+          })),
+      };
+    }
+
+    if (env.status === 'failed') {
+      return {
+        kind: 'pending',
+        name: opts.name,
+        path: targetPath,
+        project_type_id: opts.project_type_id,
+        snapshot,
+        executed_steps: this._toExecutedSteps(env.steps),
+        failed_at: env.failed_at!,
+        error_output:
+          env.steps.find((s) => s.status === 'failed')?.error_output ?? 'unknown failure',
+        cleanup: env.cleanup,
+        original_opts: opts,
+      };
+    }
+
+    // Success: run the trailer (register-in-registry).
+    return this._finishBootstrap(opts, project, snapshot, env);
+  }
+
+  /**
+   * Resume a pending bootstrap with Retry (S145). Re-runs the failed step
+   * plus all subsequent steps; previously-succeeded steps (including
+   * mcp-tool/shell-command with side effects) are NOT re-invoked.
+   */
+  async retryBootstrap(pending: BootstrapPendingState): Promise<BootstrapEnvelope> {
+    const project: ProjectContext = {
+      name: pending.original_opts.name,
+      path: pending.path,
+      type: pending.snapshot.steps[0]?.primitive ? this._typeName(pending.project_type_id) : '',
+      parent_path: dirname(pending.path),
+      template_directory: this._typeTemplateDir(pending.project_type_id),
+    };
+
+    const env = await resumeWalk({
+      snapshot: pending.snapshot,
+      project,
+      mcp_caller: pending.original_opts.mcp_caller,
+      succeeded_so_far: pending.executed_steps
+        .filter((s) => s.status === 'succeeded')
+        .map((s) => this._toStepResult(s)),
+      resume_from: pending.failed_at,
+    });
+
+    return this._envelopeFromResume(env, pending, project);
+  }
+
+  /**
+   * Resume a pending bootstrap with Skip (S146). The failed step is
+   * marked skipped; the engine continues with the next step.
+   */
+  async skipFailedAndContinue(pending: BootstrapPendingState): Promise<BootstrapEnvelope> {
+    const project: ProjectContext = {
+      name: pending.original_opts.name,
+      path: pending.path,
+      type: this._typeName(pending.project_type_id),
+      parent_path: dirname(pending.path),
+      template_directory: this._typeTemplateDir(pending.project_type_id),
+    };
+
+    const env = await resumeWalk({
+      snapshot: pending.snapshot,
+      project,
+      mcp_caller: pending.original_opts.mcp_caller,
+      succeeded_so_far: pending.executed_steps
+        .filter((s) => s.status === 'succeeded')
+        .map((s) => this._toStepResult(s)),
+      resume_from: pending.failed_at,
+      skip_failed: true,
+    });
+
+    return this._envelopeFromResume(env, pending, project);
+  }
+
+  /**
+   * Resolve a pending bootstrap with Abandon (S147). Undoes the
+   * filesystem and git work the engine itself performed, leaves
+   * external side effects in place, and returns a labelled report.
+   */
+  abandonBootstrap(pending: BootstrapPendingState): {
+    kind: 'abandoned';
+    cleaned_up: string[];
+    left_in_place: string[];
+  } {
+    const cleanedUp: string[] = [];
+    const leftInPlace: string[] = [];
+
+    // Revert parent .gitignore appends first (before removing the folder
+    // — once the folder is gone the gitignore path may not be reachable).
+    for (const append of pending.cleanup.gitignore_appends) {
+      try {
+        writeFileSync(append.path, append.original_content);
+        cleanedUp.push(`Reverted ${append.path}`);
+      } catch (err) {
+        leftInPlace.push(`Could not revert ${append.path}: ${err instanceof Error ? err.message : String(err)}`);
+      }
+    }
+
+    // Remove .git directories the runner inited (defensive — they may
+    // be inside the project folder we're about to remove).
+    for (const repo of pending.cleanup.inited_git_repos) {
+      const gitDir = join(repo, '.git');
+      try {
+        if (existsSync(gitDir)) rmSync(gitDir, { recursive: true, force: true });
+        cleanedUp.push(`Removed git repository at ${repo}`);
+      } catch (err) {
+        leftInPlace.push(`Could not remove git repo at ${repo}: ${err instanceof Error ? err.message : String(err)}`);
+      }
+    }
+
+    // Remove project folders the runner created.
+    for (const folder of pending.cleanup.created_folders) {
+      try {
+        if (existsSync(folder)) rmSync(folder, { recursive: true, force: true });
+        cleanedUp.push(`Removed folder ${folder}`);
+      } catch (err) {
+        leftInPlace.push(`Could not remove ${folder}: ${err instanceof Error ? err.message : String(err)}`);
+      }
+    }
+
+    // External side effects (mcp-tool, shell-command) are NOT undone
+    // (#hard-constraints 4.3 / S147 — engine cannot unilaterally undo
+    // external API calls).
+    for (const ext of pending.cleanup.external_side_effects) {
+      leftInPlace.push(`Left in place: ${ext.label} (clean up manually if needed)`);
+    }
+
+    // Note: register-in-registry never ran for a pending bootstrap, so
+    // no registry row exists to clean up (verified by the contract that
+    // the trailer is the LAST step).
+    return { kind: 'abandoned', cleaned_up: cleanedUp, left_in_place: leftInPlace };
+  }
+
+  // -------------------------------------------------------------------------
+  // Internal helpers for the recipe path.
+  // -------------------------------------------------------------------------
+
+  private _typeName(projectTypeId: number): string {
+    const db = this.open();
+    try {
+      const row = db.prepare(`SELECT name FROM project_types WHERE id = ?`).get(projectTypeId) as
+        | { name: string }
+        | undefined;
+      return row?.name ?? '';
+    } finally {
+      db.close();
+    }
+  }
+
+  private _typeTemplateDir(projectTypeId: number): string | null {
+    const db = this.open();
+    try {
+      const row = db
+        .prepare(`SELECT template_directory FROM project_types WHERE id = ?`)
+        .get(projectTypeId) as { template_directory: string | null } | undefined;
+      return row?.template_directory ?? null;
+    } finally {
+      db.close();
+    }
+  }
+
+  private _toExecutedSteps(steps: StepResult[]): ExecutedStep[] {
+    return steps.map((s) => ({
+      position: s.position,
+      name: s.primitive_name,
+      shape: s.shape,
+      status: s.status as ExecutedStep['status'],
+      output: s.output,
+      error_output: s.error_output,
+    }));
+  }
+
+  private _toStepResult(s: ExecutedStep): StepResult {
+    return {
+      position: s.position,
+      primitive_id: null,
+      primitive_name: s.name,
+      shape: s.shape,
+      status: s.status,
+      resolved_params: {},
+      output: s.output,
+      error_output: s.error_output,
+    };
+  }
+
+  private async _envelopeFromResume(
+    env: RunnerEnvelope,
+    pending: BootstrapPendingState,
+    project: ProjectContext,
+  ): Promise<BootstrapEnvelope> {
+    if (env.status === 'pre-flight-failed') {
+      return {
+        kind: 'pre-flight-failed',
+        name: pending.original_opts.name,
+        preflight_failures: env.preflight.steps
+          .filter((s) => !s.ok)
+          .map((s) => ({
+            position: s.position,
+            primitive_name: s.primitive_name,
+            reason: s.reason ?? 'unknown pre-flight failure',
+          })),
+      };
+    }
+    if (env.status === 'failed') {
+      // Merge the resumed cleanup into the prior cleanup log (folders
+      // already created on the first attempt remain tracked).
+      const merged: CleanupLog = {
+        created_folders: [...pending.cleanup.created_folders, ...env.cleanup.created_folders],
+        inited_git_repos: [...pending.cleanup.inited_git_repos, ...env.cleanup.inited_git_repos],
+        gitignore_appends: [...pending.cleanup.gitignore_appends, ...env.cleanup.gitignore_appends],
+        external_side_effects: [
+          ...pending.cleanup.external_side_effects,
+          ...env.cleanup.external_side_effects,
+        ],
+      };
+      return {
+        kind: 'pending',
+        name: pending.original_opts.name,
+        path: pending.path,
+        project_type_id: pending.project_type_id,
+        snapshot: pending.snapshot,
+        executed_steps: this._toExecutedSteps(env.steps),
+        failed_at: env.failed_at!,
+        error_output:
+          env.steps.find((s) => s.status === 'failed')?.error_output ?? 'unknown failure',
+        cleanup: merged,
+        original_opts: pending.original_opts,
+      };
+    }
+    return this._finishBootstrap(pending.original_opts, project, pending.snapshot, env);
+  }
+
+  /**
+   * Run the structural register-in-registry trailer and assemble the
+   * final BootstrapResult envelope. Called by both the first-attempt
+   * success path and the resume-success path.
+   */
+  private _finishBootstrap(
+    opts: BootstrapProjectOpts,
+    project: ProjectContext,
+    _snapshot: RecipeSnapshot,
+    env: RunnerEnvelope,
+  ): BootstrapEnvelope {
+    const registry = new Registry(this._dbPath);
+    try {
+      registry.register({
+        name: opts.name,
+        type: 'project',
+        status: opts.status ?? 'active',
+        description: opts.description ?? '',
+        goals: opts.goals ?? '',
+        display_name: opts.display_name,
+        paths: [project.path],
+        producer: opts.producer ?? 'bootstrap',
+        area: opts.area ?? undefined,
+        parent_project: opts.parent_project ?? undefined,
+      });
+
+      // Stamp project_type_id (Registry.register doesn't accept it directly).
+      if (opts.project_type_id != null) {
+        const db = this.open();
+        try {
+          db.prepare(
+            `UPDATE projects SET project_type_id = ?, updated_at = datetime('now') WHERE name = ?`,
+          ).run(opts.project_type_id, opts.name);
+        } finally {
+          db.close();
+        }
+      }
+    } catch (err) {
+      // Registration failed — surface as a final failed step (the trailer
+      // becomes the failure point). Cleanup is the caller's call.
+      const trailerIdx = env.steps.length - 1;
+      env.steps[trailerIdx] = {
+        ...env.steps[trailerIdx],
+        status: 'failed',
+        error_output: err instanceof Error ? err.message : String(err),
+      };
+      return {
+        kind: 'pending',
+        name: opts.name,
+        path: project.path,
+        project_type_id: opts.project_type_id!,
+        snapshot: _snapshot,
+        executed_steps: this._toExecutedSteps(env.steps),
+        failed_at: trailerIdx,
+        error_output: err instanceof Error ? err.message : String(err),
+        cleanup: env.cleanup,
+        original_opts: opts,
+      };
+    }
+
+    // Patch the trailer status to succeeded.
+    const trailerIdx = env.steps.length - 1;
+    env.steps[trailerIdx] = { ...env.steps[trailerIdx], status: 'succeeded' };
+
+    // Convenience flags — true when the corresponding built-in ran successfully.
+    const ranSuccessfully = (key: string): boolean =>
+      env.steps.some((s) => {
+        // We can't read primitive_id on the way back from the runner
+        // because the trailer has primitive_id=null; match by primitive_name
+        // against the seeded built-in display names.
+        return s.status === 'succeeded' && s.primitive_name === key;
+      });
+
+    return {
+      kind: 'success',
+      name: opts.name,
+      path: project.path,
+      type: 'project',
+      git_initialized: ranSuccessfully('Git init'),
+      templates_applied: ranSuccessfully('Copy template'),
+      parent_gitignore_updated: ranSuccessfully('Update parent .gitignore'),
+      executed_steps: this._toExecutedSteps(env.steps),
+    };
   }
 }

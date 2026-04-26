@@ -18,7 +18,20 @@ export { discoverPortsInPath, type DiscoveredPort } from './port-discovery.js';
 export { MemoryReflection, type ReflectionResult } from './memory-reflection.js';
 export { scanLocations, applyProposals, type MigrationProposal } from './migration.js';
 export { scanMemories, applyMemoryMigration, type MemoryMigrationProposal, type MemoryMigrationResult } from './migrate-memories.js';
-export { Bootstrap, BootstrapNotConfiguredError, BootstrapFolderExistsError, type BootstrapConfig, type BootstrapProjectOpts, type BootstrapResult } from './bootstrap.js';
+export {
+  Bootstrap,
+  BootstrapNotConfiguredError,
+  BootstrapFolderExistsError,
+  type BootstrapConfig,
+  type BootstrapProjectOpts,
+  type BootstrapResult,
+  // Spec 0.28: recipe-driven bootstrap envelope union.
+  type BootstrapEnvelope,
+  type BootstrapPendingState,
+  type BootstrapPreflightFailure,
+  type BootstrapDryRunTrace,
+  type ExecutedStep,
+} from './bootstrap.js';
 export {
   // Recipe data model (spec 0.28)
   BUILTIN_PRIMITIVE_KEYS,

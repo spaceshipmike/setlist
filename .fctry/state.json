@@ -40,7 +40,7 @@
       "totalChunks": 7
     },
     "chunkProgress": {
-      "completed": 2,
+      "completed": 3,
       "total": 7
     },
     "chunks": [
@@ -81,9 +81,11 @@
       {
         "id": 3,
         "name": "Three primitive shape executors + recipe walker",
-        "status": "running",
+        "status": "completed",
         "startedAt": "2026-04-26T01:00:00Z",
-        "scenarios": ["S142", "S143", "S144", "S152"],
+        "completedAt": "2026-04-26T01:35:00Z",
+        "specVersionAtBuild": "0.28",
+        "scenarios": ["S142", "S143", "S144", "S152", "S153"],
         "sections": ["#bootstrap-primitive-composition", "#rules", "#connections"],
         "files": [
           "packages/core/src/recipes/executors/filesystem.ts",
@@ -95,15 +97,15 @@
       },
       {
         "id": 4,
-        "name": "Per-type recipe binding + bootstrap-time-only evaluation",
-        "status": "planned",
+        "name": "Bootstrap engine wires the recipe runner — S145 + S151 (bootstrap-time-only) + S147 Abandon",
+        "status": "running",
+        "startedAt": "2026-04-26T01:40:00Z",
         "isGate": true,
-        "scenarios": ["S145", "S154"],
+        "scenarios": ["S145", "S147", "S151"],
         "sections": ["#project-bootstrap", "#bootstrap-primitive-composition"],
         "files": [
-          "packages/core/src/project-types/index.ts",
-          "packages/core/src/bootstrap/index.ts",
-          "packages/core/src/recipes/resolver.ts"
+          "packages/core/src/bootstrap.ts",
+          "packages/core/src/index.ts"
         ]
       },
       {
