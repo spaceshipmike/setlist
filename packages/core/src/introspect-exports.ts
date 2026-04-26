@@ -361,6 +361,93 @@ const LIBRARY_EXPORTS_MANIFEST: LibraryExportManifestEntry[] = [
     kind: 'function',
     description: 'Compute the ordered enrichment recipe for a project from its field-presence snapshot. Powers the next_steps array returned by register_project, bootstrap_project, enrich_project, write_fields, and register_capabilities responses.',
   },
+
+  // Spec 0.28: user-composable bootstrap primitives.
+  {
+    name: 'BUILTIN_PRIMITIVE_KEYS',
+    kind: 'constant',
+    description: 'Ordered list of built-in primitive keys (create-folder, copy-template, git-init, update-parent-gitignore) — the four read-only primitives setlist ships with.',
+  },
+  {
+    name: 'rowToPrimitive',
+    kind: 'function',
+    description: 'Convert a SQLite bootstrap_primitives row (definition_json string, is_builtin 0/1) into the parsed public Primitive representation.',
+  },
+  {
+    name: 'rowToRecipeStep',
+    kind: 'function',
+    description: 'Convert a SQLite project_type_recipe_steps row plus its primitive into the parsed public RecipeStep representation.',
+  },
+  {
+    name: 'seedBuiltinPrimitives',
+    kind: 'function',
+    description: 'Idempotently insert the four built-in bootstrap primitives into the bootstrap_primitives table (called on fresh install and on the v13→v14 migration).',
+  },
+  {
+    name: 'seedBuiltinRecipes',
+    kind: 'function',
+    description: 'Bind the seeded built-in primitives to the seeded Code/Non-code project types so out-of-the-box bootstrap reproduces v0.27 behavior. Idempotent — only runs when the type\'s recipe is empty.',
+  },
+  {
+    name: 'listPrimitives',
+    kind: 'function',
+    description: 'List every primitive (built-in first, then custom by name) for the Settings → Primitives panel and the recipe step picker.',
+  },
+  {
+    name: 'getPrimitive',
+    kind: 'function',
+    description: 'Get one primitive by id, with parsed definition; null if not found.',
+  },
+  {
+    name: 'getBuiltinPrimitiveByKey',
+    kind: 'function',
+    description: 'Get a built-in primitive by its stable builtin_key (create-folder, copy-template, git-init, update-parent-gitignore).',
+  },
+  {
+    name: 'createCustomPrimitive',
+    kind: 'function',
+    description: 'Create a user-authored primitive of one of the three closed shapes (filesystem-op, shell-command, mcp-tool).',
+  },
+  {
+    name: 'updateCustomPrimitive',
+    kind: 'function',
+    description: 'Update a custom primitive\'s name, description, or definition. Throws when called on a built-in (built-ins are read-only in shape).',
+  },
+  {
+    name: 'deleteCustomPrimitive',
+    kind: 'function',
+    description: 'Delete a custom primitive. Throws on built-ins, and throws when any recipe step still references the primitive.',
+  },
+  {
+    name: 'countRecipeReferences',
+    kind: 'function',
+    description: 'Count of project-type recipe steps that reference a primitive — used by the UI\'s delete-blocked dialog.',
+  },
+  {
+    name: 'listReferencingTypes',
+    kind: 'function',
+    description: 'Names of the project types whose recipes reference a given primitive — surfaced by the delete-blocked dialog.',
+  },
+  {
+    name: 'getRecipe',
+    kind: 'function',
+    description: 'Get a project type\'s full ordered recipe (user-droppable steps; the register-in-registry trailer is structural and not stored).',
+  },
+  {
+    name: 'replaceRecipe',
+    kind: 'function',
+    description: 'Atomically replace a project type\'s full recipe with a new ordered list — positions are renumbered 0..N-1.',
+  },
+  {
+    name: 'appendRecipeStep',
+    kind: 'function',
+    description: 'Append a new step to the end of a project type\'s recipe at position MAX(position)+1.',
+  },
+  {
+    name: 'snapshotRecipe',
+    kind: 'function',
+    description: 'Take an immutable snapshot of a recipe at bootstrap start — used to honor mid-flight recipe edits without affecting an in-flight Retry.',
+  },
 ];
 
 /**

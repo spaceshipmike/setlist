@@ -4,8 +4,9 @@ import { dirname, join } from 'node:path';
 import { homedir } from 'node:os';
 import { seedAreas as seedAreasFromModule, SEED_AREAS } from './areas.js';
 import { seedProjectTypes } from './project-types.js';
+import { seedBuiltinPrimitives, seedBuiltinRecipes } from './recipes/store.js';
 
-export const SCHEMA_VERSION = 13;
+export const SCHEMA_VERSION = 14;
 
 /**
  * Legacy alias kept for any callers that still expect the constant name.
@@ -257,6 +258,37 @@ CREATE TABLE IF NOT EXISTS project_digests (
     PRIMARY KEY (project_id, digest_kind)
 );
 
+-- v14 (spec 0.28): user-composable bootstrap primitives.
+-- bootstrap_primitives is the registry of primitives the recipe runner knows
+-- how to execute. Built-ins (is_builtin=1) are setlist-shipped and read-only
+-- in shape; custom rows are user-authored. The four built-ins are seeded by
+-- seedBuiltinPrimitives() (in recipes/store.ts).
+CREATE TABLE IF NOT EXISTS bootstrap_primitives (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL UNIQUE,
+    description TEXT NOT NULL DEFAULT '',
+    shape TEXT NOT NULL CHECK (shape IN ('filesystem-op', 'shell-command', 'mcp-tool')),
+    is_builtin INTEGER NOT NULL DEFAULT 0,
+    builtin_key TEXT UNIQUE,
+    definition_json TEXT NOT NULL,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL
+);
+
+-- v14 (spec 0.28): per-type recipe steps. Each row is one ordered invocation
+-- of a primitive, with bound parameter values stored as a JSON object.
+-- The register-in-registry trailer is structural and is NOT stored here.
+CREATE TABLE IF NOT EXISTS project_type_recipe_steps (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    project_type_id INTEGER NOT NULL REFERENCES project_types(id) ON DELETE CASCADE,
+    position INTEGER NOT NULL,
+    primitive_id INTEGER NOT NULL REFERENCES bootstrap_primitives(id) ON DELETE RESTRICT,
+    params_json TEXT NOT NULL DEFAULT '{}',
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL,
+    UNIQUE(project_type_id, position)
+);
+
 -- Indexes
 CREATE INDEX IF NOT EXISTS idx_projects_type ON projects(type);
 CREATE INDEX IF NOT EXISTS idx_projects_status ON projects(status);
@@ -286,6 +318,9 @@ CREATE INDEX IF NOT EXISTS idx_sources_memory ON memory_sources(memory_id);
 CREATE INDEX IF NOT EXISTS idx_enrichment_memory ON enrichment_log(memory_id, engine_kind);
 CREATE INDEX IF NOT EXISTS idx_memories_pinned ON memories(is_pinned, status);
 CREATE INDEX IF NOT EXISTS idx_project_digests_project ON project_digests(project_id);
+CREATE INDEX IF NOT EXISTS idx_bootstrap_primitives_builtin ON bootstrap_primitives(is_builtin, builtin_key);
+CREATE INDEX IF NOT EXISTS idx_recipe_steps_type ON project_type_recipe_steps(project_type_id, position);
+CREATE INDEX IF NOT EXISTS idx_recipe_steps_primitive ON project_type_recipe_steps(primitive_id);
 -- v13 project_type_id index is created after ensureColumns runs in case the
 -- projects table was created by an older schema (no project_type_id column).
 `;
@@ -711,6 +746,25 @@ function upgradeSchema(db: Database.Database): void {
     db.prepare(`UPDATE projects SET type = 'project', updated_at = datetime('now') WHERE type = 'area_of_focus'`).run();
   }
 
+  if (currentVersion >= 13 && currentVersion < 14) {
+    // v13 → v14: user-composable bootstrap primitives (spec 0.28).
+    //
+    // The bootstrap_primitives and project_type_recipe_steps tables are
+    // already created by SCHEMA_SQL above (CREATE IF NOT EXISTS). This
+    // migration block:
+    //   1. Seeds the four built-in primitives (create-folder, copy-template,
+    //      git-init, update-parent-gitignore).
+    //   2. Binds the seeded built-ins to the two seeded project types
+    //      (Code project, Non-code project) so existing recipes reproduce
+    //      v0.27 behavior.
+    //
+    // Idempotent: seedBuiltinPrimitives uses INSERT OR IGNORE keyed on
+    // builtin_key; seedBuiltinRecipes only binds when the type's recipe is
+    // currently empty, so user customizations are preserved.
+    seedBuiltinPrimitives(db);
+    seedBuiltinRecipes(db);
+  }
+
   db.prepare("INSERT OR REPLACE INTO schema_meta (key, value) VALUES ('schema_version', ?)").run(String(SCHEMA_VERSION));
 }
 
@@ -917,6 +971,10 @@ export function initDb(dbPath?: string): string {
     seedProjectTypes(db);
     seedFieldCatalog(db);
     seedTemplates(db);
+    // Spec 0.28: seed built-in primitives + bind to seeded recipes so a fresh
+    // install reproduces v0.27 bootstrap behavior out of the box.
+    seedBuiltinPrimitives(db);
+    seedBuiltinRecipes(db);
   } finally {
     db.close();
   }

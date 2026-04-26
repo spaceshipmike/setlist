@@ -2,7 +2,7 @@
   "versions": {
     "external": {
       "type": "external",
-      "current": "0.4.0",
+      "current": "0.4.1",
       "propagationTargets": [
         {
           "file": "package.json",
@@ -17,7 +17,7 @@
     },
     "spec": {
       "type": "internal",
-      "current": "0.27",
+      "current": "0.28",
       "propagationTargets": [
         {
           "file": ".fctry/spec.md",

@@ -2495,3 +2495,347 @@ Validates: `#portfolio-memory` (2.12), `#capability-declarations` (2.11) — Cli
 - An agent comparing its own working directory against the project list returned by `portfolio_brief` can detect "I'm not yet registered" — `enrichment_gaps` is for registered-but-incomplete; on-disk-but-unregistered is the agent's own deduction, not setlist's annotation
 
 Difficulty: medium
+
+---
+
+## Bootstrap Primitives (S139–S154)
+
+These scenarios cover the user-composable bootstrap primitives evolve (spec 0.27): per-type
+recipes built from three primitive shapes (`filesystem-op`, `shell-command`, `mcp-tool`),
+authored in a peer Settings panel, with combined dry-run + pre-flight, stop-and-report-resumable
+failure semantics, and a non-draggable `register-in-registry` trailer at the end of every recipe.
+The four user-droppable hardcoded steps (create-folder, copy-template, git-init,
+update-parent-gitignore) are reframed as built-in primitives in the same registry the user
+composes from. `register-in-registry` remains a setlist-internal step. Per-call recipe
+overrides are explicitly deferred.
+
+## S139: Authoring a Custom MCP-Tool Primitive {#s139}
+**Given** the desktop app is open, the user has connected at least one MCP host client (e.g., Claude Code) that has registered tools with setlist's session, and the user has opened Settings → Primitives
+**When** the user clicks `+ Add primitive`, picks shape `mcp-tool`, selects `mcp__asst-tools__todoist_create_task` from the tool dropdown, gives the primitive a name like "Create Todoist project", maps the tool's `content` parameter to the template `{project.name}`, and clicks Save
+**Then** the new primitive appears in the Primitives list and is immediately available in the project-types recipe step picker, with its shape badge and parameter summary.
+
+Validates: `#project-bootstrap` (2.13), `#desktop-app` (2.14)
+
+**Satisfaction criteria:**
+- The Primitives panel renders as a peer Settings section sibling to Areas, Project types, View, Bootstrap, Updates
+- The `+ Add primitive` flow asks first for a shape (`filesystem-op`, `shell-command`, `mcp-tool`) and only then surfaces shape-appropriate parameter fields
+- For shape `mcp-tool`, the tool dropdown is populated from the host MCP client's currently-registered tool list (S154) and includes a search/filter affordance when many tools are present
+- The parameter map UI shows one row per parameter declared by the chosen tool, each with a free-text value field that accepts plain literals and template tokens like `{project.name}`, `{project.path}`, `{project.type}`
+- Saving with a missing required parameter blocks the save and inline-flags the missing field; saving with all required parameters present persists the primitive and returns the user to the Primitives list
+- The saved primitive renders with name, shape badge (`mcp-tool`), and a collapsed parameter summary (e.g., `content: {project.name}`)
+- Opening Project types → any type → Edit → Steps → `+ Add step` shows the new primitive in the picker, grouped under `mcp-tool`
+- The primitive can be edited and re-saved from the Primitives panel; deleting it is allowed only when no project type's recipe currently references it (or the delete dialog warns and lists referencing types)
+- No setlist-managed credential field appears anywhere in the authoring flow — auth lives in the MCP server, not in setlist
+
+Difficulty: medium
+
+---
+
+## S140: Built-in Primitives Are Read-Only in Shape, Bindable in Parameters {#s140}
+**Given** the Primitives panel and the project-types step picker on a fresh install
+**When** the user inspects the four built-in primitives (`create-folder`, `copy-template`, `git-init`, `update-parent-gitignore`) in the Primitives panel and drops one into a project type's recipe
+**Then** the built-in's shape and underlying command cannot be edited, but its parameters remain bindable per recipe.
+
+Validates: `#project-bootstrap` (2.13), `#project-types` (3.2)
+
+**Satisfaction criteria:**
+- The Primitives panel lists the four built-ins alongside any custom primitives, each with a "Built-in" indicator distinct from custom rows
+- Opening a built-in primitive's editor shows its shape and underlying command/operation as read-only fields — no Edit affordance is presented for those fields
+- The Delete affordance is absent or disabled for built-ins; attempting to delete via any path (keyboard, context menu) is rejected with a clear "Built-in primitive cannot be deleted" message
+- In the Project types step picker, the built-ins appear grouped (e.g., under "Built-in") with their shape badges (`filesystem-op` for three, `shell-command` for `git-init`)
+- Dropping a built-in into a recipe creates a recipe step whose parameters are editable for that recipe (e.g., `create-folder`'s path is bound to `{project.path}` by default but can be overridden)
+- Two project types can each have a recipe step referencing the same built-in primitive with different bound parameters — the primitive itself is not mutated by either binding
+- The mapping from existing hardcoded behavior to built-ins is faithful: `create-folder` and `copy-template` and `update-parent-gitignore` are `filesystem-op`; `git-init` is `shell-command`; their default parameter bindings reproduce the pre-evolve behavior when used in the seeded recipes
+
+Difficulty: medium
+
+---
+
+## S141: Composing a Recipe in the Project Types Editor {#s141}
+**Given** Settings → Project types → Code → Edit, which now exposes a Steps section in addition to the existing default_directory / git_init / template_directory / color fields
+**When** the user adds a step via `+ Add step`, drags an existing step to a new position, removes a step via its `[×]` button, and saves
+**Then** the recipe persists with the new ordering and step set, and reopening the editor shows the saved order.
+
+Validates: `#project-types` (3.2), `#desktop-app` (2.14)
+
+**Satisfaction criteria:**
+- The Steps section appears within the Project types editor, between the existing per-type fields and the dialog's Save action
+- Each step renders as a single row: drag handle on the left, primitive name, shape badge, collapsed parameter summary, remove button on the right (`[≡] Create folder · path: ~/Code/{project.name} [×]` or equivalent)
+- `+ Add step` at the bottom of the list opens the primitive picker grouped by shape (Built-in / filesystem-op / shell-command / mcp-tool); selecting one appends it as the new last user-draggable row
+- Drag-and-drop reordering works smoothly on the user's input device (mouse and trackpad), with a visible drop indicator; dropped position is reflected immediately in the row order
+- Clicking a step row expands it inline to edit parameters; collapsing returns to the summary view
+- The remove button on a user-droppable step removes it from the recipe with a confirmation that names the step, with no other side effects
+- Save persists the full ordered recipe; Cancel discards all changes since open; reopening the editor restores the saved order exactly
+- An empty recipe (zero user-droppable steps) is allowed and saves without error — the trailer (S150) still renders
+- The Steps section is independent per project type — editing Code's recipe does not affect Non-code's recipe
+
+Difficulty: medium
+
+---
+
+## S142: Bootstrap Runs the Recipe in User-Defined Order {#s142}
+**Given** a Code project type whose recipe has been customised to: `create-folder`, a custom `shell-command` step ("direnv allow"), `copy-template`, `git-init`, a custom `mcp-tool` step ("Create Todoist project"), `update-parent-gitignore`
+**When** the user (or an agent) bootstraps a new Code project named `space-tracker-v2`
+**Then** the engine executes each step in the configured order, then runs the internal `register-in-registry` trailer last, with built-ins and custom steps invoked through the same engine.
+
+Validates: `#project-bootstrap` (2.13), `#capabilities` (3.1)
+
+**Satisfaction criteria:**
+- The bootstrap result reports the steps executed in the recipe's saved order, followed by `register-in-registry` as the final step
+- All six user-droppable steps run before `register-in-registry` runs — no interleaving, no parallelization
+- Built-in steps and user-authored steps invoke the same engine path: success/failure reporting, parameter resolution, and pre-flight checks behave identically across origins
+- Reordering the recipe in Settings between two bootstraps produces the corresponding reordered execution on the second bootstrap (no caching of step order at first invocation)
+- A successful bootstrap registers the project in setlist with the project type's identity (S03), produces a folder at the resolved `{project.path}`, has a git repo initialized, has the parent .gitignore updated, and creates the Todoist project — each side-effect attributable to its step in the trace
+- The result envelope's existing fields (`name`, `path`, `type`, `git_initialized`, `templates_applied`, `parent_gitignore_updated`) remain populated when the corresponding built-in steps are present in the recipe; absent when those steps were removed from the recipe
+- A new field on the result envelope summarises every step in the executed recipe (name, shape, status: succeeded / failed / skipped) so callers don't need to introspect built-in flags to understand custom-step outcomes
+- A recipe that omits `git-init` and `update-parent-gitignore` (e.g., a Non-code type) still completes successfully without those side-effects
+
+Difficulty: hard
+
+---
+
+## S143: Pre-flight Validation Surfaces Foreseeable Failures Before Any Step Runs {#s143}
+**Given** a recipe whose steps reference an MCP server that is not currently connected to the host session and a `shell-command` that references a binary not on PATH
+**When** the user (or an agent) initiates `bootstrap_project` (or clicks Bootstrap in the desktop app)
+**Then** pre-flight validation runs first and reports each foreseeable failure with the offending step labelled, before any step executes — and no folder is created, no git is initialized, no Todoist project is made.
+
+Validates: `#project-bootstrap` (2.13), `#hard-constraints` (4.3), `#error-handling` (2.5.1)
+
+**Satisfaction criteria:**
+- The bootstrap response (or dialog) surfaces a list like `Pre-flight failed: Step 4: Create Todoist project — MCP server 'asst-tools' not connected; Step 5: direnv allow — binary 'direnv' not on PATH` with each step identified by its 1-based index in the user's recipe and its primitive name
+- Pre-flight checks at minimum: required MCP servers reachable, referenced shell binaries present on PATH, template paths exist on disk, and parameters resolve to non-empty strings (no unresolved `{project.name}` substitution failures)
+- When pre-flight fails, no filesystem mutation, no git mutation, and no MCP-tool / shell-command side-effect occurs — the project folder is not created, the parent .gitignore is unchanged, and `register-in-registry` is not called
+- The user can close the dialog, fix the issue (e.g., start the MCP server, install the binary), and re-run Bootstrap — the second attempt re-runs pre-flight from scratch with no carry-over state from the first attempt
+- Pre-flight passes do not guarantee step success — a server may go down between pre-flight and execution; that case is handled by mid-run failure semantics (S144), not pre-flight
+- Pre-flight runs the same checks regardless of whether the call originated from the desktop dialog, the MCP `bootstrap_project` tool, or the CLI — there is one engine path
+- Pre-flight does not call any mcp-tool side-effects or shell-commands — it is a connectivity/presence check, not a trial run
+
+Difficulty: hard
+
+---
+
+## S144: Mid-Run Failure: Stop and Report with Resume Options {#s144}
+**Given** a recipe whose `mcp-tool` step (Create Todoist project) succeeds, whose subsequent `filesystem-op` step (copy-template) fails because a template file does not exist
+**When** the bootstrap engine reaches the failed step
+**Then** execution halts at the failed step, the project is NOT registered in setlist, and the user is shown which steps succeeded, which one failed, and three options: Retry, Skip, Abandon.
+
+Validates: `#project-bootstrap` (2.13), `#error-handling` (2.5.1), `#rules` (3.3)
+
+**Satisfaction criteria:**
+- The failure surface explicitly states "Step N of M failed: <primitive name>: <reason>" with N being the 1-based index in the user's recipe
+- Succeeded prior steps are listed by name in the order they ran (e.g., "Created folder ~/Code/space-tracker-v2", "Created Todoist project 'space-tracker-v2'")
+- Remaining (not-yet-run) steps are listed by name in the order they would have run, including the `register-in-registry` trailer
+- The response makes it explicit that the project is NOT yet registered in setlist — the trailer did not execute
+- Three controls are offered with clear labels: Retry, Skip, Abandon — and a brief one-line description of each
+- No filesystem, git, or external side-effect is rolled back automatically — succeeded steps stay in place pending the user's choice
+- The same surface is reachable from the MCP `bootstrap_project` tool result (structured, parseable) and the desktop dialog (rendered) — both share the contract
+- Until the user picks a resolution, the registry contains no row for this bootstrap attempt — `list_projects` does not show a half-registered entry
+
+Difficulty: hard
+
+---
+
+## S145: Retry Resumes from the Failed Step Without Re-running Successes {#s145}
+**Given** a stop-and-report state from S144 with a succeeded `mcp-tool` step (Create Todoist project), a succeeded `shell-command` step, and a failed `filesystem-op` step
+**When** the user fixes the underlying cause (e.g., creates the missing template file) and clicks Retry
+**Then** the engine re-runs only the failed step plus all subsequent remaining steps, including the `register-in-registry` trailer — succeeded `mcp-tool` and `shell-command` steps do NOT re-run.
+
+Validates: `#project-bootstrap` (2.13), `#rules` (3.3)
+
+**Satisfaction criteria:**
+- The Retry trace shows the failed step transitioning from failed → succeeded (or failed again) and each subsequent step running fresh
+- The previously-succeeded `mcp-tool` step is NOT invoked a second time — no second Todoist project is created, no duplicate API call is observable
+- The previously-succeeded `shell-command` step is NOT re-executed — no duplicate side-effect from a non-idempotent command
+- The previously-succeeded `filesystem-op` steps are also not re-run on Retry (S151 covers their idempotence properties separately)
+- If Retry succeeds, the trailer runs and the project is registered with full identity and area assignment
+- If Retry fails again on the same step (or a later step), the user returns to the same stop-and-report surface with succeeded/failed/remaining updated to reflect the new state — Retry is repeatable
+- The Retry action is rejected (or surfaced as no-op) if the user has materially edited the project type's recipe between the original failure and Retry — the engine treats the in-flight bootstrap as bound to the recipe snapshot it started with
+
+Difficulty: hard
+
+---
+
+## S146: Skip Continues Past the Failed Step {#s146}
+**Given** the stop-and-report state from S144
+**When** the user clicks Skip
+**Then** the failed step is marked skipped, the engine continues with the remaining steps including the `register-in-registry` trailer, and the project is registered.
+
+Validates: `#project-bootstrap` (2.13), `#rules` (3.3)
+
+**Satisfaction criteria:**
+- Skip marks the failed step's status as `skipped` (distinct from `failed` and `succeeded`) in the executed-recipe summary
+- The engine then runs each remaining step in order, ending with `register-in-registry`
+- The final result is a registered project — `list_projects` returns the new entry, `get_project` returns its identity
+- The result envelope reports the skipped step by name and reason — the user has a record of what was bypassed
+- If a later step fails after Skip, the user returns to the stop-and-report surface again with the same three options for the new failed step
+- Skip on a `filesystem-op` that produces a value later steps depend on (e.g., copy-template feeding a path other steps reference) does not retroactively rerun anything; downstream steps proceed and either succeed against partial state or fail naturally — the engine does not reason about cross-step dependencies
+- Skipping the very last user-droppable step still allows the trailer to run
+
+Difficulty: medium
+
+---
+
+## S147: Abandon Cleans Up Filesystem and Git, Lists External Side-Effects Honestly {#s147}
+**Given** the stop-and-report state from S144 — folder created, git initialized, Todoist project created, copy-template failed
+**When** the user clicks Abandon
+**Then** setlist removes the folder it created, removes the git repo it initialized, leaves the Todoist project in place, and shows the user a labelled list of what was and was not cleaned up.
+
+Validates: `#project-bootstrap` (2.13), `#error-handling` (2.5.1), `#hard-constraints` (4.3)
+
+**Satisfaction criteria:**
+- Abandon removes the project folder if it was created during this bootstrap attempt (not if it pre-existed and was reused)
+- Abandon removes the .git directory inside the folder if `git-init` ran successfully during this bootstrap attempt
+- Abandon reverts the parent .gitignore mutation if `update-parent-gitignore` succeeded — restoring the file to its pre-bootstrap content
+- Abandon does NOT call any compensating MCP tool, does NOT delete the Todoist project, does NOT undo any `shell-command` side-effects
+- The cleanup report shows two clearly labelled lists: "Cleaned up:" (folder, git repo, parent gitignore) and "Left in place — clean up manually if needed:" (Created Todoist project 'space-tracker-v2', any other external side-effects by step name)
+- The project is never registered in setlist as a result of Abandon — `register-in-registry` does not run
+- After Abandon, the registry contains no row for the abandoned bootstrap attempt and no orphaned area / parent linkages
+- Abandon is irreversible from the same surface — the user must re-initiate Bootstrap to try again
+
+Difficulty: hard
+
+---
+
+## S148: Dry Run from Bootstrap Dialog Produces a Per-Step Trace {#s148}
+**Given** the desktop Bootstrap dialog with a project name typed in (e.g., `space-tracker-v2`) and a project type selected
+**When** the user clicks `Dry run` instead of Bootstrap
+**Then** the engine produces a per-step trace using the typed name, with resolved parameters and a pre-flight ✓/✗ marker per step, and executes nothing.
+
+Validates: `#project-bootstrap` (2.13)
+
+**Satisfaction criteria:**
+- The Bootstrap dialog has a `Dry run` button visually distinct from (and adjacent to) the primary Bootstrap action
+- Dry run produces a list of every step in the recipe in execution order, plus the `register-in-registry` trailer
+- Each line shows: the step's primitive name, its resolved parameters (template tokens substituted with the typed project name, e.g., `~/Code/space-tracker-v2` not `~/Code/{project.name}`), and a pre-flight marker `✓` or `✗ — <reason>`
+- For `mcp-tool` steps, the trace shows the tool name and the resolved parameter object (e.g., `Would call mcp__asst-tools__todoist_create_task with: { content: "space-tracker-v2" } (pre-flight ✗ — server not connected)`)
+- For `shell-command` steps, the trace shows the resolved command line that would execute (e.g., `Would run: git init && git add -A && git commit -m 'initial' (pre-flight ✓)`)
+- For `filesystem-op` steps, the trace shows the resolved operation (e.g., `Would create folder: ~/Code/space-tracker-v2 (pre-flight ✓)`)
+- No side-effect occurs: no folder is created, no git is initialized, no MCP tool is invoked, no shell command is executed, no registry row is created
+- The trace is copyable as text from the dialog (selectable and copyable, or via an explicit Copy button)
+- Pre-flight ✗ entries do not abort the trace generation — every step is rendered regardless of upstream pre-flight failures, so the user sees the whole picture
+
+Difficulty: medium
+
+---
+
+## S149: Preview Recipe from Type Editor Uses an Example Placeholder {#s149}
+**Given** the Project types editor with a recipe in mid-edit (steps added, reordered, parameters bound) and no project name in scope
+**When** the user clicks `Preview recipe`
+**Then** the engine produces the same kind of per-step trace as S148, substituting `<example-name>` (or equivalent placeholder) for `{project.name}` so the user can sanity-check the recipe without needing a real project to bootstrap.
+
+Validates: `#project-types` (3.2), `#project-bootstrap` (2.13)
+
+**Satisfaction criteria:**
+- The `Preview recipe` button appears in the Steps section of the Project types editor, near the recipe list
+- The trace renders with `<example-name>` (or a documented sentinel like `<example>`) substituted everywhere `{project.name}` appears, and a documented sentinel for `{project.path}` and any other supported template tokens
+- Pre-flight ✓/✗ markers are computed and shown the same way as S148 — connectivity and presence checks run, even though substitution is symbolic
+- The trace renders even with unsaved recipe edits in the editor — preview reflects the current in-memory recipe, not the last saved version
+- No side-effect occurs (same guarantees as S148)
+- Preview includes the `register-in-registry` trailer in the trace, with a marker indicating it would register a project named `<example-name>`
+- Recipes with parameter resolution failures (e.g., a template token that doesn't exist) surface those failures in the trace as pre-flight ✗ rather than crashing
+
+Difficulty: medium
+
+---
+
+## S150: Register-in-Registry Trailer Is Visible but Non-Draggable {#s150}
+**Given** the Project types editor's Steps section for any project type
+**When** the user views the recipe
+**Then** a small differentiated row reading `[final, automatic] Register in setlist` is rendered at the bottom of the Steps list, below all user-droppable rows, and the user cannot move, remove, or duplicate it.
+
+Validates: `#project-types` (3.2), `#project-bootstrap` (2.13), `#desktop-app` (2.14)
+
+**Satisfaction criteria:**
+- The trailer row appears at the bottom of every project type's Steps list — including types with zero user-droppable steps
+- The trailer is visually differentiated from user-droppable rows (e.g., dimmed, italicised, or rendered in a system-row style) and labelled `[final, automatic] Register in setlist` (or wording equivalent in intent)
+- The trailer has no drag handle — attempting to drag it does nothing
+- The trailer has no remove button — `[×]` is absent or disabled
+- The trailer cannot be selected, duplicated, or reordered relative to itself by any input gesture (keyboard, drag, context menu)
+- The primitive picker (`+ Add step`) does NOT list `register-in-registry` as a droppable primitive — the user cannot add another instance
+- The trailer renders identically across all types (Code, Non-code, custom user-defined types) — its presence is structural, not configurable
+- The trailer appears in the Preview recipe trace (S149) and the Dry run trace (S148) at the bottom of the step list
+
+Difficulty: easy
+
+---
+
+## S151: Recipe Edits Do Not Retroactively Affect Bootstrapped Projects {#s151}
+**Given** a project `alpha` was bootstrapped yesterday with the Code recipe `[create-folder, copy-template, git-init, update-parent-gitignore]`, and today the user edits the Code recipe to add a `Create Todoist project` step
+**When** the user looks at `alpha` in the registry, runs any setlist command against `alpha`, or restarts the desktop app
+**Then** nothing about `alpha` changes — no Todoist project is created for `alpha`, no re-run is triggered, no flag indicates "out of date"; the recipe edit only affects projects bootstrapped after the edit is saved.
+
+Validates: `#project-types` (3.2), `#project-bootstrap` (2.13), `#rules` (3.3)
+
+**Satisfaction criteria:**
+- `get_project('alpha')` returns the same identity, fields, and area as before the recipe edit — no fields are dropped, added, or rewritten as a side-effect of the recipe change
+- No MCP tool, shell command, or filesystem mutation is invoked against `alpha` as a result of saving the recipe edit
+- The desktop app does not show `alpha` as out-of-date, stale, or in need of re-bootstrap — there is no UI affordance suggesting historical projects should be replayed against the new recipe
+- Bootstrapping a brand-new Code project after the recipe edit DOES include the new `Create Todoist project` step
+- The audit trail of `alpha` (if any is kept) reflects the recipe that ran at original bootstrap time, not the current recipe — recipes are evaluated at bootstrap time, not at query time
+- Deleting a step from the recipe similarly does not "undo" anything from previously-bootstrapped projects (e.g., removing `update-parent-gitignore` from the Code recipe does not remove `alpha` from the parent .gitignore)
+
+Difficulty: medium
+
+---
+
+## S152: Shell-Command Primitive Runs in Project Folder with User Environment {#s152}
+**Given** a Code recipe with a custom `shell-command` step `direnv allow` added after `create-folder`, with the step's working directory bound to `{project.path}`
+**When** the user bootstraps a new Code project
+**Then** the `direnv allow` step runs as a child process inside the new project's folder, inheriting the user's normal shell environment (PATH, keychain access, gh auth, etc.) — setlist does not sandbox it.
+
+Validates: `#project-bootstrap` (2.13), `#hard-constraints` (4.3), `#connections` (3.4)
+
+**Satisfaction criteria:**
+- The `shell-command` step's working directory is the resolved `{project.path}` (e.g., `~/Code/<name>`), not setlist's own working directory
+- The child process inherits the environment variables present in the user's interactive shell at the time setlist was launched — at minimum PATH, HOME, and any user-configured tool-specific vars (e.g., GH_TOKEN, OP_SERVICE_ACCOUNT_TOKEN if set in the user's shell)
+- Tools that rely on the user's environment work as the user would expect: `direnv`, `gh`, `op`, `git` all have access to their normal credential surfaces (keychain, op CLI session, ssh-agent)
+- Setlist does NOT inject any setlist-managed credentials into the environment — there is no setlist secrets store
+- Setlist does NOT strip or scrub environment variables — the user's shell environment passes through transparently
+- Setlist does NOT escalate privileges — the child process runs as the user's UID with the user's permissions
+- Stdout and stderr from the child process are captured and surfaced in the bootstrap trace (and the stop-and-report surface on failure) — not silently discarded
+- The exit code determines step success/failure: zero is success, non-zero is failure → triggers S144's stop-and-report
+- The user-authored command string is rendered verbatim in the recipe row's parameter summary (S141) so the user can audit what would run before they save
+
+Difficulty: hard
+
+---
+
+## S153: Filesystem-Op Idempotence on Retry {#s153}
+**Given** a recipe whose `filesystem-op` step `create-folder` succeeded, and a later `mcp-tool` step failed (S144), and the user clicks Retry
+**When** the engine resumes from the failed step
+**Then** the previously-succeeded `create-folder` step is NOT re-executed by the engine — and the spec is explicit that even if it were re-executed, `filesystem-op` semantics are idempotent (mkdir-p; copy-template detects existing files; gitignore append is line-presence-checked).
+
+Validates: `#project-bootstrap` (2.13), `#rules` (3.3)
+
+**Satisfaction criteria:**
+- On Retry-from-failed-step, the engine's executed-recipe summary shows previously-succeeded `filesystem-op` steps as `succeeded (not re-run)` — distinguishable from re-executed states
+- No second `mkdir` syscall is observable for a step whose first invocation succeeded
+- The spec's rules section (or scenario evidence) declares: `create-folder` uses mkdir-p semantics — re-running on an existing folder is a no-op (no error, no clobber)
+- `copy-template` detects already-present files (by path or content hash) and does not overwrite them on a hypothetical re-run
+- `update-parent-gitignore` checks line presence before appending — re-running on a parent .gitignore that already contains the entry is a no-op
+- A user who manually edits the parent .gitignore between the original run and Retry does not have their edits clobbered
+- These idempotence guarantees apply to user-authored `filesystem-op` primitives as well — the spec defines the contract, the engine enforces it for built-ins, and authoring a new `filesystem-op` documents the requirement (a custom non-idempotent fs op is the user's risk to take, and the spec is explicit about that)
+- `shell-command` and `mcp-tool` shapes are NOT subject to the idempotence rule — they are explicitly not re-run on Retry (S145) precisely because the engine cannot assume idempotence for arbitrary commands or external API calls
+
+Difficulty: medium
+
+---
+
+## S154: MCP-Tool Palette Enumerates Session-Registered Tools {#s154}
+**Given** the Primitives panel's `+ Add primitive` flow with shape `mcp-tool` chosen, and a host MCP client (Claude Code or Claude Desktop) currently connected to setlist's MCP server with several tools registered in this session (including third-party MCP server tools and setlist's own tools)
+**When** the user opens the tool dropdown
+**Then** the dropdown lists tools that the host client has registered and made visible to setlist's session — not setlist's own internal tools as a privileged source — and the user can pick any one.
+
+Validates: `#capability-declarations` (2.11), `#project-bootstrap` (2.13), `#connections` (3.4)
+
+**Satisfaction criteria:**
+- The tool dropdown lists tools whose origin is the current MCP session — i.e., tools the host MCP client has registered and surfaced to setlist
+- Each tool entry shows the tool's fully-qualified name (e.g., `mcp__asst-tools__todoist_create_task`) and, where available, its short description for disambiguation
+- Setlist's own MCP tools (e.g., `mcp__setlist__register_project`) are not given any privileged or implicit position — they appear if and only if they are visible to the same session enumeration mechanism
+- A tool that becomes available later in the session (e.g., the user starts a new MCP server mid-session) appears in the dropdown without requiring a setlist app restart
+- A tool that becomes unavailable (server disconnected) is either filtered from the dropdown or rendered with an unavailable indicator — but a primitive previously authored against it is not silently deleted; it surfaces a pre-flight ✗ at bootstrap time (S143)
+- The dropdown does not invent, mock, or hardcode any tool that is not actually registered with the session — the source of truth is the live registry, not a static list maintained by setlist
+- A non-Claude MCP client that registers tools through the same protocol surface produces a dropdown indistinguishable from a Claude-Code-driven session — no client-detection branching
+- Authoring against a tool that the spec considers ambient (e.g., setlist's own `register_project`) is technically possible but explicitly out-of-scope for v1 — recipes are not the place to invoke setlist's own registration; the trailer covers it
+
+Difficulty: hard

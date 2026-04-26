@@ -1,1 +1,145 @@
-{}
+{
+  "currentCommand": "execute",
+  "completedSteps": ["state-owner-scan", "executor-plan"],
+  "specVersion": "0.28",
+  "readinessSummary": {
+    "aligned": 39,
+    "ready-to-build": 9,
+    "draft": 0,
+    "undocumented": 0,
+    "partial": 0,
+    "totalSections": 48,
+    "scenariosTotal": 154,
+    "scenariosSatisfied": 138,
+    "scenariosUnsatisfied": 16,
+    "newWork": {
+      "section": "bootstrap-primitive-composition",
+      "scenarios": "S139-S154",
+      "schema": "v13 (live) -> v14 (planned, not migrated)",
+      "blockers": "none — clean slate, recipe runner needs schema, library, MCP, and UI work"
+    }
+  },
+  "sectionReadiness": {
+    "project-bootstrap": "ready-to-build",
+    "desktop-app": "ready-to-build",
+    "rules": "ready-to-build",
+    "connections": "ready-to-build",
+    "entities": "ready-to-build",
+    "scope": "ready-to-build",
+    "hard-constraints": "ready-to-build",
+    "schema": "ready-to-build",
+    "capability-declarations": "aligned"
+  },
+  "buildRun": {
+    "status": "running",
+    "startedAt": "2026-04-26T00:00:00Z",
+    "lastCheckpoint": "2026-04-26T00:00:00Z",
+    "plan": {
+      "specVersion": "0.28",
+      "phase": "User-composable bootstrap primitives (S139-S154)",
+      "totalChunks": 7
+    },
+    "chunkProgress": {
+      "completed": 0,
+      "total": 7
+    },
+    "chunks": [
+      {
+        "id": 1,
+        "name": "Schema v14 + recipe data model",
+        "status": "running",
+        "startedAt": "2026-04-26T00:05:00Z",
+        "isGate": true,
+        "scenarios": ["S139"],
+        "sections": ["#schema", "#bootstrap-primitive-composition", "#entities"],
+        "files": [
+          "packages/core/src/db.ts",
+          "packages/core/src/recipes/types.ts",
+          "packages/core/src/recipes/store.ts",
+          "packages/core/src/index.ts"
+        ]
+      },
+      {
+        "id": 2,
+        "name": "Built-in primitive registry",
+        "status": "planned",
+        "scenarios": ["S140", "S141", "S153"],
+        "sections": ["#bootstrap-primitive-composition", "#project-bootstrap"],
+        "files": [
+          "packages/core/src/recipes/builtins/create-directory.ts",
+          "packages/core/src/recipes/builtins/git-init.ts",
+          "packages/core/src/recipes/builtins/copy-template.ts",
+          "packages/core/src/recipes/builtins/register-in-registry.ts",
+          "packages/core/src/recipes/builtins/claim-port.ts",
+          "packages/core/src/bootstrap/runner.ts"
+        ]
+      },
+      {
+        "id": 3,
+        "name": "Three primitive shape executors",
+        "status": "planned",
+        "scenarios": ["S142", "S143", "S144"],
+        "sections": ["#bootstrap-primitive-composition", "#rules", "#connections"],
+        "files": [
+          "packages/core/src/recipes/executors/filesystem.ts",
+          "packages/core/src/recipes/executors/shell.ts",
+          "packages/core/src/recipes/executors/mcp.ts",
+          "packages/core/src/recipes/runner.ts"
+        ]
+      },
+      {
+        "id": 4,
+        "name": "Per-type recipe binding + bootstrap-time-only evaluation",
+        "status": "planned",
+        "isGate": true,
+        "scenarios": ["S145", "S154"],
+        "sections": ["#project-bootstrap", "#bootstrap-primitive-composition"],
+        "files": [
+          "packages/core/src/project-types/index.ts",
+          "packages/core/src/bootstrap/index.ts",
+          "packages/core/src/recipes/resolver.ts"
+        ]
+      },
+      {
+        "id": 5,
+        "name": "Combined dry-run + pre-flight",
+        "status": "planned",
+        "scenarios": ["S146", "S147"],
+        "sections": ["#bootstrap-primitive-composition", "#project-bootstrap"],
+        "files": [
+          "packages/core/src/recipes/preflight.ts",
+          "packages/core/src/bootstrap/index.ts",
+          "packages/mcp/src/tools/bootstrap_project.ts"
+        ]
+      },
+      {
+        "id": 6,
+        "name": "Stop-and-report-resumable failure (Retry/Skip/Abandon)",
+        "status": "planned",
+        "scenarios": ["S148", "S149", "S150"],
+        "sections": ["#bootstrap-primitive-composition", "#rules", "#hard-constraints"],
+        "files": [
+          "packages/core/src/recipes/resume-state.ts",
+          "packages/core/src/recipes/cleanup.ts",
+          "packages/core/src/bootstrap/runner.ts",
+          "packages/mcp/src/tools/bootstrap_project.ts",
+          "packages/cli/src/commands/bootstrap.ts"
+        ]
+      },
+      {
+        "id": 7,
+        "name": "Settings panel for recipe authoring",
+        "status": "planned",
+        "scenarios": ["S151", "S152"],
+        "sections": ["#desktop-app", "#bootstrap-primitive-composition"],
+        "files": [
+          "packages/app/src/components/settings/RecipesPanel.tsx",
+          "packages/app/src/components/settings/RecipeEditor.tsx",
+          "packages/app/src/components/settings/StepList.tsx",
+          "packages/app/src/components/settings/SettingsView.tsx",
+          "packages/app/src/ipc/recipes.ts"
+        ]
+      }
+    ]
+  }
+}

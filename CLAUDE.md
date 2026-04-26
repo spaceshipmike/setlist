@@ -13,7 +13,7 @@ Running system: Schema v13 (adds `project_types` as a user-managed table, replac
 This project is built and maintained using the fctry spec-driven workflow.
 
 - **Spec:** `.fctry/spec.md` — the complete natural-language specification
-- **Scenarios:** `.fctry/scenarios.md` — 134 end-to-end scenarios defining behavioral satisfaction
+- **Scenarios:** `.fctry/scenarios.md` — 154 end-to-end scenarios defining behavioral satisfaction
 - **Config:** `.fctry/config.json` — version registry (external 0.2.7, spec 0.26)
 - **State:** `.fctry/state.json` — current workflow state
 
@@ -124,7 +124,7 @@ Every project in the registry should be discoverable and understandable by agent
 | File | Purpose |
 |------|---------|
 | spec.md | NLSpec v2 — the complete specification |
-| scenarios.md | Holdout scenario set (134 scenarios) |
+| scenarios.md | Holdout scenario set (154 scenarios) |
 | config.json | Version registry |
 | state.json | Current workflow state |
 | interview-state.md | Interview completion record |
@@ -169,11 +169,12 @@ Scenarios in `.fctry/scenarios.md` define the behavioral contract. Key categorie
 - **S128-S131:** User-managed areas (CRUD in Settings, delete-block-with-projects, label-only renames preserve memory routing, curated 12-preset color palette)
 - **S132-S134:** Legacy `area_of_focus` removed, area-name validation against live table, Settings panel structure (Areas → Project types → View → Bootstrap → Updates) — supersedes S41/S71/S77
 - **S135-S138:** Client-independent agent onboarding (server `instructions` on initialize, `next_steps` arrays in registration responses, `setlist://docs/onboarding` MCP resource, `portfolio_brief` enrichment-gap annotations) — token-efficient pointer-shaped surfaces, MCP-native so any conforming client onboards a new project without bespoke integration
+- **S139-S154:** User-composable bootstrap primitives (per-type recipes, three primitive shapes — `filesystem-op` / `shell-command` / `mcp-tool`, peer Settings panel for authoring, existing 5 hardcoded steps refactored into the registry as built-ins, non-draggable `register-in-registry` trailer, combined dry-run + pre-flight, stop-and-report-resumable failure with Retry/Skip/Abandon, honest abandon cleanup, recipes evaluated at bootstrap time only)
 
 <!-- compact-instructions
 Preserve during auto-compaction:
 - Spec: .fctry/spec.md (Setlist NLSpec at 0.26; port history in §1.5)
-- Scenarios: .fctry/scenarios.md (134 scenarios, S01-S134)
+- Scenarios: .fctry/scenarios.md (154 scenarios, S01-S154)
 - Config: .fctry/config.json (external 0.2.7, spec 0.26)
 - State: .fctry/state.json (current workflow step)
 - Key constraint: Spec 0.26 shipped through v0.3.6 — areas user-managed (CRUD, seeded defaults), project types first-class (default_directory, git_init, template_directory), Home view has column visibility/density/sort persistence/landing view, Cmd-, opens Settings; schema v13 live

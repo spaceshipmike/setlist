@@ -17,13 +17,13 @@ describe('Schema Initialization (S01)', () => {
     rmSync(tmpDir, { recursive: true, force: true });
   });
 
-  it('creates the database with schema v8', () => {
+  it('creates the database with the current schema version', () => {
     initDb(dbPath);
     const db = connect(dbPath);
     try {
       const meta = db.prepare("SELECT value FROM schema_meta WHERE key = 'schema_version'").get() as { value: string };
       expect(meta.value).toBe(String(SCHEMA_VERSION));
-      expect(SCHEMA_VERSION).toBe(13);
+      expect(SCHEMA_VERSION).toBe(14);
     } finally {
       db.close();
     }

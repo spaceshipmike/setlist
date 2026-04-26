@@ -19,6 +19,42 @@ export { MemoryReflection, type ReflectionResult } from './memory-reflection.js'
 export { scanLocations, applyProposals, type MigrationProposal } from './migration.js';
 export { scanMemories, applyMemoryMigration, type MemoryMigrationProposal, type MemoryMigrationResult } from './migrate-memories.js';
 export { Bootstrap, BootstrapNotConfiguredError, BootstrapFolderExistsError, type BootstrapConfig, type BootstrapProjectOpts, type BootstrapResult } from './bootstrap.js';
+export {
+  // Recipe data model (spec 0.28)
+  BUILTIN_PRIMITIVE_KEYS,
+  type BuiltinPrimitiveKey,
+  type PrimitiveShape,
+  type PrimitiveDefinition,
+  type FilesystemOpDefinition,
+  type ShellCommandDefinition,
+  type McpToolDefinition,
+  type Primitive,
+  type PrimitiveRow,
+  type RecipeStep,
+  type RecipeStepRow,
+  type Recipe,
+  type RecipeSnapshot,
+} from './recipes/types.js';
+export {
+  rowToPrimitive,
+  rowToRecipeStep,
+  seedBuiltinPrimitives,
+  seedBuiltinRecipes,
+  listPrimitives,
+  getPrimitive,
+  getBuiltinPrimitiveByKey,
+  createCustomPrimitive,
+  updateCustomPrimitive,
+  deleteCustomPrimitive,
+  countRecipeReferences,
+  listReferencingTypes,
+  getRecipe,
+  replaceRecipe,
+  appendRecipeStep,
+  snapshotRecipe,
+  type CreatePrimitiveOpts,
+  type UpdatePrimitiveOpts,
+} from './recipes/store.js';
 export { HealthAssessor, HEALTH_CACHE_TTL_MS, type HealthTier, type HealthDimension, type DimensionResult, type HealthAssessment, type PortfolioHealth } from './health.js';
 export { computeProjectVersion, listProjectDocuments, type ProjectVersion } from './project-version.js';
 export { introspectLibraryExports } from './introspect-exports.js';
