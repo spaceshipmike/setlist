@@ -195,3 +195,48 @@ Append-only structured lessons from builds. The State Owner manages maturation.
 **Anti-pattern:** Rendering all columns and hiding via `display: none` — wastes layout work and complicates header alignment.
 **Context:** Project list with 5 toggleable columns.
 **Outcome:** Headers and rows stay aligned with no extra plumbing.
+
+### 2026-04-26T03:55:00Z | #bootstrap-primitive-composition (2.13)
+
+**Status:** candidate | **Confidence:** 1
+**Helpful:** 0 | **Harmful:** 0
+**Agent:** executor
+**Trigger:** retry-success
+**Component:** core
+**Severity:** medium
+**Tags:** shell-builtins, preflight, path-lookup, false-positive
+**Rule:** When pre-flight checks "is this binary on PATH?" for a shell command, the builtins exclusion list MUST cover at minimum: `exit`, `true`, `false`, `eval`, `exec`, `read`, `shift`, `break`, `continue`, `declare`, `local`, `readonly`, plus standard control flow. Test fixtures that use `exit N` to simulate failure will tank pre-flight without these.
+**Evidence:** Build of S139-S154; recipes-executors.test.ts test cases ("halts on first failure", "Retry resumes", "Skip continues") all failed with `pre-flight-failed` because `exit` was not whitelisted; fixed in shell.ts firstBinary().
+**Anti-pattern:** Treating shell builtins as binaries-on-PATH and looking them up via `which`-style lookup. Builtins by definition don't have a binary file.
+**Context:** PATH-presence pre-flight check on the first executable token of a command string.
+**Outcome:** Without the expanded builtins set, any test simulating a failing shell command via `exit N` mistakenly fails pre-flight before the executor runs.
+
+### 2026-04-26T03:55:30Z | #project-bootstrap (2.13)
+
+**Status:** candidate | **Confidence:** 1
+**Helpful:** 0 | **Harmful:** 0
+**Agent:** executor
+**Trigger:** tech-stack-pattern
+**Component:** core
+**Severity:** medium
+**Tags:** discriminated-union, backward-compat, runtime-feature-flag
+**Rule:** When extending an existing surface with a new behavior path, return a discriminated union (`{ kind: 'success' } | { kind: 'pending' } | { kind: 'pre-flight-failed' } | { kind: 'dry-run' }`) rather than overloading the existing return type with optional fields. Keep the legacy method working unchanged; route to the new path inside the public dispatcher when the feature flag (here: project_type_id with non-empty recipe) is satisfied. This preserves all existing tests and lets new tests assert on `result.kind` for clarity.
+**Evidence:** Bootstrap class spec 0.28: `bootstrapProject` (legacy sync) + `bootstrapWithRecipe` (new async, returns BootstrapEnvelope union). MCP server's bootstrap_project routes by checking recipe presence. All 14 backward-compat tests pass unchanged.
+**Anti-pattern:** Adding `pending: PendingState | undefined` to the existing BootstrapResult — turns every caller into a kind-check that's actually checking for a magic undefined.
+**Context:** Adding the recipe runner alongside the v0.27 single-path bootstrap.
+**Outcome:** Zero existing callers broke; new tests are crisp because the `kind` field is a real discriminator.
+
+### 2026-04-26T03:56:00Z | #capability-declarations (2.11)
+
+**Status:** candidate | **Confidence:** 1
+**Helpful:** 0 | **Harmful:** 0
+**Agent:** executor
+**Trigger:** failure-rearchitect
+**Component:** core
+**Severity:** high
+**Tags:** introspect-exports, manifest, drift, test-failure
+**Rule:** When adding new exports to `packages/core/src/index.ts`, ALWAYS update `packages/core/src/introspect-exports.ts` LIBRARY_EXPORTS_MANIFEST in the same change. The introspect-exports test asserts byte-level parity — every runtime export must have a manifest entry, every manifest entry must be a runtime export. Forgetting this fails 5 different self-registration tests across 3 test files.
+**Evidence:** Chunk 1 of the spec 0.28 build initially exported recipe types from index.ts without updating the manifest; introspect-exports.test.ts and library-import-checks failed. Resolution was a single edit appending entries to LIBRARY_EXPORTS_MANIFEST.
+**Anti-pattern:** Treating the manifest as something the test can derive — it can't, by design (TS type-only exports aren't reflected in the runtime module object, so the manifest must be hand-maintained).
+**Context:** Library has a hand-maintained capability manifest that the MCP server reads at startup to self-register library exports. Tests enforce parity.
+**Outcome:** Skipping this step always breaks the build at the test phase, never silently. The fix is mechanical (append entries to the array) but easy to forget.
