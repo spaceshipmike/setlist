@@ -2,7 +2,7 @@
   "versions": {
     "external": {
       "type": "external",
-      "current": "0.5.0",
+      "current": "0.5.1",
       "propagationTargets": [
         {
           "file": "package.json",
@@ -67,7 +67,7 @@
     "freshAudit": "codex",
     "localPrefilter": "oss"
   },
-  "formatVersion": "0.85.0",
+  "formatVersion": "0.85.2",
   "evaluation": {
     "trials": 3,
     "passThreshold": 2,

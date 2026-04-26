@@ -25,5 +25,9 @@
       "specStatus": "stable"
     }
   },
-  "buildRun": null
+  "buildRun": null,
+  "upgradeApplied": {
+    "from": "0.85.0",
+    "to": "0.85.2"
+  }
 }
