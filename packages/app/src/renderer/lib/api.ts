@@ -36,6 +36,57 @@ export interface ProjectTypeRow {
   updated_at: number;
 }
 
+// Spec 0.28: bootstrap primitives + recipes.
+export type PrimitiveShape = 'filesystem-op' | 'shell-command' | 'mcp-tool';
+
+export interface FilesystemOpDefinition {
+  shape: 'filesystem-op';
+  operation: 'create-folder' | 'copy-template' | 'append-to-file';
+  defaults?: Record<string, string>;
+}
+
+export interface ShellCommandDefinition {
+  shape: 'shell-command';
+  command: string;
+  workingDirectory?: string;
+}
+
+export interface McpToolDefinition {
+  shape: 'mcp-tool';
+  toolName: string;
+  defaults?: Record<string, string>;
+}
+
+export type PrimitiveDefinition = FilesystemOpDefinition | ShellCommandDefinition | McpToolDefinition;
+
+export interface Primitive {
+  id: number;
+  name: string;
+  description: string;
+  shape: PrimitiveShape;
+  is_builtin: boolean;
+  builtin_key: string | null;
+  definition: PrimitiveDefinition;
+  created_at: number;
+  updated_at: number;
+}
+
+export interface RecipeStep {
+  id: number;
+  project_type_id: number;
+  position: number;
+  primitive_id: number;
+  primitive: Primitive;
+  params: Record<string, string>;
+  created_at: number;
+  updated_at: number;
+}
+
+export interface Recipe {
+  project_type_id: number;
+  steps: RecipeStep[];
+}
+
 /** Curated 12-color palette for areas and project types. Mirrors core/AREA_COLOR_PALETTE. */
 export const AREA_COLOR_PALETTE: readonly string[] = [
   '#3b82f6', '#ec4899', '#10b981', '#ef4444', '#f59e0b', '#a855f7',
@@ -252,6 +303,22 @@ const api = {
   }) => window.setlist.updateProjectType(id, patch) as Promise<ProjectTypeRow>,
   deleteProjectType: (id: number) =>
     window.setlist.deleteProjectType(id) as Promise<{ ok: boolean }>,
+
+  // ── Bootstrap primitives + recipes (spec 0.28) ────────────────
+  listPrimitives: () => window.setlist.listPrimitives() as Promise<Primitive[]>,
+  getPrimitiveById: (id: number) => window.setlist.getPrimitiveById(id) as Promise<Primitive | null>,
+  createPrimitive: (opts: { name: string; description?: string; definition: PrimitiveDefinition }) =>
+    window.setlist.createPrimitive(opts) as Promise<Primitive>,
+  updatePrimitive: (id: number, opts: { name?: string; description?: string; definition?: PrimitiveDefinition }) =>
+    window.setlist.updatePrimitive(id, opts) as Promise<Primitive>,
+  deletePrimitive: (id: number) => window.setlist.deletePrimitive(id) as Promise<{ ok: boolean }>,
+  primitiveReferences: (id: number) =>
+    window.setlist.primitiveReferences(id) as Promise<{ count: number; types: string[] }>,
+  getRecipe: (projectTypeId: number) => window.setlist.getRecipe(projectTypeId) as Promise<Recipe>,
+  replaceRecipe: (projectTypeId: number, steps: { primitive_id: number; params: Record<string, string> }[]) =>
+    window.setlist.replaceRecipe(projectTypeId, steps) as Promise<Recipe>,
+  appendRecipeStep: (projectTypeId: number, primitiveId: number, params: Record<string, string>) =>
+    window.setlist.appendRecipeStep(projectTypeId, primitiveId, params) as Promise<RecipeStep>,
 
   assessHealth: (name?: string, opts?: { fresh?: boolean }) =>
     window.setlist.assessHealth(name, opts) as Promise<HealthAssessment | PortfolioHealth>,

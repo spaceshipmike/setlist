@@ -40,7 +40,7 @@
       "totalChunks": 7
     },
     "chunkProgress": {
-      "completed": 5,
+      "completed": 6,
       "total": 7
     },
     "chunks": [
@@ -126,8 +126,10 @@
       {
         "id": 6,
         "name": "CLI surface for primitives/recipes + onboarding update",
-        "status": "running",
+        "status": "completed",
         "startedAt": "2026-04-26T02:55:00Z",
+        "completedAt": "2026-04-26T03:10:00Z",
+        "specVersionAtBuild": "0.28",
         "scenarios": [],
         "sections": ["#bootstrap-primitive-composition", "#capability-declarations", "#desktop-app"],
         "files": [
@@ -139,15 +141,17 @@
       {
         "id": 7,
         "name": "Settings panel for recipe authoring",
-        "status": "planned",
-        "scenarios": ["S151", "S152"],
+        "status": "running",
+        "startedAt": "2026-04-26T03:15:00Z",
+        "scenarios": ["S139-UI", "S140-UI", "S141", "S150"],
         "sections": ["#desktop-app", "#bootstrap-primitive-composition"],
         "files": [
-          "packages/app/src/components/settings/RecipesPanel.tsx",
-          "packages/app/src/components/settings/RecipeEditor.tsx",
-          "packages/app/src/components/settings/StepList.tsx",
-          "packages/app/src/components/settings/SettingsView.tsx",
-          "packages/app/src/ipc/recipes.ts"
+          "packages/app/src/main/ipc.ts",
+          "packages/app/src/preload/index.ts",
+          "packages/app/src/renderer/lib/api.ts",
+          "packages/app/src/renderer/components/PrimitivesSection.tsx",
+          "packages/app/src/renderer/components/RecipeStepsList.tsx",
+          "packages/app/src/renderer/views/SettingsView.tsx"
         ]
       }
     ]

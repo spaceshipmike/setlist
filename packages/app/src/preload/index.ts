@@ -126,6 +126,21 @@ const api = {
   }) => ipcRenderer.invoke('projectTypes:update', id, patch),
   deleteProjectType: (id: number) => ipcRenderer.invoke('projectTypes:delete', id),
 
+  // Bootstrap primitives + recipes (spec 0.28)
+  listPrimitives: () => ipcRenderer.invoke('primitives:list'),
+  getPrimitiveById: (id: number) => ipcRenderer.invoke('primitives:get', id),
+  createPrimitive: (opts: { name: string; description?: string; definition: unknown }) =>
+    ipcRenderer.invoke('primitives:create', opts),
+  updatePrimitive: (id: number, opts: { name?: string; description?: string; definition?: unknown }) =>
+    ipcRenderer.invoke('primitives:update', id, opts),
+  deletePrimitive: (id: number) => ipcRenderer.invoke('primitives:delete', id),
+  primitiveReferences: (id: number) => ipcRenderer.invoke('primitives:references', id),
+  getRecipe: (projectTypeId: number) => ipcRenderer.invoke('recipes:get', projectTypeId),
+  replaceRecipe: (projectTypeId: number, steps: { primitive_id: number; params: Record<string, string> }[]) =>
+    ipcRenderer.invoke('recipes:replace', projectTypeId, steps),
+  appendRecipeStep: (projectTypeId: number, primitiveId: number, params: Record<string, string>) =>
+    ipcRenderer.invoke('recipes:append', projectTypeId, primitiveId, params),
+
   // Auto-Update (#auto-update)
   getUpdateStatus: () =>
     ipcRenderer.invoke('getUpdateStatus'),

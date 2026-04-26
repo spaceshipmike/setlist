@@ -2,7 +2,11 @@
 // @fctry: #auto-update
 import type { IpcMain } from 'electron';
 import { app, dialog, BrowserWindow } from 'electron';
-import { Registry, MemoryStore, MemoryRetrieval, Bootstrap, HealthAssessor } from '@setlist/core';
+import {
+  Registry, MemoryStore, MemoryRetrieval, Bootstrap, HealthAssessor,
+  PrimitivesRegistry,
+  type PrimitiveDefinition,
+} from '@setlist/core';
 import { getChannel, setChannel, getLastCheck, type UpdateChannel } from './prefs.js';
 import {
   applyChannel,
@@ -19,6 +23,7 @@ function isDev(): boolean {
 
 let registry: Registry | null = null;
 let healthAssessor: HealthAssessor | null = null;
+let primitivesRegistry: PrimitivesRegistry | null = null;
 
 function getRegistry(): Registry {
   if (!registry) registry = new Registry();
@@ -28,6 +33,11 @@ function getRegistry(): Registry {
 function getHealth(): HealthAssessor {
   if (!healthAssessor) healthAssessor = new HealthAssessor(getRegistry().dbPath);
   return healthAssessor;
+}
+
+function getPrimitivesRegistry(): PrimitivesRegistry {
+  if (!primitivesRegistry) primitivesRegistry = new PrimitivesRegistry(getRegistry().dbPath);
+  return primitivesRegistry;
 }
 
 export function registerIpcHandlers(ipcMain: IpcMain): void {
@@ -279,4 +289,41 @@ export function registerIpcHandlers(ipcMain: IpcMain): void {
     reg.deleteProjectType(id);
     return { ok: true };
   });
+
+  // ── Bootstrap primitives + recipes (spec 0.28) ───────────────
+
+  const pr = getPrimitivesRegistry();
+
+  ipcMain.handle('primitives:list', () => pr.listPrimitives());
+  ipcMain.handle('primitives:get', (_e, id: number) => pr.getPrimitive(id));
+  ipcMain.handle(
+    'primitives:create',
+    (_e, opts: { name: string; description?: string; definition: PrimitiveDefinition }) =>
+      pr.createPrimitive({ ...opts, description: opts.description ?? '' }),
+  );
+  ipcMain.handle(
+    'primitives:update',
+    (_e, id: number, opts: { name?: string; description?: string; definition?: PrimitiveDefinition }) =>
+      pr.updatePrimitive(id, opts),
+  );
+  ipcMain.handle('primitives:delete', (_e, id: number) => {
+    pr.deletePrimitive(id);
+    return { ok: true };
+  });
+  ipcMain.handle('primitives:references', (_e, id: number) => ({
+    count: pr.countReferences(id),
+    types: pr.listReferencingTypes(id),
+  }));
+
+  ipcMain.handle('recipes:get', (_e, projectTypeId: number) => pr.getRecipe(projectTypeId));
+  ipcMain.handle(
+    'recipes:replace',
+    (_e, projectTypeId: number, steps: { primitive_id: number; params: Record<string, string> }[]) =>
+      pr.replaceRecipe(projectTypeId, steps),
+  );
+  ipcMain.handle(
+    'recipes:append',
+    (_e, projectTypeId: number, primitiveId: number, params: Record<string, string>) =>
+      pr.appendStep(projectTypeId, primitiveId, params),
+  );
 }

@@ -13,6 +13,7 @@ import { UpdatesSection } from '../components/UpdatesSection';
 import { AreasSection } from '../components/AreasSection';
 import { ProjectTypesSection } from '../components/ProjectTypesSection';
 import { ViewSection } from '../components/ViewSection';
+import { PrimitivesSection } from '../components/PrimitivesSection';
 
 interface SettingsViewProps {
   onBack: () => void;
@@ -169,7 +170,10 @@ export function SettingsView({ onBack }: SettingsViewProps) {
       {/* 2. Project types */}
       <ProjectTypesSection onError={flashError} onSuccess={flashSuccess} />
 
-      {/* 3. View */}
+      {/* 3. Primitives (spec 0.28) */}
+      <PrimitivesSection onError={flashError} onSuccess={flashSuccess} />
+
+      {/* 4. View */}
       <ViewSection />
 
       {/* 4. Bootstrap */}

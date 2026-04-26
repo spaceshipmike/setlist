@@ -9,6 +9,7 @@ import api, { type ProjectTypeRow, type ProjectSummary, AREA_COLOR_PALETTE } fro
 import { useProjectTypes } from '../hooks/useProjectTypes';
 import { ColorPalette } from './ColorPalette';
 import { ReassignModal } from './ReassignModal';
+import { RecipeStepsList } from './RecipeStepsList';
 
 interface Props {
   onError?: (msg: string) => void;
@@ -235,6 +236,16 @@ function TypeForm({ row, onCancel, onSave }: TypeFormProps) {
           <span className="block text-xs font-medium text-[var(--color-text-secondary)] mb-2">Color (optional)</span>
           <ColorPalette selected={color} onSelect={setColor} />
         </div>
+
+        {row && (
+          <div className="mb-5 pt-4 border-t border-[var(--color-border)]">
+            <span className="block text-xs font-semibold uppercase tracking-wider text-[var(--color-text-secondary)] mb-1">Steps</span>
+            <span className="block text-xs text-[var(--color-text-tertiary)] mb-2">
+              The bootstrap recipe for this project type — primitives that run in order when a new project is bootstrapped.
+            </span>
+            <RecipeStepsList projectTypeId={row.id} onError={(msg) => alert(msg)} />
+          </div>
+        )}
 
         <div className="flex justify-end gap-2">
           <button
