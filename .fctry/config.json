@@ -7,6 +7,22 @@
         {
           "file": "package.json",
           "field": "version"
+        },
+        {
+          "file": "packages/core/package.json",
+          "field": "version"
+        },
+        {
+          "file": "packages/mcp/package.json",
+          "field": "version"
+        },
+        {
+          "file": "packages/cli/package.json",
+          "field": "version"
+        },
+        {
+          "file": "packages/app/package.json",
+          "field": "version"
         }
       ],
       "incrementRules": {
