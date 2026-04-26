@@ -40,7 +40,7 @@
       "totalChunks": 7
     },
     "chunkProgress": {
-      "completed": 4,
+      "completed": 5,
       "total": 7
     },
     "chunks": [
@@ -113,27 +113,27 @@
       {
         "id": 5,
         "name": "MCP surface — primitives/recipes/bootstrap-envelope tools + S154 tool palette",
-        "status": "running",
+        "status": "completed",
         "startedAt": "2026-04-26T02:20:00Z",
+        "completedAt": "2026-04-26T02:50:00Z",
+        "specVersionAtBuild": "0.28",
         "scenarios": ["S148", "S149", "S150", "S154"],
         "sections": ["#bootstrap-primitive-composition", "#project-bootstrap", "#capability-declarations"],
         "files": [
-          "packages/mcp/src/server.ts",
-          "packages/mcp/src/onboarding.ts"
+          "packages/mcp/src/server.ts"
         ]
       },
       {
         "id": 6,
-        "name": "Stop-and-report-resumable failure (Retry/Skip/Abandon)",
-        "status": "planned",
-        "scenarios": ["S148", "S149", "S150"],
-        "sections": ["#bootstrap-primitive-composition", "#rules", "#hard-constraints"],
+        "name": "CLI surface for primitives/recipes + onboarding update",
+        "status": "running",
+        "startedAt": "2026-04-26T02:55:00Z",
+        "scenarios": [],
+        "sections": ["#bootstrap-primitive-composition", "#capability-declarations", "#desktop-app"],
         "files": [
-          "packages/core/src/recipes/resume-state.ts",
-          "packages/core/src/recipes/cleanup.ts",
-          "packages/core/src/bootstrap/runner.ts",
-          "packages/mcp/src/tools/bootstrap_project.ts",
-          "packages/cli/src/commands/bootstrap.ts"
+          "packages/cli/src/index.ts",
+          "packages/cli/src/commands.ts",
+          "packages/mcp/src/onboarding.ts"
         ]
       },
       {

@@ -91,7 +91,7 @@ under replace semantics. Each capability is an object:
   \`requires_auth\` (boolean), \`invocation_model\` (e.g. "synchronous",
   "stream", "background"), \`audience\` (e.g. "agent", "human", "internal").
 
-Setlist itself self-registers all 47 of its MCP tools as capabilities at server
+Setlist itself self-registers all 56 of its MCP tools as capabilities at server
 startup; any project that wants to be discoverable across the ecosystem should
 do the same.
 
@@ -107,6 +107,38 @@ discovery and reasoning, not marketing copy:
   productivity hub."
 - Non-code projects only need \`short_description\` — skip \`tech_stack\` and
   \`patterns\`.
+
+## Bootstrapping new projects with recipes
+
+\`bootstrap_project\` runs a per-type **recipe** — an ordered list of
+**primitives** that creates the folder, copies templates, inits git,
+and runs any user-authored steps. Three primitive shapes:
+
+- \`filesystem-op\` — create-folder, copy-template, append-to-file
+- \`shell-command\` — verbatim command in the new project's folder
+- \`mcp-tool\` — delegates to a tool registered with the host MCP client
+
+The four built-ins (create-folder, copy-template, git-init,
+update-parent-gitignore) are read-only in shape but bindable in
+parameters per recipe. Custom primitives are user-authored via
+\`create_primitive\`.
+
+Discovery + control:
+
+- \`list_primitives\` / \`get_primitive\` — see what's available
+- \`get_recipe\` / \`replace_recipe\` / \`append_recipe_step\` — per-type
+  recipe edits
+- \`bootstrap_project\` with \`dry_run: true\` — symbolic walk with
+  pre-flight ✓/✗ markers, no side effects
+- \`bootstrap_project\` returns \`kind: 'pending'\` + \`token\` on mid-run
+  failure; pass token + \`action: 'retry' | 'skip' | 'abandon'\` to
+  \`bootstrap_resolve\` to continue. Retry resumes from the failed step
+  WITHOUT re-running succeeded mcp-tool/shell-command steps. Abandon
+  undoes filesystem and git work; external side effects are listed
+  honestly as "left in place."
+
+Recipe edits are **bootstrap-time-only** — projects already
+bootstrapped are not retroactively affected by recipe changes.
 
 ## When to enrich
 

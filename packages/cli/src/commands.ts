@@ -73,4 +73,28 @@ export const CLI_COMMAND_DEFINITIONS: CliCommandDefinition[] = [
     description: 'Launch or focus the Setlist desktop app (the control panel).',
     usage: 'setlist ui',
   },
+  {
+    name: 'primitives',
+    description: 'List, inspect, or manage bootstrap primitives (built-in and user-authored).',
+    usage: 'setlist primitives <list|show|delete> [--id <n>]',
+    subcommands: [
+      { name: 'list', description: 'List every bootstrap primitive (built-ins first, then custom).', usage: 'setlist primitives list' },
+      { name: 'show', description: 'Show one primitive\'s name, shape, description, and parsed definition.', usage: 'setlist primitives show --id <n>' },
+      { name: 'delete', description: 'Delete a custom primitive (built-ins and referenced primitives are blocked).', usage: 'setlist primitives delete --id <n>' },
+    ],
+  },
+  {
+    name: 'recipe',
+    description: 'List or inspect per-type bootstrap recipes.',
+    usage: 'setlist recipe <list|show> [--type <id>]',
+    subcommands: [
+      { name: 'list', description: 'List recipes for every project type with step counts.', usage: 'setlist recipe list' },
+      { name: 'show', description: 'Show the ordered steps + the structural register-in-registry trailer for one project type.', usage: 'setlist recipe show --type <id>' },
+    ],
+  },
+  {
+    name: 'bootstrap',
+    description: 'Bootstrap a new project end-to-end (or dry-run the recipe to see what would happen).',
+    usage: 'setlist bootstrap <name> --type <project_type_id> [--dry-run] [--area <name>] [--parent <name>]',
+  },
 ];

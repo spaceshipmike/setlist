@@ -1,5 +1,8 @@
 #!/usr/bin/env node
-import { Registry, initDb, scanLocations, applyProposals, scanMemories, applyMemoryMigration } from '@setlist/core';
+import {
+  Registry, initDb, scanLocations, applyProposals, scanMemories, applyMemoryMigration,
+  PrimitivesRegistry, Bootstrap, TRAILER_LABEL,
+} from '@setlist/core';
 import { runWorker, installWorker, uninstallWorker, workerStatus } from './worker.js';
 import { runDigestRefresh } from './digest.js';
 import { CLI_COMMAND_DEFINITIONS } from './commands.js';
@@ -205,6 +208,140 @@ switch (command) {
     } else {
       console.error('Setlist.app not found. Build it with: npm run build -w packages/app');
       process.exit(1);
+    }
+    break;
+  }
+
+  case 'primitives': {
+    const pr = new PrimitivesRegistry();
+    switch (subcommand) {
+      case 'list': {
+        const all = pr.listPrimitives();
+        for (const p of all) {
+          const tag = p.is_builtin ? 'builtin' : 'custom ';
+          console.log(`  [${p.id}] ${tag} ${p.shape.padEnd(15)} ${p.name}`);
+          if (p.description) console.log(`        ${p.description}`);
+        }
+        if (all.length === 0) console.log('  (no primitives — run setlist init to seed built-ins)');
+        break;
+      }
+      case 'show': {
+        const idStr = getFlag('id');
+        if (!idStr) { console.error('Usage: setlist primitives show --id <n>'); process.exit(1); }
+        const p = pr.getPrimitive(parseInt(idStr, 10));
+        if (!p) { console.error(`No primitive with id ${idStr}`); process.exit(1); }
+        console.log(`Name:        ${p.name}`);
+        console.log(`Shape:       ${p.shape}`);
+        console.log(`Built-in:    ${p.is_builtin ? `yes (${p.builtin_key})` : 'no'}`);
+        console.log(`Description: ${p.description || '(none)'}`);
+        console.log(`Definition:`);
+        console.log('  ' + JSON.stringify(p.definition, null, 2).split('\n').join('\n  '));
+        const refs = pr.countReferences(p.id);
+        if (refs > 0) {
+          const types = pr.listReferencingTypes(p.id);
+          console.log(`Referenced by ${refs} recipe step(s) in: ${types.join(', ')}`);
+        }
+        break;
+      }
+      case 'delete': {
+        const idStr = getFlag('id');
+        if (!idStr) { console.error('Usage: setlist primitives delete --id <n>'); process.exit(1); }
+        try {
+          pr.deletePrimitive(parseInt(idStr, 10));
+          console.log(`Primitive ${idStr} deleted.`);
+        } catch (err) {
+          console.error(err instanceof Error ? err.message : String(err));
+          process.exit(1);
+        }
+        break;
+      }
+      default:
+        console.log('Usage: setlist primitives <list|show|delete> [--id <n>]');
+    }
+    break;
+  }
+
+  case 'recipe': {
+    const pr = new PrimitivesRegistry();
+    const reg = new Registry();
+    switch (subcommand) {
+      case 'list': {
+        const types = reg.listProjectTypes();
+        for (const t of types) {
+          const recipe = pr.getRecipe(t.id);
+          console.log(`  [${t.id}] ${t.name.padEnd(25)} ${recipe.steps.length} step(s) + 1 trailer`);
+        }
+        if (types.length === 0) console.log('  (no project types — run setlist init to seed defaults)');
+        break;
+      }
+      case 'show': {
+        const typeStr = getFlag('type');
+        if (!typeStr) { console.error('Usage: setlist recipe show --type <project_type_id>'); process.exit(1); }
+        const typeId = parseInt(typeStr, 10);
+        const types = reg.listProjectTypes();
+        const t = types.find(t => t.id === typeId);
+        if (!t) { console.error(`No project type with id ${typeId}`); process.exit(1); }
+        const recipe = pr.getRecipe(typeId);
+        console.log(`${t.name} (id ${t.id}) — ${recipe.steps.length} user-droppable step(s)`);
+        console.log();
+        for (const step of recipe.steps) {
+          const params = Object.entries(step.params).map(([k, v]) => `${k}=${v}`).join(', ');
+          console.log(`  ${String(step.position + 1).padStart(2)}. ${step.primitive.shape.padEnd(15)} ${step.primitive.name}`);
+          if (params) console.log(`      ${params}`);
+        }
+        console.log(`  ${String(recipe.steps.length + 1).padStart(2)}. ${'(structural)'.padEnd(15)} ${TRAILER_LABEL}`);
+        break;
+      }
+      default:
+        console.log('Usage: setlist recipe <list|show> [--type <id>]');
+    }
+    break;
+  }
+
+  case 'bootstrap': {
+    const name = args[1];
+    if (!name || name.startsWith('--')) {
+      console.error('Usage: setlist bootstrap <name> --type <project_type_id> [--dry-run] [--area <name>] [--parent <name>] [--description <d>]');
+      process.exit(1);
+    }
+    const typeStr = getFlag('type');
+    if (!typeStr) {
+      console.error('Required: --type <project_type_id> (use `setlist recipe list` to see available types)');
+      process.exit(1);
+    }
+    const dryRun = hasFlag('dry-run');
+    const bs = new Bootstrap();
+    const env = await bs.bootstrapWithRecipe({
+      name,
+      project_type_id: parseInt(typeStr, 10),
+      dry_run: dryRun,
+      area: getFlag('area'),
+      parent_project: getFlag('parent'),
+      description: getFlag('description'),
+    });
+    if (env.kind === 'dry-run') {
+      console.log(`Dry run for '${name}' at ${env.path}\n`);
+      for (const s of env.steps) {
+        const marker = s.preflight_ok ? '✓' : `✗ — ${s.preflight_reason ?? 'failed'}`;
+        const params = Object.entries(s.resolved_params).map(([k, v]) => `${k}=${v}`).join(', ');
+        console.log(`  ${String(s.position + 1).padStart(2)}. ${s.shape.padEnd(15)} ${s.primitive_name} [${marker}]`);
+        if (params) console.log(`      ${params}`);
+      }
+      console.log('\nNo side effects — nothing was created.');
+    } else if (env.kind === 'success') {
+      console.log(`Bootstrapped '${env.name}' at ${env.path}`);
+      console.log(`  git_initialized: ${env.git_initialized}, templates_applied: ${env.templates_applied}, parent_gitignore_updated: ${env.parent_gitignore_updated}`);
+      console.log(`  ${env.executed_steps?.length ?? 0} step(s) ran`);
+    } else if (env.kind === 'pre-flight-failed') {
+      console.error(`Bootstrap pre-flight failed for '${env.name}':`);
+      for (const f of env.preflight_failures) {
+        console.error(`  Step ${f.position + 1}: ${f.primitive_name} — ${f.reason}`);
+      }
+      process.exit(1);
+    } else if (env.kind === 'pending') {
+      console.error(`Bootstrap halted at step ${env.failed_at + 1}: ${env.error_output}`);
+      console.error(`Use the desktop app or the MCP bootstrap_resolve tool with token to retry/skip/abandon.`);
+      process.exit(2);
     }
     break;
   }
