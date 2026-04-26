@@ -2408,3 +2408,90 @@ Validates: `#desktop-app` (2.14) — Settings panel structure
 - An empty state in any section (e.g., zero project types — only possible if all defaults were deleted) renders a helpful "Add your first <thing>" prompt rather than a blank gap
 
 Difficulty: medium
+
+---
+
+## S135: MCP Server Sends Onboarding Instructions on Initialize {#s135}
+**Given** a fresh MCP client (Claude Code, Codex, Cursor, Continue, Cline, or any other MCP-conforming client) connecting to setlist's MCP server for the first time in a session
+**When** the client completes the MCP initialize handshake
+**Then** the server returns a brief `instructions` paragraph describing what setlist is, the four-step registration → enrichment → digest workflow, the capability item shape (`name` / `capability_type` / `description` required, five optional fields), and a pointer to the `setlist://docs/onboarding` resource — and the client surfaces this paragraph to its model as a session-level hint.
+
+Validates: `#capability-declarations` (2.11) — Client-independent agent onboarding mechanism #1
+
+**Satisfaction criteria:**
+- The MCP `initialize` response includes a non-empty `instructions` field at the protocol level (not buried in tool descriptions)
+- The instructions paragraph fits under ~150 words — it is a pointer, not the full guide
+- The paragraph names: what setlist is (project registry), the four core action verbs in order (register_project / enrich_project / write_fields / refresh_project_digest), the capability item shape (object with name / capability_type / description required), and an explicit pointer to `setlist://docs/onboarding` for depth
+- The same paragraph is returned identically to every client — no Claude-specific phrasing, no client-detection branching
+- A non-Claude MCP client (e.g., a custom Node script using the official `@modelcontextprotocol/sdk` client) receives the field and can read it programmatically
+- The instructions text contains no MCP tool schemas, no full field documentation, and no example payloads — those live in the resource
+- Updating the instructions paragraph is a one-line code change in the `Server` constructor — there is no second copy maintained elsewhere
+- The onboarding instructions are returned even when the registry is empty (zero registered projects) — the bootstrap path must not depend on portfolio state
+
+Difficulty: medium
+
+---
+
+## S136: Registration Responses Carry next_steps Recipe {#s136}
+**Given** an MCP-connected agent (any client) that has just discovered its working directory project is not yet in the registry
+**When** the agent calls `register_project` (or `bootstrap_project` for a fresh-folder project)
+**Then** the success response includes a structured `next_steps` array of `{action, why}` entries pointing at the immediate enrichment calls — and the agent can act on them in order without fetching any external documentation.
+
+Validates: `#registration` (2.2), `#project-bootstrap` (2.13), `#capability-declarations` (2.11) — Client-independent agent onboarding mechanism #2
+
+**Satisfaction criteria:**
+- A successful `register_project` response includes a `next_steps` field that is an array (possibly empty when the call already provided everything)
+- A successful `bootstrap_project` response includes the same `next_steps` field with the same shape — the two surfaces share the contract, not parallel implementations
+- Each `next_steps` entry has at minimum `{action, why}` where `action` is the literal MCP tool name to call next and `why` is a one-line explanation under ~15 words
+- For a brand-new sparse `register_project` (only `name` provided), the `next_steps` array contains entries for `enrich_project` (add goals/topics/entities), `write_fields` (add description, tech_stack, patterns), `register_capabilities` (declare integration surfaces), and `refresh_project_digest` (generate the essence digest) — in a sensible order
+- For a richer `register_project` (description + tech_stack already provided), the `next_steps` omits the `write_fields` entry for those filled fields and shortens accordingly
+- The same `next_steps` shape returns from `enrich_project`, `write_fields`, and `register_capabilities` — each call's response surfaces what enrichment remains
+- When no enrichment gap remains for the project, the `next_steps` array is exactly `[]` (not omitted, not null) — the empty array is the explicit signal that the workflow has terminated
+- The `why` strings are short pointers, not the full field documentation — the resource carries depth
+- A non-Claude MCP client receives and can iterate over the `next_steps` array using only the standard MCP tool-result envelope
+
+Difficulty: medium
+
+---
+
+## S137: Onboarding Resource Holds the Full Enrichment Guide {#s137}
+**Given** an MCP-connected agent that wants the full enrichment guide rather than the terse pointers carried in `instructions` and `next_steps`
+**When** the agent calls `ListResources` and then `ReadResource` against `setlist://docs/onboarding`
+**Then** the agent receives the complete identity → profile → fields → capabilities → digest guide, with field semantics and write-good-descriptions guidance, as the single source of truth referenced by every other onboarding surface.
+
+Validates: `#capability-declarations` (2.11) — Client-independent agent onboarding mechanism #3
+
+**Satisfaction criteria:**
+- `ListResources` returns at least one entry whose URI is `setlist://docs/onboarding` (or the spec's chosen URI scheme) and whose name is human-readable (e.g., "Setlist onboarding guide")
+- `ReadResource` for that URI returns a non-empty markdown (or text) document covering, at minimum: the four-step workflow, the identity field set, the profile field set (goals/topics/entities/concerns), the structured-fields tier (short/medium/readme descriptions, tech_stack, patterns), the capability item shape, the digest refresh model, and a "what makes a good description" subsection
+- The resource is the ONLY surface that holds the verbose guidance — `instructions` and `next_steps` reference it but never duplicate any of its sentences verbatim
+- Updating the guide is a one-place edit (the resource's source file or template) — no synchronization step is required to keep `instructions` and `next_steps` consistent because they only point, they don't restate
+- The resource is fetched on demand only — it is not loaded as ambient context, not duplicated into tool descriptions, and not included in `portfolio_brief` responses
+- A non-Claude MCP client using the standard resources capability can list and read it without any setlist-specific code path
+- The resource declares its content type (e.g., `text/markdown`) so clients can render it appropriately
+- An agent that follows the resource verbatim arrives at a project record passing all field-presence checks that `enrichment_gaps` would otherwise flag (S138)
+
+Difficulty: medium
+
+---
+
+## S138: portfolio_brief Annotates Enrichment Gaps {#s138}
+**Given** a registry containing a mix of well-enriched and under-enriched projects (some with full descriptions / tech_stack / digest, some with only `name` and `area` from a sparse migration or hasty registration)
+**When** any agent calls `portfolio_brief`
+**Then** the response includes an `enrichment_gaps` array of compact `{project, missing: [field, ...]}` entries flagging each registered project that lacks fields agents need for cross-project reasoning — and well-enriched projects do not appear in the array.
+
+Validates: `#portfolio-memory` (2.12), `#capability-declarations` (2.11) — Client-independent agent onboarding mechanism #4
+
+**Satisfaction criteria:**
+- `portfolio_brief` response has an `enrichment_gaps` field that is always present, even when the array is empty
+- Each entry is exactly `{project: <name>, missing: [<field>, ...]}` with no prose, no scoring, no severity ranking
+- The `missing` array contains canonical field names matching the registry's stored field names (e.g., `description`, `medium_description`, `tech_stack`, `patterns`, `digest`) — not human-prose descriptions of what is missing
+- A project that has a non-empty `description` AND a non-empty `tech_stack` (for code projects) AND a non-null essence digest does NOT appear in the array
+- A project missing only the digest appears with `missing: ["digest"]` — partial enrichment is reflected, not collapsed to "incomplete"
+- The check is field-presence only — no LLM call, no quality scoring, no semantic check on the content of the fields. A one-character description satisfies presence (the spec does not adjudicate quality at this layer)
+- Archived projects do not appear in `enrichment_gaps` — the annotations cover active projects only
+- Adding the annotations to the response does not measurably increase `portfolio_brief` latency beyond the existing target — the field-presence check is a SQL projection, not a separate scan
+- A non-Claude MCP client iterating over `enrichment_gaps` can drive enrichment calls (`enrich_project`, `write_fields`, `refresh_project_digest`) directly without prior knowledge of setlist's vocabulary
+- An agent comparing its own working directory against the project list returned by `portfolio_brief` can detect "I'm not yet registered" — `enrichment_gaps` is for registered-but-incomplete; on-disk-but-unregistered is the agent's own deduction, not setlist's annotation
+
+Difficulty: medium

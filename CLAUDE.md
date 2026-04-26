@@ -4,9 +4,9 @@
 
 Setlist is the TypeScript implementation of the Project Registry — the active intelligence hub for the user's personal ecosystem. It provides project identity, capability declarations, portfolio memory, port allocation, task routing, batch operations, cross-project intelligence, and a desktop control panel via a local SQLite database, MCP server, and Electron app.
 
-Spec 0.26 introduces user-managed areas (seeded with seven defaults, full CRUD via Settings) and first-class user-managed project types (default directory, git-init flag, optional template directory) backed by a new `project_types` table; the desktop app gains a restructured Settings panel and Home-view controls (column visibility, density toggle, sort persistence, default landing view, Cmd-, accelerator). Schema v13 and the new tables/UI are specced but **not yet built** — the running system is still on schema v12. For origin and port history, see spec §1.5.
+Spec 0.26 is **shipped through v0.3.6**: user-managed areas (seeded with seven defaults, full CRUD via Settings), first-class user-managed project types (default directory, git-init flag, optional template directory) backed by the `project_types` table, restructured Settings panel, and Home-view controls (column visibility, density toggle, sort persistence, default landing view, Cmd-, accelerator) are all live. For origin and port history, see spec §1.5.
 
-Running system: Schema v12 (adds `project_digests` table for free-form per-project essence summaries, versioned by spec version, cascaded on archive; builds on v11's canonical areas table, first-class area_id/parent_project_id columns on projects, area_of_focus type retired, and v10's unified memory types, belief classification, temporal validity, entity extraction, procedural versioning), 39 MCP tools, desktop UI sharing Chorus's design system with multiselect status filtering and archived project visibility.
+Running system: Schema v13 (adds `project_types` as a user-managed table, replaces `projects.type` CHECK with FK into it, reclassifies `areas` from system-owned to user-managed; builds on v12's `project_digests` table, v11's canonical areas + first-class `area_id`/`parent_project_id` columns on projects, area_of_focus type retired, and v10's unified memory types, belief classification, temporal validity, entity extraction, procedural versioning), 47 MCP tools, desktop UI sharing Chorus's design system with multiselect status filtering and archived project visibility.
 
 ## Factory Contract
 
@@ -42,7 +42,7 @@ npm run typecheck
 ```
 packages/
 ├── core/    # @setlist/core — library (all registry logic)
-├── mcp/     # @setlist/mcp — MCP server (39 tools, stdio)
+├── mcp/     # @setlist/mcp — MCP server (47 tools, stdio)
 ├── cli/     # @setlist/cli — CLI commands + async worker
 └── app/     # @setlist/app — desktop control panel (Electron + React)
 ```
@@ -54,15 +54,15 @@ packages/
 - **Electron** — Desktop shell for @setlist/app. Main process imports @setlist/core via IPC bridge.
 - **React + Tailwind CSS 4 + Radix UI** — Renderer stack, shared design system with Chorus.
 - **ESM-only** — All packages produce ESM output. No CJS.
-- **Schema v12** — Current schema: adds `project_digests` table for free-form per-project essence summaries (one row per `(project, digest_kind)`, versioned by spec version, cascaded on archive). Builds on v11's canonical areas, first-class area_id and parent_project_id columns on projects, area_of_focus type retired. Migration history from v8 (port origin) through v9 (observation memory type) and v10 (unified memory types + belief/temporal/entity/procedural-versioning fields) is preserved in spec §5.2.
+- **Schema v13** — Current schema: adds `project_types` as a user-managed table, replaces the `projects.type` CHECK with a FK into it, and reclassifies the `areas` table from system-owned to user-managed. Builds on v12's `project_digests` (free-form per-project essence summaries, one row per `(project, digest_kind)`, versioned by spec version, cascaded on archive) and v11's canonical areas + first-class area_id/parent_project_id columns on projects (area_of_focus type retired). Migration history from v8 (port origin) through v9 (observation memory type), v10 (unified memory types + belief/temporal/entity/procedural-versioning fields), v11, and v12 is preserved in spec §5.2.
 - **Library-first** — @setlist/core is the primary interface. MCP, CLI, and desktop app are thin wrappers.
 
 ### Database
 
 Location: `~/.local/share/project-registry/registry.db`
-20 tables, schema v12, WAL mode, FTS5 for memory search.
+22 tables, schema v13, WAL mode, FTS5 for memory search.
 
-### 39 MCP Tools
+### 47 MCP Tools
 
 **Identity (14):** list_projects, get_project, switch_project, search_projects, get_registry_stats, register_project, update_project, archive_project, rename_project, batch_update, write_fields, enrich_project, set_project_area, set_parent_project
 
@@ -81,6 +81,10 @@ Location: `~/.local/share/project-registry/registry.db`
 **Health (1):** assess_health
 
 **Digests (3):** get_project_digest, get_project_digests, refresh_project_digest
+
+**Areas (4):** list_areas, create_area, update_area, delete_area
+
+**Project types (4):** list_project_types, create_project_type, update_project_type, delete_project_type
 
 ## Project Enrichment
 
@@ -164,6 +168,7 @@ Scenarios in `.fctry/scenarios.md` define the behavioral contract. Key categorie
 - **S124-S127:** Project types as first-class user-managed entities (CRUD, fields, delete-block-with-projects, path-based migration on upgrade)
 - **S128-S131:** User-managed areas (CRUD in Settings, delete-block-with-projects, label-only renames preserve memory routing, curated 12-preset color palette)
 - **S132-S134:** Legacy `area_of_focus` removed, area-name validation against live table, Settings panel structure (Areas → Project types → View → Bootstrap → Updates) — supersedes S41/S71/S77
+- **S135-S138:** Client-independent agent onboarding (server `instructions` on initialize, `next_steps` arrays in registration responses, `setlist://docs/onboarding` MCP resource, `portfolio_brief` enrichment-gap annotations) — token-efficient pointer-shaped surfaces, MCP-native so any conforming client onboards a new project without bespoke integration
 
 <!-- compact-instructions
 Preserve during auto-compaction:
@@ -171,8 +176,8 @@ Preserve during auto-compaction:
 - Scenarios: .fctry/scenarios.md (134 scenarios, S01-S134)
 - Config: .fctry/config.json (external 0.2.7, spec 0.26)
 - State: .fctry/state.json (current workflow step)
-- Key constraint: Spec 0.26 — areas user-managed (CRUD, seeded defaults), project types first-class (default_directory, git_init, template_directory), Home view has column visibility/density/sort persistence/landing view, Cmd-, opens Settings; schema v13 specced but not built
-- Key constraint: Running code is still on schema v12 (canonical areas + sub-projects + project digests, 20 tables); v12 → v13 migration is the next /fctry:execute target
-- Key constraint: 39 MCP tools covering identity, capabilities, memory, ports, tasks, bootstrap, health (no area/type CRUD MCP tools — desktop-app only in 0.26)
+- Key constraint: Spec 0.26 shipped through v0.3.6 — areas user-managed (CRUD, seeded defaults), project types first-class (default_directory, git_init, template_directory), Home view has column visibility/density/sort persistence/landing view, Cmd-, opens Settings; schema v13 live
+- Key constraint: Running code is on schema v13 (project_types user-managed table + FK from projects.type, areas reclassified user-managed, building on v12 project_digests and v11 canonical areas + sub-projects, 22 tables)
+- Key constraint: 47 MCP tools covering identity, capabilities, memory, ports, tasks, bootstrap, health, digests, areas, project types (areas + project types CRUD exposed via MCP as of 0.26)
 - Key constraint: Library-first (@setlist/core), ESM-only, better-sqlite3
 -->

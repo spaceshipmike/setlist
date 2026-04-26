@@ -3,23 +3,23 @@
 ```yaml
 ---
 title: Setlist
-spec-version: "0.26"
-date: 2026-04-24
+spec-version: "0.27"
+date: 2026-04-26
 status: active
 author: Mike
 spec-format: nlspec-v2
 synopsis:
-  short: "TypeScript project registry — intelligence hub with desktop control panel, user-managed areas + project types, customizable Home view, 39 MCP tools, unified memory, per-project essence digests"
-  medium: "TypeScript monorepo (@setlist/core, @setlist/mcp, @setlist/cli, @setlist/app) implementing the project registry as both invisible infrastructure and a directly operable desktop surface. Local SQLite (better-sqlite3) + MCP server + Electron control panel sharing Chorus's design system (Tailwind 4, Radix UI), distributed as signed and notarized release builds that auto-update over two user-selectable channels (stable, beta). The desktop app exposes a single-page Settings panel (Areas, Project types, View, Bootstrap, Updates) where the user manages canonical areas as a CRUD list (seeded with seven defaults, recolored from a curated 12-preset palette, deletion blocked while projects are attached) and manages project types as a first-class CRUD list with per-type default directory, git-init flag, and optional template directory (seeded with Code project at ~/Code and Non-code project at ~/Projects). The Home view supports column visibility toggles (Status, Health, Type, Updated, area badge — Name is always shown), a compact/spacious row-density toggle, sort persistence across sessions, a default landing view (grouped lanes vs flat grid), and the standard Cmd-, accelerator to open Settings; the Type column reads the actual stored project type, no longer a path heuristic. Provides project identity, capability declarations, unified portfolio memory (10 types with FTS5 full-text search, belief classification, temporal validity, entity storage, procedural versioning, four-level scoping with area bubble-up, and triple-gate stale-memory archival; vector retrieval, hybrid RRF fusion, hierarchical compaction, gap detection, and distillation are studied aspirations gated on an embedding-tier decision), project bootstrap (now driven by the user's project_types list rather than a hardcoded enum, with the legacy area_of_focus type fully removed), port allocation, batch operations, cross-project intelligence, and composite project health assessment (activity + completeness + outcomes). Schema v13 (adds project_types table and replaces the projects.type CHECK constraint with a foreign key into it; areas table CHECK relaxed; builds on v12's project_digests table and v11's structural areas + parent_project_id columns), 39 MCP tools, importable as @setlist/core by Chorus and Ensemble. The digest generator in @setlist/cli defaults to a hosted model (Gemini 2.5 Flash-Lite via OpenRouter, 1M-token context, cost-attributed per project) with a local MLX fallback when the key is missing or the provider fails, and extracts markdown from PDFs and Office documents for non-code projects that have no spec file."
-  readme: "Setlist is the TypeScript implementation of the Project Registry — both invisible infrastructure at the center of the user's personal ecosystem and a directly operable desktop control panel. As infrastructure, it provides structured, queryable identity for every project (organized under a user-managed list of areas seeded at install with seven sensible defaults — Work, Family, Home, Health, Finance, Personal, Infrastructure — that the user can rename, recolor, add to, or remove via Settings, with optional parent-child sub-project relationships), with programmatic administration, capability declarations, unified portfolio memory (10 types with belief classification, temporal validity, entity storage, procedural versioning, four-level scoping with area bubble-up, and triple-gate stale-memory archival; today recall runs over FTS5 full-text search with a composite score over reinforcement, recency, and outcome history — vector retrieval and RRF fusion are studied aspirations consolidated in §2.12.1 and gated on an unresolved embedding-tier decision), port allocation, user-managed project types governing bootstrap behavior, batch operations, and cross-project intelligence via 39 MCP tools and direct library import. As a desktop application, it presents a card-grid dashboard of all projects with multiselect status filtering (archived hidden by default), togglable column visibility, compact/spacious row density, persistent sort across sessions, a configurable default landing view (grouped lanes or flat grid), tabbed project detail views (overview, memory, capabilities, ports), full project CRUD — register, edit, archive, rename — and a single-page Settings panel for managing areas, project types, view defaults, bootstrap roots, and update channels (Cmd-, opens Settings). All this runs through a native macOS Electron app sharing Chorus's design language (Tailwind CSS 4, Radix UI, terracotta accent, warm charcoal surfaces). The main process imports @setlist/core directly; no API layer sits between the UI and the registry. Distributed as four npm packages (@setlist/core, @setlist/mcp, @setlist/cli, @setlist/app), Setlist is directly consumable by Chorus, Ensemble, and any Node.js tool in the ecosystem, while also standing alone as a full-featured project management surface."
+  short: "TypeScript project registry — intelligence hub with desktop control panel, user-managed areas + project types, customizable Home view, 47 MCP tools, unified memory, per-project essence digests, client-independent MCP onboarding"
+  medium: "TypeScript monorepo (@setlist/core, @setlist/mcp, @setlist/cli, @setlist/app) implementing the project registry as both invisible infrastructure and a directly operable desktop surface. Local SQLite (better-sqlite3) + MCP server + Electron control panel sharing Chorus's design system (Tailwind 4, Radix UI), distributed as signed and notarized release builds that auto-update over two user-selectable channels (stable, beta). The desktop app exposes a single-page Settings panel (Areas, Project types, View, Bootstrap, Updates) where the user manages canonical areas as a CRUD list (seeded with seven defaults, recolored from a curated 12-preset palette, deletion blocked while projects are attached) and manages project types as a first-class CRUD list with per-type default directory, git-init flag, and optional template directory (seeded with Code project at ~/Code and Non-code project at ~/Projects). The Home view supports column visibility toggles (Status, Health, Type, Updated, area badge — Name is always shown), a compact/spacious row-density toggle, sort persistence across sessions, a default landing view (grouped lanes vs flat grid), and the standard Cmd-, accelerator to open Settings; the Type column reads the actual stored project type, no longer a path heuristic. Provides project identity, capability declarations, unified portfolio memory (10 types with FTS5 full-text search, belief classification, temporal validity, entity storage, procedural versioning, four-level scoping with area bubble-up, and triple-gate stale-memory archival; vector retrieval, hybrid RRF fusion, hierarchical compaction, gap detection, and distillation are studied aspirations gated on an embedding-tier decision), project bootstrap (now driven by the user's project_types list rather than a hardcoded enum, with the legacy area_of_focus type fully removed), port allocation, batch operations, cross-project intelligence, and composite project health assessment (activity + completeness + outcomes). Schema v13 (adds project_types table and replaces the projects.type CHECK constraint with a foreign key into it; areas table CHECK relaxed; builds on v12's project_digests table and v11's structural areas + parent_project_id columns), 47 MCP tools, importable as @setlist/core by Chorus and Ensemble. The digest generator in @setlist/cli defaults to a hosted model (Gemini 2.5 Flash-Lite via OpenRouter, 1M-token context, cost-attributed per project) with a local MLX fallback when the key is missing or the provider fails, and extracts markdown from PDFs and Office documents for non-code projects that have no spec file. The MCP server carries the full registration → enrichment → digest workflow on the protocol surface itself — server `instructions` on initialize, `next_steps` arrays in registration responses, a `setlist://docs/onboarding` resource, and `enrichment_gaps` annotations on `portfolio_brief` — so any conforming MCP client (Claude Code, Codex, Cursor, Continue, Cline, custom) onboards a new project without bespoke client integration; the heavy guidance lives once in the resource and every other surface is a token-efficient pointer."
+  readme: "Setlist is the TypeScript implementation of the Project Registry — both invisible infrastructure at the center of the user's personal ecosystem and a directly operable desktop control panel. As infrastructure, it provides structured, queryable identity for every project (organized under a user-managed list of areas seeded at install with seven sensible defaults — Work, Family, Home, Health, Finance, Personal, Infrastructure — that the user can rename, recolor, add to, or remove via Settings, with optional parent-child sub-project relationships), with programmatic administration, capability declarations, unified portfolio memory (10 types with belief classification, temporal validity, entity storage, procedural versioning, four-level scoping with area bubble-up, and triple-gate stale-memory archival; today recall runs over FTS5 full-text search with a composite score over reinforcement, recency, and outcome history — vector retrieval and RRF fusion are studied aspirations consolidated in §2.12.1 and gated on an unresolved embedding-tier decision), port allocation, user-managed project types governing bootstrap behavior, batch operations, and cross-project intelligence via 47 MCP tools and direct library import. The MCP server itself is the onboarding surface: a brief `instructions` paragraph at handshake names the registration → enrichment → digest workflow and the capability item shape; successful `register_project` and `bootstrap_project` responses carry `next_steps` arrays of `{action, why}` entries pointing at the immediate follow-up calls; a `setlist://docs/onboarding` MCP resource holds the full guide for any agent that wants depth; and `portfolio_brief` returns compact `enrichment_gaps` flagging projects missing fields agents need for cross-project reasoning. All four mechanisms are MCP-native, so any conforming client (Claude Code, Codex, Cursor, Continue, Cline, custom) onboards a new project without bespoke client integration, and heavy content lives once in the resource so the on-the-wire surfaces stay token-efficient. As a desktop application, it presents a card-grid dashboard of all projects with multiselect status filtering (archived hidden by default), togglable column visibility, compact/spacious row density, persistent sort across sessions, a configurable default landing view (grouped lanes or flat grid), tabbed project detail views (overview, memory, capabilities, ports), full project CRUD — register, edit, archive, rename — and a single-page Settings panel for managing areas, project types, view defaults, bootstrap roots, and update channels (Cmd-, opens Settings). All this runs through a native macOS Electron app sharing Chorus's design language (Tailwind CSS 4, Radix UI, terracotta accent, warm charcoal surfaces). The main process imports @setlist/core directly; no API layer sits between the UI and the registry. Distributed as four npm packages (@setlist/core, @setlist/mcp, @setlist/cli, @setlist/app), Setlist is directly consumable by Chorus, Ensemble, and any Node.js tool in the ecosystem, while also standing alone as a full-featured project management surface."
   tech-stack: [typescript, better-sqlite3, "@modelcontextprotocol/sdk", node, npm-monorepo, electron, electron-updater, react, tailwindcss-v4, radix-ui]
-  patterns: [user-managed-canonical-set, user-managed-project-types, seeded-then-mutable, curated-color-palette, label-rename-stable-id, reassign-before-delete, structural-parent-child, area-scoped-memory-inheritance, atomized-fields, progressive-disclosure, producer-consumer, registration-not-discovery, invisible-infrastructure, operable-surface, config-file-scanning, hub-and-spoke, capability-declaration, definition-is-truth, fuzzy-match-suggestions, archive-triggered-cleanup, producer-attribution, summary-compactness, freshness-importance-scoring, invocation-metadata, retain-recall-reflect, outcome-aware-reinforcement, content-hash-dedup, embedding-provider-abstraction, budget-controlled-recall, four-level-scoping, hybrid-retrieval, belief-classification, temporal-validity, entity-extraction, procedural-versioning, unified-memory-store, template-driven-bootstrap, configure-then-use, shared-design-system, ipc-bridge, per-machine-view-prefs, native-vector-search, hierarchical-compaction, progressive-retrieval, knowledge-distillation, graph-gap-detection, mcp-startup-validation, progress-notification, worst-tier-wins, on-demand-assessment, qualitative-tiers, signed-notarized-builds, silent-download-prompt-before-install, two-channel-release, scenarios-as-contract, canaries-not-gates, narrow-ci-wide-local, edit-time-security-check, release-blocking-preflight, dual-abi-swap-and-restore, detect-and-recover-over-prevent, derived-essence-digest, spec-version-as-staleness-signal, external-generator-internal-store, hosted-digest-generation-with-local-fallback, document-extraction-for-non-code-digests, project-tagged-llm-cost-attribution, filetree-hash-as-staleness-signal, introspected-capability-declarations]
-  goals: [user-managed-area-organization, user-managed-project-types, customizable-home-view, sub-project-hierarchy, unified-project-identity, capability-discovery, programmatic-project-administration, batch-operations, cross-project-task-dispatch, conflict-free-port-allocation, automatic-port-discovery, async-task-execution, cross-project-intelligence, crash-resilient-worker, ranked-cross-project-results, capability-invocation-awareness, portfolio-memory, outcome-reinforcement, hybrid-retrieval, npm-packageable-distribution, canonical-memory-store, chorus-memory-unification, project-bootstrap-and-scaffolding, desktop-control-panel, project-dashboard, project-crud-ui, single-page-settings, implicit-connection-surfacing, fast-first-pass-recall, synthesized-knowledge-from-memory-clusters, memory-graph-blind-spot-detection, project-health-assessment, composite-tier-surfacing, glanceable-portfolio-health, auto-update-with-channels, project-essence-digests, digest-staleness-signal, cross-project-semantic-matching, non-code-project-digests, provider-agnostic-digest-generator, capability-self-registration]
-plugin-version: 0.81.0
+  patterns: [user-managed-canonical-set, user-managed-project-types, seeded-then-mutable, curated-color-palette, label-rename-stable-id, reassign-before-delete, structural-parent-child, area-scoped-memory-inheritance, atomized-fields, progressive-disclosure, producer-consumer, registration-not-discovery, invisible-infrastructure, operable-surface, config-file-scanning, hub-and-spoke, capability-declaration, definition-is-truth, fuzzy-match-suggestions, archive-triggered-cleanup, producer-attribution, summary-compactness, freshness-importance-scoring, invocation-metadata, retain-recall-reflect, outcome-aware-reinforcement, content-hash-dedup, embedding-provider-abstraction, budget-controlled-recall, four-level-scoping, hybrid-retrieval, belief-classification, temporal-validity, entity-extraction, procedural-versioning, unified-memory-store, template-driven-bootstrap, configure-then-use, shared-design-system, ipc-bridge, per-machine-view-prefs, native-vector-search, hierarchical-compaction, progressive-retrieval, knowledge-distillation, graph-gap-detection, mcp-startup-validation, progress-notification, worst-tier-wins, on-demand-assessment, qualitative-tiers, signed-notarized-builds, silent-download-prompt-before-install, two-channel-release, scenarios-as-contract, canaries-not-gates, narrow-ci-wide-local, edit-time-security-check, release-blocking-preflight, dual-abi-swap-and-restore, detect-and-recover-over-prevent, derived-essence-digest, spec-version-as-staleness-signal, external-generator-internal-store, hosted-digest-generation-with-local-fallback, document-extraction-for-non-code-digests, project-tagged-llm-cost-attribution, filetree-hash-as-staleness-signal, introspected-capability-declarations, client-independent-onboarding, mcp-instructions-on-initialize, next-steps-in-tool-response, mcp-onboarding-resource, enrichment-gap-annotations, pointer-shaped-protocol-surface, single-source-of-truth-resource]
+  goals: [user-managed-area-organization, user-managed-project-types, customizable-home-view, sub-project-hierarchy, unified-project-identity, capability-discovery, programmatic-project-administration, batch-operations, cross-project-task-dispatch, conflict-free-port-allocation, automatic-port-discovery, async-task-execution, cross-project-intelligence, crash-resilient-worker, ranked-cross-project-results, capability-invocation-awareness, portfolio-memory, outcome-reinforcement, hybrid-retrieval, npm-packageable-distribution, canonical-memory-store, chorus-memory-unification, project-bootstrap-and-scaffolding, desktop-control-panel, project-dashboard, project-crud-ui, single-page-settings, implicit-connection-surfacing, fast-first-pass-recall, synthesized-knowledge-from-memory-clusters, memory-graph-blind-spot-detection, project-health-assessment, composite-tier-surfacing, glanceable-portfolio-health, auto-update-with-channels, project-essence-digests, digest-staleness-signal, cross-project-semantic-matching, non-code-project-digests, provider-agnostic-digest-generator, capability-self-registration, client-independent-agent-onboarding, token-efficient-protocol-surfaces]
+plugin-version: 0.83.1
 ---
 ```
 
-Setlist is the TypeScript implementation of the Project Registry and the active intelligence hub for the user's personal ecosystem. Schema v13 (adds `project_types` as a user-managed table, replaces the `projects.type` CHECK with a FK into it, and reclassifies the `areas` table from system-owned to user-managed; builds on v12's `project_digests`, v11's structural `area_id` and `parent_project_id` columns, retired `area_of_focus` type, and v10's unified memory types, belief classification, temporal validity, entity extraction, and procedural versioning). 39 MCP tools covering project identity, capabilities, portfolio memory, digests, ports, task dispatch, bootstrap, cross-project queries, and composite project health. Native macOS desktop control panel with a single-page Settings panel (Areas, Project types, View, Bootstrap, Updates) for direct human operation. Area-scoped memory inheritance. See §1.5 for origin and port history.
+Setlist is the TypeScript implementation of the Project Registry and the active intelligence hub for the user's personal ecosystem. Schema v13 (adds `project_types` as a user-managed table, replaces the `projects.type` CHECK with a FK into it, and reclassifies the `areas` table from system-owned to user-managed; builds on v12's `project_digests`, v11's structural `area_id` and `parent_project_id` columns, retired `area_of_focus` type, and v10's unified memory types, belief classification, temporal validity, entity extraction, and procedural versioning). 47 MCP tools covering project identity, capabilities, portfolio memory, digests, ports, task dispatch, bootstrap, cross-project queries, and composite project health. Native macOS desktop control panel with a single-page Settings panel (Areas, Project types, View, Bootstrap, Updates) for direct human operation. Area-scoped memory inheritance. See §1.5 for origin and port history.
 
 The rewrite exists because Chorus (Electron + React) and Ensemble need the registry as a direct npm dependency, not a subprocess or MCP-only integration. @setlist/core provides the library API importable from any Node.js process. @setlist/mcp wraps it as an MCP server. @setlist/cli exposes it from the terminal. @setlist/app provides a desktop control panel — an Electron app that imports @setlist/core directly, giving the user a visual surface for project management alongside the programmatic interfaces. The behavioral contract is carried by the 134-scenario holdout set in `.fctry/scenarios.md` and evaluated by LLM-as-judge; vitest is available for targeted unit tests against @setlist/core but is not the truth signal.
 
@@ -100,7 +100,7 @@ Setlist is a TypeScript monorepo providing the Project Registry as four npm pack
 
 - **@setlist/core** -- The library. All registry logic: project identity, field model, variable-depth querying, filtering, migration, port management, capability declarations, portfolio memory (retain/recall/reflect), task queue, cross-project queries, batch operations. Importable from any Node.js process. This is what Chorus, Ensemble, and the desktop app consume directly.
 
-- **@setlist/mcp** -- The MCP server. A thin translation layer wrapping @setlist/core as 39 MCP tools via @modelcontextprotocol/sdk, using stdio transport managed by Claude Code's lifecycle.
+- **@setlist/mcp** -- The MCP server. A thin translation layer wrapping @setlist/core as 47 MCP tools via @modelcontextprotocol/sdk, using stdio transport managed by Claude Code's lifecycle.
 
 - **@setlist/cli** -- The CLI. Terminal commands for project management, migration, worker installation, and diagnostics. Entry point: `setlist`.
 
@@ -208,6 +208,10 @@ import { Registry } from '@setlist/core';
 const registry = new Registry();
 registry.registerProject({ name, displayName, type, status, description, goals, paths, area, parentProject });
 ```
+
+**Response shape:**
+
+A successful `register_project` returns the registered project's identity confirmation **plus** a `next_steps` array of `{action, why}` entries pointing at the immediate enrichment calls — typically `enrich_project`, `write_fields`, `register_capabilities`, and `refresh_project_digest`. The array shortens as those calls land and ends as `[]` when no gaps remain. This is the cross-surface registration → enrichment pattern described in `#capability-declarations` (2.11), and it carries the workflow on the response itself so any MCP client can follow it without out-of-band guidance.
 
 **Registration from fctry:**
 
@@ -490,6 +494,8 @@ This matters because `query_capabilities` and `cross_query` match against indivi
 
 A producer writes a project's capabilities by providing the complete set of capability declarations for that project. Each write uses **replace semantics** -- the new set replaces the previous set entirely. This ensures the registry always reflects what the code actually exposes, not a stale accumulation.
 
+The `register_capabilities` MCP tool is the externally-exposed write path. Each item in the `capabilities` array is an object — never a bare string — with three required fields (`name`, `capability_type`, `description`) and five optional fields (`inputs`, `outputs`, `requires_auth`, `invocation_model`, `audience`). External callers (agents in other projects writing on behalf of their host project) see the item shape declared in the tool's input schema; this surface is in-process for setlist's own self-registration and external for cross-project producers like fctry.
+
 **fctry as the first capability producer:**
 
 fctry writes capability declarations after builds, not during spec writing. Capabilities reflect code reality -- what was actually built.
@@ -523,7 +529,7 @@ Setlist self-registers its own capabilities on every MCP server startup. The ope
 
 Three surfaces are registered on startup, each introspected directly from the running code:
 
-- **MCP tools** — every tool the server exposes (currently 39), registered with `type: tool`. The source of truth is the tool-registration array in the MCP server entrypoint; whatever the server is about to expose to clients is what lands in the registry.
+- **MCP tools** — every tool the server exposes (currently 47), registered with `type: tool`. The source of truth is the tool-registration array in the MCP server entrypoint; whatever the server is about to expose to clients is what lands in the registry.
 - **CLI commands** — every top-level subcommand in `@setlist/cli` (e.g., `migrate`, `digest refresh`, `ui`), registered with `type: cli-command`. The source of truth is the command-registration structure in `packages/cli/src/index.ts`.
 - **Library exports** — every public export from `@setlist/core`, registered with `type: library`. The source of truth is the package's public API entrypoint (`packages/core/src/index.ts`).
 
@@ -532,6 +538,19 @@ Introspection is the source of truth — no hand-maintained `capabilities.json` 
 **First-run behavior:** on a fresh registry, the MCP server ensures the `setlist` project row exists before writing capabilities. If it is missing, the server creates it with canonical defaults — `area: Infrastructure`, `type: project`, and a description identifying it as the TypeScript project registry — then proceeds with the three capability writes. This is safe because setlist is the registry; it is writing to its own database.
 
 **Failure isolation:** the three surfaces are introspected and registered independently. If reflection on CLI commands fails (for example, because the CLI package has not been built), the MCP tool and library registrations still complete. The server logs one warning line identifying the surface that failed and continues its normal startup; it never crashes or refuses to serve MCP traffic because of a self-registration error.
+
+**Client-independent agent onboarding:**
+
+Setlist's MCP server carries the full registration → enrichment → digest workflow on the protocol surface itself, so any conforming MCP client (Claude Code, Codex, Cursor, Continue, Cline, custom) can onboard a new agent into the registry without bespoke client integration. Four mechanisms layer for token efficiency — heavy content lives once in the resource; the rest are lightweight pointers.
+
+1. **Server `instructions` on initialize.** At handshake, setlist returns a brief paragraph (under ~150 words) naming what it is, the four-step workflow (register → enrich → write fields → refresh digest), the capability item shape (`name` / `capability_type` / `description` required, five optional fields), and a pointer to the onboarding resource. Compliant MCP clients pass it to the model as a session-level hint, read once per session.
+2. **`next_steps` in registration responses.** Successful `register_project` and `bootstrap_project` responses include a structured `next_steps` array — each entry shaped as `{action: <tool_name>, why: <one-line>}` — listing the immediate follow-up calls in order (typically `enrich_project`, `write_fields`, `register_capabilities`, `refresh_project_digest`). The same shape returns from `enrich_project`, `write_fields`, and `register_capabilities` themselves; the array shortens as fields fill in and ends as `[]` when no gaps remain. The recipe travels in the response that confirmed the action — no separate fetch.
+3. **`setlist://docs/onboarding` resource.** The full enrichment guide — identity / profile / fields / capabilities / digest, with field semantics and write-good-descriptions guidance — is exposed via `ListResources` / `ReadResource`. This is the single source of truth for agent-facing onboarding documentation; `instructions` and `next_steps` both reference it but never duplicate its content. Fetched on demand only.
+4. **`portfolio_brief` enrichment-gap annotations.** The `portfolio_brief` response includes an `enrichment_gaps` array of compact `{project, missing: [field, ...]}` entries flagging registered projects that lack fields agents need for cross-project reasoning (e.g., `description`, `tech_stack`, `digest`). No prose, no scoring. The agent comparing its own working directory against `list_projects` detects "I'm not yet registered"; the gap annotations guide enrichment for projects that are.
+
+**Token-efficiency principle:** the resource is the only verbose surface. `instructions`, `next_steps`, and gap annotations are all pointer-shaped — short fields that name the next move and reference the resource for depth. The full onboarding guide is fetched only when the agent wants depth, not on every session, and never as ambient context.
+
+The four mechanisms are MCP-native, not Claude-specific: any client implementing the MCP `instructions` field, structured tool responses, the resources capability, or `portfolio_brief` calls participates in the same workflow without code changes.
 
 ### 2.12 Portfolio Memory {#portfolio-memory}
 
@@ -671,6 +690,7 @@ The embedding provider is a runtime configuration. Changing providers does not i
 - Portfolio-scoped and global-scoped memories (via an internal recall with no query, portfolio scope, and a generous token budget)
 - Known health indicators: projects with no recent commits, stale specs, missing capabilities, or unresolved drift observations
 - Recent observations (memory type `observation`) that haven't been acted on
+- Enrichment gaps: registered projects missing fields agents need for cross-project reasoning (e.g., `description`, `tech_stack`, `digest`). Each gap entry is compact — `{project, missing: [field, ...]}` — no prose, no scoring. See `#capability-declarations` (2.11) for the full client-independent onboarding pattern this annotation participates in.
 
 The response is structured data, not synthesized prose. The calling agent (e.g., the orchestrator) does the reasoning — `portfolio_brief` provides the raw material efficiently in a single call, replacing what would otherwise require `list_projects` + `recall` + multiple `get_project` calls.
 
@@ -726,7 +746,7 @@ An agent or user calls `bootstrap_project` with a project name, a project type (
 
 When the new project's parent directory is itself a git repository with an existing `.gitignore` — the portfolio-root convention at `~/Code/`, where each project is its own git repo and the parent directory tracks only its own metadata — `bootstrap_project` appends the new project's directory name (with a trailing slash) to that `.gitignore` so the parent repo ignores the nested sub-repo. The append is best-effort and silent: it never fails the bootstrap, it is a no-op when the parent directory is not a git repo, when the parent has no `.gitignore` (one is not created), or when the entry is already listed. The result surfaces this as `parent_gitignore_updated: true | false` alongside the existing `git_initialized` and `templates_applied` flags.
 
-The caller receives confirmation with the registered project name, the chosen type, and the created path. The project is immediately queryable in the registry and ready for development.
+The caller receives confirmation with the registered project name, the chosen type, and the created path. The project is immediately queryable in the registry and ready for development. The bootstrap response also includes a `next_steps` array of `{action, why}` entries pointing at the immediate enrichment calls (`enrich_project`, `write_fields`, `register_capabilities`, `refresh_project_digest`) — the same cross-surface pattern described in `#capability-declarations` (2.11).
 
 **Path override:**
 
@@ -1012,7 +1032,7 @@ The fctry-owned field domain includes: tech_stack, patterns, short_description, 
 
 **Desktop project CRUD.** Provides UI forms for registering new projects, editing project identity fields (display name, status, description, goals), archiving projects, and renaming projects. Each operation delegates to the corresponding @setlist/core method through the IPC bridge.
 
-**MCP server access.** @setlist/mcp wraps @setlist/core as 39 MCP tools via @modelcontextprotocol/sdk using stdio transport managed by Claude Code's lifecycle. The server provides:
+**MCP server access.** @setlist/mcp wraps @setlist/core as 47 MCP tools via @modelcontextprotocol/sdk using stdio transport managed by Claude Code's lifecycle. The server provides:
 
 - `list_projects` -- List projects at a given depth with optional filters.
 - `get_project` -- Get a single project by name at a given depth.
@@ -1241,7 +1261,7 @@ See [Appendix D](#appendix-d-mcp-tool-reference) for the complete tool reference
 | Ensemble | Memory retain/recall, library import of @setlist/core | Ensemble reads/writes via direct import | Ensemble continues without memory |
 | Knowmarks | Project metadata (name, description, goals, keywords, tech stack) | Knowmarks reads from registry | Falls back to regex extraction |
 | ctx | Project context (description, goals, status, tech stack) | ctx reads from registry | Operates without project context |
-| Claude Code (via MCP) | All 39 tools | CC reads/writes via @setlist/mcp | CC has no project awareness; MCP server provides it |
+| Claude Code (via MCP) | All 47 tools | CC reads/writes via @setlist/mcp | CC has no project awareness; MCP server provides it |
 | Async worker (launchd) | Task execution | Worker reads tasks, spawns CC sessions, writes results | Tasks remain pending until worker runs |
 | CC auto-memory files | Per-project patterns and decisions (`MEMORY.md`) | cross_query reads from filesystem | Cross-project queries limited to registry fields + structured memories |
 | Embedding provider (OpenAI / Ollama) | Vector embeddings for memory content | Registry sends content, receives embeddings | FTS5-only fallback. All other features work identically. |
@@ -1346,7 +1366,7 @@ better-sqlite3 provides synchronous native SQLite bindings with no async wrapper
 
 - **Schema v13 (current).** v13 introduces the user-managed `project_types` table (with seeded Code project and Non-code project defaults), replaces the `projects.type` CHECK constraint with a foreign key into `project_types`, and reclassifies the `areas` table from system-owned to user-managed. Builds on v12 (`project_digests`) and v11 (canonical `areas` table, `projects.area_id`, `projects.parent_project_id`, retired `area_of_focus` project type, area-scope memory remap). Migration history from v8 is documented in §5. Schema migrations are incremental and non-destructive; existing data is never lost during upgrades.
 
-- **39 MCP tools.** The MCP server exposes 39 tools covering identity, capabilities, memory (agent and admin), ports, tasks, bootstrap, and health. Tool names, parameter shapes, and response shapes are defined in this spec and stable across patch releases.
+- **47 MCP tools.** The MCP server exposes 47 tools covering identity, capabilities, memory (agent and admin), ports, tasks, bootstrap, health, digests, areas, and project types. Tool names, parameter shapes, and response shapes are defined in this spec and stable across patch releases.
 
 - **ESM-only.** All packages produce ESM output. No CommonJS dual-publishing.
 
@@ -1368,7 +1388,7 @@ better-sqlite3 provides synchronous native SQLite bindings with no async wrapper
 
 - **Schema evolution must be incremental and non-destructive.** Each version upgrade must handle the full migration path. Existing data must never be lost during upgrades. New columns use nullable defaults or sensible initial values. The `skill` → `procedural` type migration in v10 and the `area_of_focus` → `project` + canonical-area reclassification in v11 are data migrations within the table-recreate pattern.
 
-- **Setlist must not re-invent MCP tool semantics.** The 39 tools have defined parameter names, types, and response shapes. Setlist implements them; it does not redesign them.
+- **Setlist must not re-invent MCP tool semantics.** The 47 tools have defined parameter names, types, and response shapes. Setlist implements them; it does not redesign them.
 
 ### 4.5 Testing Discipline {#testing-discipline}
 
@@ -1429,7 +1449,7 @@ setlist/
 │   ├── mcp/                         # @setlist/mcp
 │   │   ├── src/
 │   │   │   ├── index.ts             # MCP server entry point
-│   │   │   └── server.ts            # 39 tool definitions
+│   │   │   └── server.ts            # 47 tool definitions
 │   │   ├── package.json
 │   │   └── tsconfig.json
 │   ├── cli/                         # @setlist/cli
@@ -1590,7 +1610,7 @@ import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 
 const server = new Server({ name: 'setlist', version: '0.1.0' }, { capabilities: { tools: {} } });
-// Register 39 tools...
+// Register 47 tools...
 const transport = new StdioServerTransport();
 await server.connect(transport);
 ```
@@ -1676,7 +1696,7 @@ Setlist integrates with the broader ecosystem:
 - **Ensemble** — Imports @setlist/core for memory retain/recall during agent orchestration.
 
 **MCP consumers (unchanged):**
-- **Claude Code** — Uses @setlist/mcp for all 39 tools.
+- **Claude Code** — Uses @setlist/mcp for all 47 tools.
 
 **Producers (unchanged):**
 - **fctry** — Writes project identity and capabilities via MCP or library import.
@@ -1707,7 +1727,7 @@ Setlist integrates with the broader ecosystem:
 | cross_query.py | cross-query.ts | 3 scopes, freshness+importance scoring |
 | tasks.py | registry.ts | Task CRUD consolidated into Registry |
 | scripts/migrate_memories.py | migrate-memories.ts | CC auto-memory + fctry memory migration |
-| server.py | server.ts | 39 MCP tools via @modelcontextprotocol/sdk |
+| server.py | server.ts | 47 MCP tools via @modelcontextprotocol/sdk |
 | cli.py | index.ts | CLI entry point |
 | worker.py | worker.ts | Launchd integration |
 
@@ -1734,7 +1754,7 @@ The test mapping is a translation reference only — it does not define a passin
 ### 7.1 Satisfaction Definition {#satisfaction}
 
 - @setlist/core is importable from any Node.js/TypeScript project as an npm dependency.
-- @setlist/mcp exposes 39 MCP tools covering identity, capabilities, memory, ports, tasks, bootstrap, and health, with parameter shapes and response shapes stable across patch releases.
+- @setlist/mcp exposes 47 MCP tools covering identity, capabilities, memory, ports, tasks, bootstrap, and health, with parameter shapes and response shapes stable across patch releases.
 - @setlist/cli provides `setlist` as a terminal command covering project management, migration, worker installation, and diagnostics.
 - Chorus can import @setlist/core and call `listProjects()`, `getProject()`, `switchProject()` directly.
 - Ensemble can import @setlist/core and call `retain()`, `recall()`, `feedback()` directly.
@@ -1757,7 +1777,7 @@ The test mapping is a translation reference only — it does not define a passin
 
 **Then layer in:** Migration, port management, port discovery.
 
-**Then layer in:** @setlist/mcp — wrap the core library as 39 MCP tools.
+**Then layer in:** @setlist/mcp — wrap the core library as 47 MCP tools.
 
 **Then layer in:** Portfolio memory — retain, recall, reflect. Content-hash dedup. FTS5 retrieval.
 
@@ -1843,7 +1863,7 @@ Load-bearing design choices:
 | Registry | The structured, queryable record of every project in the user's ecosystem — identity, fields, capabilities, memory, ports, health |
 | Setlist | The TypeScript implementation of the Project Registry |
 | @setlist/core | npm package providing the library API — all registry logic |
-| @setlist/mcp | npm package providing the MCP server — 39 tools via @modelcontextprotocol/sdk |
+| @setlist/mcp | npm package providing the MCP server — 47 tools via @modelcontextprotocol/sdk |
 | @setlist/cli | npm package providing the CLI — terminal commands and worker script |
 | @setlist/app | npm package providing the desktop control panel — Electron app with React renderer |
 | better-sqlite3 | Synchronous native SQLite binding for Node.js |
@@ -1890,7 +1910,7 @@ Load-bearing design choices:
 
 ## Appendix D: MCP Tool Reference {#appendix-d-mcp-tool-reference}
 
-Complete tool reference for the 39 MCP tools.
+Complete tool reference for the 47 MCP tools.
 
 **Project Identity:**
 
