@@ -1,0 +1,28 @@
+{
+  "project": "orchestrator",
+  "config_label": "glm-4.7-flash@t0.0",
+  "model": "z-ai/glm-4.7-flash",
+  "temperature": 0,
+  "sample": 1,
+  "digest": "Orchestrator is a reactive Claude Code skill that answers cross-project questions by assembling knowledge from the project registry, specs, CLAUDE.md files, and code. It classifies questions as atomic or composite, scopes relevant projects, reads sources fresh on every query, and responds with cited evidence. The user invokes it via `/orchestrator` or `/portfolio` followed by a question, and it retains non-obvious insights as portfolio-scoped memories in the registry. The skill handles reference routing through three modes: inline URL routing, batch processing of recent knowmarks saves, and project-specific mining of the existing knowledge base. It distills above-floor knowmarks into structured insight cards stored in a local SQLite database, clusters these cards into emergent waves before per-item routing, and scores them against project digests. Confirmed routings delegate to per-project `/fctry:ref` for spec incorporation and register persistent reference-topic memories in the registry to track evidence over time. Orchestrator supports seven question types: dependency tracing (including co-change coupling), impact analysis, portfolio health (measuring staleness on calendar and commit axes and mechanically validating spec claims), pattern comparison, project briefings, disruptive opportunity identification (grounded in user goals), and connection scans (three-layer analysis of changes, relationships, and non-obvious connections). It reasons over sources to infer implicit dependencies, detect contradictions, and classify facts temporally. The skill integrates with the setlist project registry via MCP, reads specs, architecture snapshots, and code directly from disk, and uses knowmarks for extraction. It employs extraction models like Gemini 2.5 Flash-Lite (default) and Qwen3.6 (local fallback) to generate insight cards. The current scope is strictly reactive; it does not perform proactive monitoring, sub-agent invocation for general reasoning, or write to project specs. Future autonomous capabilities are planned in stages, moving from event-triggered suggestions to low-risk autonomous actions, governed by tiered self-modification rules.",
+  "token_count": 544,
+  "matched_features": [
+    "portfolio",
+    "Claude Code skill",
+    "insight cards",
+    "knowmarks",
+    "reference routing",
+    "waves",
+    "SQLite",
+    "registry"
+  ],
+  "missing_features": [
+    "speculation",
+    "facet"
+  ],
+  "recall": 0.8,
+  "length_compliance": "in_range",
+  "duration_ms": 66420,
+  "cost_usd": null,
+  "error": null
+}

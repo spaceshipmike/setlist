@@ -1,0 +1,27 @@
+{
+  "project": "knowmarks",
+  "config_label": "glm-4.7-flash@t0.2",
+  "model": "z-ai/glm-4.7-flash",
+  "temperature": 0.2,
+  "sample": 1,
+  "digest": "",
+  "token_count": 0,
+  "matched_features": [],
+  "missing_features": [
+    "Milkdown",
+    "MCP",
+    "Companion",
+    "Spaces",
+    "Wiki",
+    "Graph",
+    "FTS5",
+    "fastembed",
+    "Notes",
+    "citation"
+  ],
+  "recall": 0,
+  "length_compliance": "under",
+  "duration_ms": 179540,
+  "cost_usd": null,
+  "error": "glm-4.7-flash@t0.2 returned empty content (finish=length, reasoning=27970 chars)"
+}

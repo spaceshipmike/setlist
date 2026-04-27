@@ -1,0 +1,28 @@
+{
+  "project": "ensemble",
+  "config_label": "flash@t0.0",
+  "model": "google/gemini-2.5-flash",
+  "temperature": 0,
+  "sample": 1,
+  "digest": "Ensemble is a TypeScript-based extension platform manager primarily focused on Claude Code, with secondary support for 16 other AI clients. It provides full lifecycle management for seven declarative artifact types: MCP servers, skills, plugins, subagents, slash commands, hooks, and managed `settings.json` values. The platform is designed to be library-first, offering pure-function operations with Zod-validated schemas, a CLI, and an Electron desktop application.\n\nFor Claude Code, Ensemble manages all seven resource types end-to-end, including safe apply, rollback snapshots, typed variables, and library reconciliation. MCP servers and skills additionally support mirroring across 16 other AI clients (Claude Desktop, Cursor, VS Code, Windsurf, Zed, JetBrains, Antigravity, CodeBuddy, Qoder, Trae, and more). Other client types will expand support for additional resource types after the Claude Code experience is fully refined. The desktop application features a pivot-based sidebar, a project × Claude Code matrix view, inline staged changes with diff preview, and ambient state rendering. A shared discovery engine, `browse.ts`, powers fuzzy search across installed and discoverable resources, supporting `@marketplace-name` filter syntax.\n\nThe core architecture is library-first, meaning all operations are pure functions that take a configuration object and return an updated configuration. This allows Ensemble to be used as a standalone CLI, a desktop application, or an imported library for other applications. Configuration is stored in `~/.config/ensemble/config.json`, and changes are reflected across all interfaces. Every library resource includes a source-owned `description` (auto-populated and refreshed from upstream) and a user-authored `userNotes` field, which is never overwritten and is weighted 2x in local search. The canonical library store is located at `~/.config/ensemble/library/`, independent of any Claude Code scope, with install state managed as a property of each library resource.\n\nEnsemble's sync engine projects the desired install state into client configurations. Servers and plugins are synced via config-entry writes, while skills, agents, and commands use symlink or file fan-out from the canonical store. Hooks and managed settings are synced via non-destructive merges into `settings.json`, preserving unmanaged keys. Every sync operation creates a rollback-capable snapshot, allowing any change to be undone. Drift detection, based on artifact-level content hashes, identifies external modifications to managed resources. The `doctor` command provides a deterministic health audit, checking for issues like missing environment variables, orphaned entries, and configuration drift.\n\nThe platform supports configuration profiles, which capture client assignments, path rules, and settings under a named label, enabling atomic switching between different operational contexts. Profiles can also be exported as standalone Claude Code plugins, bundling resources, typed variables, and launch prompts. Secret redaction occurs at the serialization boundary for exported profiles, ensuring sensitive information is not exposed. Ensemble integrates with the project registry for project-aware scoping and can optionally read from Setlist's capability registry to enrich search results and doctor checks with portfolio-wide capability awareness.",
+  "token_count": 847,
+  "matched_features": [
+    "Claude Code",
+    "MCP",
+    "skills",
+    "plugins",
+    "subagents",
+    "hooks",
+    "settings.json",
+    "library",
+    "snapshot"
+  ],
+  "missing_features": [
+    "multi-client"
+  ],
+  "recall": 0.9,
+  "length_compliance": "over_target",
+  "duration_ms": 5477,
+  "cost_usd": null,
+  "error": null
+}

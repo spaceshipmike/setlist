@@ -1,0 +1,28 @@
+{
+  "project": "fctry",
+  "config_label": "glm-4.7-flash@t0.2",
+  "model": "z-ai/glm-4.7-flash",
+  "temperature": 0.2,
+  "sample": 1,
+  "digest": "fctry is a Claude Code plugin that orchestrates eight specialized agents to produce experience-first specifications in NLSpec v2 format and drive autonomous builds from them. The system conducts a conversational interview to capture user vision, generates a complete spec and scenario holdout set, and manages the build-measure-learn loop until scenario satisfaction is achieved. The spec uses experience language exclusively, describing what users see, do, and feel rather than technical architecture. Scenarios are kept in a separate file to prevent the coding agent from \"teaching to the test.\" The live spec viewer provides real-time updates, a recursive kanban board, and mission control during builds.\n\nBuild execution follows a plan-gated autonomous model where the user approves a build plan once and the system executes all chunks independently, handling failures, retries, and rearchitecting silently. The Executor proposes a plan based on scenario satisfaction and execution priorities, and the Observer verifies each chunk's output against the spec. The system enforces a strict operational voice contract where user-facing surfaces speak plain English, never exposing factory-internal vocabulary. Context is managed proactively to prevent degradation, with checkpoints and a three-tier context budget gate ensuring builds survive session death or context exhaustion.\n\nThe system maintains a structured state through the State Owner, which scans the codebase and detects drift between the spec and reality. A version registry manages project versions and their propagation targets, while build learnings are accumulated in a lessons file and cross-session knowledge is stored in a global memory store. The spec viewer serves as a multi-project dashboard with a recursive kanban board, change history, and async inbox for evolve ideas and references. The status line provides ambient progress feedback, and the next-action recommender offers prioritized next steps based on cached state.",
+  "token_count": 500,
+  "matched_features": [
+    "NLSpec",
+    "Claude Code plugin",
+    "scenarios",
+    "Executor",
+    "Observer",
+    "State Owner",
+    "viewer",
+    "kanban"
+  ],
+  "missing_features": [
+    "Voice Translator",
+    "Spec Writer"
+  ],
+  "recall": 0.8,
+  "length_compliance": "in_range",
+  "duration_ms": 49536,
+  "cost_usd": null,
+  "error": null
+}

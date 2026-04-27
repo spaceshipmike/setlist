@@ -1,0 +1,28 @@
+{
+  "project": "fctry",
+  "config_label": "glm-4.7-flash@t0.2",
+  "model": "z-ai/glm-4.7-flash",
+  "temperature": 0.2,
+  "sample": 2,
+  "digest": "fctry is a Claude Code plugin that orchestrates eight specialized agents to convert conversational user visions into experience-first specifications in NLSpec v2 format and then drives autonomous builds from them. The system enforces a strict workflow where the State Owner scans the codebase first, followed by domain agents, and finally the Scenario Crafter and Spec Writer produce the spec and scenarios. The user approves a build plan once, after which the Executor autonomously executes chunks in dependency order, handling failures and rearchitecting silently while resurfacing only for experience-level questions. The spec viewer provides a multi-project-aware web interface with real-time updates, while the terminal status line offers ambient progress visibility. The system maintains a version registry in config.json for auto-discovery and propagation, and an async inbox in the viewer for background processing of ideas and references. The system enforces a two-register operational voice contract where user-facing surfaces speak plain English through a single translation module, blocking factory-internal vocabulary like \"chunk,\" \"readiness,\" or \"memory digest\" from reaching the user. Experience language governs both input (user descriptions) and output (build plans, error messages, experience reports), ensuring the spec captures what the user sees and does rather than technical implementation details. This is enforced by deterministic templates and a Voice Translator agent for free-form prose, with a narrow block-tier guard preventing banned terms in templates, events, and status labels. The system also enforces workflow steps (State Owner must run first) and uses structured choices via AskUserQuestion for user-facing decisions. Build execution is plan-gated and autonomous, with the Executor proposing chunks tied to scenarios and the user approving the plan once. The system handles failures through a four-stage escalation progression (retry, recover, restructure, escalate) and manages context pressure through a three-tier context budget gate (65% awareness, 75% soft gate, 85% hard gate) to prevent degradation. The Observer agent performs post-chunk verification using structural checks, behavioral reviews, and optional multi-model assessment (Claude, Codex, Gemini) to ensure scenario satisfaction. The build trace records what happened, and the experience report maps completed work to concrete user actions rather than satisfaction percentages. Unbuilt sections include background-worker execution, the viewer as a control plane with a terminal emulator, cross-project synthesis, a self-improvement loop, an arbiter-tier disagreement resolver, and an experimental fully-autonomous loop.",
+  "token_count": 682,
+  "matched_features": [
+    "NLSpec",
+    "Claude Code plugin",
+    "scenarios",
+    "Executor",
+    "Observer",
+    "Voice Translator",
+    "Spec Writer",
+    "State Owner",
+    "viewer"
+  ],
+  "missing_features": [
+    "kanban"
+  ],
+  "recall": 0.9,
+  "length_compliance": "in_range",
+  "duration_ms": 34438,
+  "cost_usd": null,
+  "error": null
+}

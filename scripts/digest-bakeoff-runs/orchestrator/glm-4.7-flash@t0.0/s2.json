@@ -1,0 +1,28 @@
+{
+  "project": "orchestrator",
+  "config_label": "glm-4.7-flash@t0.0",
+  "model": "z-ai/glm-4.7-flash",
+  "temperature": 0,
+  "sample": 2,
+  "digest": "Orchestrator is a reactive Claude Code skill that answers cross-project questions by assembling knowledge from the project registry, specs, and a persistent layer of distilled insight cards. The user invokes it with `/orchestrator` followed by a question. The skill classifies the request as atomic or composite, scopes relevant projects via the setlist registry MCP, and reads sources fresh from disk—`.fctry/spec.md`, `CLAUDE.md`, architecture files, and code—before reasoning. Answers are tight (3-5 sentences), cite specific sources, and flag speculation. The skill retains non-obvious findings to setlist memory as observations.\n\nKnowledge assembly relies on a \"thin index\" provided by the registry to determine what to read, then performs fresh reads of the actual sources. It uses the `codebase-memory` MCP for structural understanding of single projects. The orchestrator does not cache answers; it maintains one persistent store of insight cards extracted from above-floor knowmarks. These cards capture thesis, intent tags, named patterns, claims with evidence strength, and counter-examples, stored in a local SQLite database at `~/Code/.cache/insight-cards.db`. Cards are regenerated only when their source changes materially.\n\nReference routing is the primary action mode, triggered by `/orchestrator ref`. The skill distills knowmarks saves into insight cards, clusters them into \"waves\" (emergent themes) before per-item routing, and scores them against project digests. It supports three modes: inline routing of a specific URL, batch processing of recent GitHub stars, and project-specific mining of the existing knowledge base. On confirmation, the orchestrator delegates to the target project's `/fctry:ref` to incorporate the reference into the spec and appends a structured handoff to the project's `.fctry/inbox.json`. It also stages reference-topic state in its own SQLite until a setlist evolve adds the native memory type.\n\nThe skill handles seven core question types: dependency tracing (including co-change coupling), impact analysis, portfolio health (mechanical claim validation, dual-axis staleness, severity tagging), pattern comparison, project briefings, disruptive opportunities (grounded in user goals), and connection scans (three-layer abstraction of changes, relationships, and connections). It uses Gemini 2.5 Flash-Lite for extraction by default, with local Qwen3.6 as a fallback. The orchestrator does not write to specs or code; it only writes to its own card store, the cost trace ledger, and the bounded inbox handoff.\n\nThe current state is strictly reactive. Future autonomy is explicitly deferred to a graduated path: event-triggered suggestions and autonomous low-risk actions are not yet implemented. The skill also does not implement a portfolio-wide code index or vector similarity search; these are listed as future capabilities or pattern studies.",
+  "token_count": 725,
+  "matched_features": [
+    "portfolio",
+    "Claude Code skill",
+    "insight cards",
+    "knowmarks",
+    "reference routing",
+    "waves",
+    "SQLite",
+    "registry",
+    "speculation"
+  ],
+  "missing_features": [
+    "facet"
+  ],
+  "recall": 0.9,
+  "length_compliance": "in_range",
+  "duration_ms": 22885,
+  "cost_usd": null,
+  "error": null
+}

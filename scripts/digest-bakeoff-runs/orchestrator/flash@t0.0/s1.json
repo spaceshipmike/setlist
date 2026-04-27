@@ -1,0 +1,27 @@
+{
+  "project": "orchestrator",
+  "config_label": "flash@t0.0",
+  "model": "google/gemini-2.5-flash",
+  "temperature": 0,
+  "sample": 1,
+  "digest": "Orchestrator is a portfolio intelligence agent implemented as a reactive Claude Code skill. It understands active projects, their architectures, dependencies, and patterns, reasoning about them as a unified system. It classifies user questions as atomic or composite, identifies scope, assembles knowledge by reading relevant specs, CLAUDE.md files, and code from disk, and then reasons to synthesize an answer. Answers are concise (3-5 sentences), cite specific sources, and flag speculation. Non-obvious connections are surfaced, and drill-down is conversational. Findings deemed non-obvious are retained as portfolio-scoped observations in setlist memory.\n\nThe agent handles seven question types: dependency tracing (including implicit co-change coupling), impact analysis, portfolio health and drift (with mechanical claim validation and dual-axis staleness), pattern comparison, project briefings, disruptive opportunity identification (grounded in user priorities), and connection scans (operating at item, relationship, and abstract connection layers). It integrates with the project registry (setlist) via MCP tools for project indexing and portfolio memory, and performs direct file reads for project sources. It also uses a `codebase-memory` MCP for single-project structural understanding.\n\nFor reference routing, Orchestrator processes external references (e.g., GitHub stars) by first saving them to knowmarks. It then distills above-floor saves into structured **insight cards**, stored in a private SQLite database (`~/Code/.cache/insight-cards.db`). Cards capture thesis, intent tags, patterns, claims with evidence strength, and source quality. Extraction uses a hybrid prompt (portfolio-agnostic core + scan-time project overlay) with Gemini 2.5 Flash-Lite as the default model and local Qwen3.6-35B-A3B-8bit as fallback. Cards are lazily created for above-floor items and refreshed opportunistically.\n\nBefore per-item routing, the orchestrator clusters cards within a scan window into **waves** to surface emergent themes. It analyzes cards against current project digests to determine relevance and disruptive opportunities, presenting a tiered routing table. Confirmed routings are dispatched to target projects' `/fctry:ref` and registered as persistent **reference-topics** in setlist memory, accumulating evidence over time and triggering re-evolve suggestions when the corpus shifts. Project-mode routing (`/orchestrator ref <project>`) mines existing knowmarks by decomposing project goals into facets, expanding through semantic clusters, and using iterative refinement and related-neighbor walks.\n\nThe orchestrator's responsibilities include identifying cross-project patterns, detecting convergence opportunities, monitoring portfolio health and drift, identifying disruptive opportunities (grounded in `~/Code/.plans/portfolio-goals.md`), and discovering non-obvious connections between projects. It operates under principles of fresh reasoning, cited claims, transparency, and deferral to per-project agents for implementation details. It is reactive in v1, with future stages planned for event-triggered suggestions and autonomous low-risk actions, governed by tiered self-modification rules.\n\nThe orchestrator does not become a dashboard or general coordinator. It does not maintain a separate memory system beyond its insight card store and reference-topic stage, which are intended for eventual migration to setlist. It does not fabricate dependencies or read code when specs suffice. Its write operations are limited to `retain` to setlist memory, `save` to knowmarks, appending to `.fctry/inbox.json` for handoff, and managing its own card store and cost trace ledger.",
+  "token_count": 927,
+  "matched_features": [
+    "portfolio",
+    "Claude Code skill",
+    "insight cards",
+    "knowmarks",
+    "reference routing",
+    "waves",
+    "SQLite",
+    "registry",
+    "speculation",
+    "facet"
+  ],
+  "missing_features": [],
+  "recall": 1,
+  "length_compliance": "over_target",
+  "duration_ms": 6044,
+  "cost_usd": null,
+  "error": null
+}

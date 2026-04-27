@@ -1,0 +1,28 @@
+{
+  "project": "fctry",
+  "config_label": "glm-4.7-flash@t0.0",
+  "model": "z-ai/glm-4.7-flash",
+  "temperature": 0,
+  "sample": 2,
+  "digest": "fctry is a Claude Code plugin that orchestrates eight specialized agents to convert conversational user descriptions into NLSpec v2 specifications and then drives autonomous builds from them. The system enforces experience language in both directions, using a two-register output model where technical register is for agents and experience register is for the user. The core workflow involves the State Owner grounding the conversation, the Interviewer extracting the vision, the Scenario Crafter and Spec Writer generating the spec and scenarios, and the Executor planning and executing the build. The user approves the build plan once, after which the system executes autonomously, handling failures, retries, and rearchitecting silently while resurfacing only for experience-level questions. The Observer agent verifies chunk outputs using structural and behavioral checks, and a quality ratchet ensures monotonic improvement. Builds are checkpointed and resumable, and the system accumulates lessons and memory across sessions for institutional learning. The live spec viewer is a multi-project server that renders the spec, shows real-time updates, and transforms into mission control during builds, featuring a kanban board, change history, and an async inbox. Future directions include background-worker execution for parallel chunk processing, the viewer evolving into a control plane via MCP elicitation and a terminal emulator, a self-improvement loop command, an arbiter-tier disagreement resolver, and an experimental fully-autonomous loop.",
+  "token_count": 388,
+  "matched_features": [
+    "NLSpec",
+    "Claude Code plugin",
+    "scenarios",
+    "Executor",
+    "Observer",
+    "Spec Writer",
+    "State Owner",
+    "viewer",
+    "kanban"
+  ],
+  "missing_features": [
+    "Voice Translator"
+  ],
+  "recall": 0.9,
+  "length_compliance": "under",
+  "duration_ms": 23817,
+  "cost_usd": null,
+  "error": null
+}

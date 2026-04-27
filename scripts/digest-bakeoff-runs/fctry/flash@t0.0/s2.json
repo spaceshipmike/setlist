@@ -1,0 +1,28 @@
+{
+  "project": "fctry",
+  "config_label": "flash@t0.0",
+  "model": "google/gemini-2.5-flash",
+  "temperature": 0,
+  "sample": 2,
+  "digest": "fctry is a Claude Code plugin designed for autonomous software development from experience-first specifications. It orchestrates eight specialized agents through eight commands to convert conversational descriptions of user experiences into complete NLSpec v2 documents, generate scenario holdout sets, and manage the build-measure-learn loop until scenario satisfaction is achieved. The system is built on Node.js, SQLite, WebSocket, and Mermaid.js, integrating with the Claude Code Plugin API.\n\nThe core commands include `/fctry:init` for conversational spec creation, `/fctry:evolve` for targeted spec updates, `/fctry:ref` for incorporating external references, `/fctry:review` for checking spec-code alignment, `/fctry:execute` for autonomous builds, `/fctry:next` for recommending the highest-priority action, `/fctry:view` for a live spec viewer, and `/fctry:stop` for managing the viewer. The system emphasizes \"experience language everywhere,\" ensuring all user-facing surfaces use plain English and avoid internal factory vocabulary. A dedicated voice translation module enforces this two-register model, with a block-tier guard catching drift in critical user-facing outputs.\n\nThe spec viewer serves as a multi-project dashboard, displaying registered fctry projects in columns with readiness bars, spec status, and pending inbox items. It transforms into a live mission control during builds, showing a visual dependency graph of chunks, their lifecycle states, and real-time activity feeds. The viewer supports progressive disclosure, accordion sections, readiness filtering, and auto-generated Mermaid diagrams (entity relationships, user flows, agent pipelines, convergence phases, and section dependency neighborhoods). An async inbox allows users to submit evolve ideas, reference URLs, and new features, which are processed in the background.\n\nAutonomous execution is plan-gated: the user approves a build plan once, and the system executes independently, handling failures, retries, and rearchitecting silently. It resurfaces only for experience-level questions where the spec is ambiguous. Build progress is tracked via checkpoints, allowing interrupted builds to resume. The system accumulates codebase-specific lessons across sessions in a git-tracked `lessons.md` file, which mature through a bidirectional lifecycle (candidate, active, anti-pattern) based on utility feedback. A global memory store (`~/.fctry/memory.md`) captures cross-session knowledge like conversation digests, decision records, cross-project lessons, and user preferences.\n\nKey capabilities include multi-session continuity, conflict-aware updates, automated reference discovery (with pattern insights and concrete recommendations), scenario-driven build planning, and goal-gate enforcement. The system minimizes token consumption through sectional spec loading, phased agent loading, and scenario lazy-loading. It maintains a structured spec index in SQLite for efficient access and tracks section readiness automatically. The terminal status line provides a two-line summary of project identity and current activity, including visual progress bars and a derived next step.\n\nHard constraints include operating as a Claude Code plugin, using experience language exclusively, maintaining scenario holdout separation, requiring plan-gated execution, ensuring the State Owner runs first, prohibiting human code review, and enforcing credential safety during autonomous execution. Anti-patterns include avoiding becoming an IDE or a project management tool, silently overwriting data, assuming on conflicts, allowing spec viewer editing, and drive-by refactoring.\n\nFuture directions include background-worker execution for parallel chunk processing, a scheduled autonomous work launcher for continuous inbox processing, an experimental fully-autonomous loop for continuous discover-incorporate-build cycles, and the viewer evolving into a full control plane for direct interaction with the factory. Unbuilt sections explicitly mentioned include the full implementation of the experimental autonomous loop, the scheduled autonomous work launcher, and the full control plane capabilities of the viewer.",
+  "token_count": 1048,
+  "matched_features": [
+    "NLSpec",
+    "Claude Code plugin",
+    "State Owner",
+    "viewer"
+  ],
+  "missing_features": [
+    "scenarios",
+    "Executor",
+    "Observer",
+    "Voice Translator",
+    "Spec Writer",
+    "kanban"
+  ],
+  "recall": 0.4,
+  "length_compliance": "over_target",
+  "duration_ms": 11501,
+  "cost_usd": null,
+  "error": null
+}

@@ -1,0 +1,28 @@
+{
+  "project": "fctry",
+  "config_label": "glm-4.7-flash@t0.0",
+  "model": "z-ai/glm-4.7-flash",
+  "temperature": 0,
+  "sample": 3,
+  "digest": "fctry is a Claude Code plugin that enables non-coders to build software from experience-first specifications. It orchestrates eight specialized agents to convert conversational vision into NLSpec v2 documents and scenario holdout sets, then drives autonomous builds. The user approves a build plan once, and the system executes chunks independently, resurfacing only for experience-level questions. Experience language governs both what the system accepts from the user and every surface the system speaks back through, with a two-register model separating technical register for internal machinery from plain English for user-facing output. The system maintains a canonical spec in `.fctry/spec.md` and a holdout scenario set in `.fctry/scenarios.md`. Users can evolve specific sections via `/fctry:evolve` or incorporate external references via `/fctry:ref`. The State Owner scans the codebase to detect drift between spec and implementation, surfacing conflicts for user resolution. The spec viewer provides a multi-project dashboard with a kanban board, real-time updates, and mission control during builds. The Executor proposes a plan based on scenario satisfaction and readiness, then executes chunks autonomously. The system handles failures, retries, and rearchitecting silently. Builds are checkpointed and resumable. The Observer verifies chunk outputs against the spec. The viewer transforms into mission control during execution, showing a dependency graph and activity feed. The status line provides ambient progress feedback. The spec includes sections for the core flow, first run, multi-session interviews, evolve flow, ref flow, review flow, execute flow, navigate sections, live spec viewer, error handling, details, status line, and next action. The system tracks per-section readiness, versioning via a registry, and cross-session memory. Future directions include background-worker execution, viewer-as-control-plane, and an experimental autonomous loop.",
+  "token_count": 494,
+  "matched_features": [
+    "NLSpec",
+    "Claude Code plugin",
+    "scenarios",
+    "Executor",
+    "Observer",
+    "State Owner",
+    "viewer",
+    "kanban"
+  ],
+  "missing_features": [
+    "Voice Translator",
+    "Spec Writer"
+  ],
+  "recall": 0.8,
+  "length_compliance": "under",
+  "duration_ms": 37335,
+  "cost_usd": null,
+  "error": null
+}

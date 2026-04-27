@@ -1,0 +1,28 @@
+{
+  "project": "knowmarks",
+  "config_label": "flash@t0.0",
+  "model": "google/gemini-2.5-flash",
+  "temperature": 0,
+  "sample": 1,
+  "digest": "Knowmarks is an open-source, local-first knowledge management system designed for both human and AI agent interaction. It ingests diverse content types, including URLs, PDFs, Office documents, YouTube videos, GitHub repositories, Readwise highlights, browser clips, AI conversation threads, email, and local files, into a single, format-agnostic corpus. This corpus is then exposed through three distinct, ownership-clean surfaces: user-authored Notes, an LLM-compiled Wiki (where every claim is traced to a source span), and a pipeline-extracted Graph (detailing entities, relationships, and communities with provenance).\n\nThe system organizes knowledge into \"Spaces,\" which are named, composable subsets of the corpus. Spaces are defined by three orthogonal attributes: origin (machine-suggested, user-created, LLM-proposed), membership rule (explicit, semantic, hybrid), and lifetime intent (reference, project, exploration). Retrieval for both humans and agents operates via a surface cascade, prioritizing token-efficient Wiki articles, then Graph traversal for structural queries, and finally passage-level results for open-ended semantic queries, all while honoring token budgets and grounding citations.\n\nThe primary human interface is the conversational \"Companion,\" accessible via a dashboard rail, desktop app, or global launcher. The Companion mediates intake, triage, exploration, retrieval preview, and space management through dialogue, wrapping existing MCP verbs in confirm-flow language. It renders a \"Brief\" (a change-driven narrative synthesis of corpus activity) and surfaces proactive observations. For heavy synthesis or long-form reasoning, the Companion facilitates hand-off to the user's chosen frontier LLM via MCP. LLM inference is routed on two axes: capability (fast/deep) and timing (sync/async), ensuring user-blocking calls are inline while background enrichment (summaries, connections, fact extraction) flows through a durable, per-user batch queue.\n\nKnowmarks offers multiple peer surfaces, including a CLI, REST API, web dashboard, browser extension, and native macOS desktop app. It supports pluggable embedding providers (fastembed, Ollama, OpenAI-compatible) and uses SQLite for data storage. Key features include content-type-aware extraction (with high-fidelity PDF, YouTube visual OCR, and Office document processing), source-aware staleness probes, progressive search refinement, automation rules for incoming items, and persistent citations with W3C Web Annotation selectors for drift resilience. The system emphasizes disposable derived state, meaning all generated artifacts (embeddings, wiki articles, graph structures) are rebuildable from source content.\n\nThe project is actively developed, with many core components built and deployed. However, the Wiki and Graph layers are currently proposed and not yet built, representing significant future development areas. The system also includes an alpha deployment mode for multi-user testing on a shared instance with per-user isolation, focusing on time-to-first-value for onboarding.",
+  "token_count": 771,
+  "matched_features": [
+    "MCP",
+    "Companion",
+    "Spaces",
+    "Wiki",
+    "Graph",
+    "fastembed",
+    "Notes",
+    "citation"
+  ],
+  "missing_features": [
+    "Milkdown",
+    "FTS5"
+  ],
+  "recall": 0.8,
+  "length_compliance": "in_range",
+  "duration_ms": 6089,
+  "cost_usd": null,
+  "error": null
+}

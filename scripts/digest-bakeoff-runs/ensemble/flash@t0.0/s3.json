@@ -1,0 +1,28 @@
+{
+  "project": "ensemble",
+  "config_label": "flash@t0.0",
+  "model": "google/gemini-2.5-flash",
+  "temperature": 0,
+  "sample": 3,
+  "digest": "Ensemble is a TypeScript-based extension platform manager primarily focused on Claude Code, with secondary support for 16 other AI clients. It provides a full lifecycle management solution for seven declarative artifact types: MCP servers, skills, plugins, subagents, slash commands, hooks, and managed `settings.json` values. The platform is designed to be library-first, offering pure-function operations, a CLI, and an Electron desktop application.\n\nFor Claude Code, Ensemble manages all seven artifact types end-to-end, including safe apply, rollback snapshots, typed variables, and library reconciliation. MCP servers and skills additionally support mirroring across 16 other AI clients (Claude Desktop, Cursor, VS Code, Windsurf, Zed, JetBrains, Antigravity, CodeBuddy, Qoder, Trae, and more). Other client types will expand support for the remaining five artifact types incrementally after the Claude Code experience is fully mature.\n\nThe platform emphasizes a \"frictionless through anticipation\" user experience, where presence, state, scope, provenance, destination, and consequence are ambiently displayed. Key pillars include project-level tooling management (with a primary project × Claude Code configuration view), library building (as a living shelf accumulating resources from various sources), and marketplace discovery (a unified \"Explore\" surface blending curated catalogs, live registry search, local directories, and Git repositories).\n\nEnsemble's core concepts include a resource lifecycle model centered on Marketplace (discovery), Library (user-owned inventory), and Install state (a property of library resources). The library is the canonical store at `~/.config/ensemble/library/`, independent of any client scope. Install state is a per-client/per-project matrix. The desktop app uses a pivot-based sidebar (Library, By Project, By Group, By Client, Marketplace) and a Matrix view to visualize and manage resource activation. Installation states in the Matrix view distinguish between `direct`, `inherited`, `drift`, `orphan`, and `ignored` resources.\n\nEvery library resource includes dual annotation fields: a source-owned `description` (auto-populated and refreshed from upstream) and a user-authored `userNotes` (never overwritten by re-import, weighted 2x in local search). Resources and profiles can declare typed variables (`text`, `note`, `api-key`, `password`) with root-to-leaf inheritance and secret redaction at the serialization boundary. A published detection policy governs how file-based resources are identified during filesystem scans.\n\nThe CLI exposes `pull`, `add`, `install`, `uninstall`, and `remove` verbs for managing library membership and install state. `ensemble import-legacy` is a one-shot transitional command for migrating v1.3 configurations to the v2.0.1 library and install-state matrix; it is scheduled for deletion after the migration.\n\nThe `ensemble sync` operation projects install state into client configurations. It employs different strategies per resource type: config-entry writes for servers and plugins, symlink fan-out (with copy fallback) for skills, agents, and commands, and non-destructive key-level merges for hooks and managed settings. Every sync generates a rollback-capable snapshot, and all writes are atomic (write to temp, validate, then rename). Drift detection uses artifact-level content hashes for file-based resources and entry-level hashes for config-entry resources. Per-client sync modes allow overriding the default symlink behavior for specific clients or platforms.\n\n`ensemble doctor` provides a deterministic health audit, checking for missing environment variables, orphaned entries, stale configurations, parse errors, drift, unreachable binaries, broken symlinks, unresolved skill dependencies, upstream drift, and refreshed descriptions. It provides structured scoring and actionable fix suggestions.\n\nEnsemble integrates with MCP server registries (Official MCP Registry, Glama) for discovery and installation, offering pre-install security summaries and storing tool metadata. Local capability search uses BM25 scoring, query alias expansion, multi-signal quality scoring, and optional usage-based self-learning.\n\nConfiguration profiles allow users to snapshot and activate different sets of client assignments, path rules, and settings. Profiles can also be exported as self-contained Claude Code plugins, including their assigned resources, variables, and launch prompts.\n\nThe project is built with TypeScript, Node.js, Commander.js, Zod, Vitest, Biome, tsup, Electron, React, and Tailwind CSS. It adheres to design principles such as library-first architecture, additive-only sync, idempotent operations, marker-based coexistence, and non-destructive configuration merges.",
+  "token_count": 1195,
+  "matched_features": [
+    "Claude Code",
+    "MCP",
+    "skills",
+    "plugins",
+    "subagents",
+    "hooks",
+    "settings.json",
+    "library",
+    "snapshot"
+  ],
+  "missing_features": [
+    "multi-client"
+  ],
+  "recall": 0.9,
+  "length_compliance": "over_target",
+  "duration_ms": 7669,
+  "cost_usd": null,
+  "error": null
+}

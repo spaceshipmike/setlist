@@ -1,0 +1,28 @@
+{
+  "project": "knowmarks",
+  "config_label": "glm-4.7-flash@t0.0",
+  "model": "z-ai/glm-4.7-flash",
+  "temperature": 0,
+  "sample": 3,
+  "digest": "Knowmarks is an open-source, local-first knowledge layer designed for the agentic era. It ingests everything—URLs, PDFs, Office documents, YouTube videos, GitHub repositories, Readwise highlights, browser clips, AI conversation threads, email, and local files—into a single format-agnostic corpus. Over this corpus sit three ownership-clean surfaces: user-authored **Notes**, an LLM-compiled **Wiki** under strict-compiler discipline (every claim traced to a source span), and a pipeline-extracted **Graph** with per-claim provenance. **Spaces**—named, composable subsets of the corpus—replace the older three-way split of projects/clusters/collections, using origin, membership rule, and lifetime intent as orthogonal attributes.\n\nThe primary agent-facing surface is the MCP server, which serves space-scoped retrieval via a **surface cascade** (wiki first for token efficiency, graph second for structural questions, passages third for open-ended semantic queries). Retrieval is token-budget-aware and grounded by passage-fingerprint verification. The system supports pluggable embeddings (fastembed, Ollama, OpenAI-compatible) and uses source-aware staleness probes to identify outdated content. Derived state—vectors, entities, wiki articles—is disposable and rebuildable from source fingerprints.\n\nHumans interact through the **Companion**, a conversational surface in the dashboard rail that wraps MCP verbs in confirm-flow language and mediates triage, intake, and space management. The Companion offers a hand-off to the user's chosen LLM for heavy synthesis. Ingestion is format-agnostic and runs through a phased pipeline: metadata saves immediately, full extraction (content-type-aware, including high-fidelity PDF/Office and YouTube visual capture) and enrichment (summaries, connections, structured facts) happen asynchronously. Automation rules and connector syncs (browser bookmarks, GitHub, Readwise, RSS, etc.) route items automatically.\n\nSeveral major surfaces are currently proposed or not yet built. The **Wiki** compiler (diff → summarize → extract → write → link) and the **Graph** entity resolution layer (canonical IDs, aliases, merge/split history) are target behavior. Passage-level retrieval with chunking for long-form items and a pluggable vector backend (zvec) are also proposed. The email connector and filesystem watcher are deferred to a future cycle. The global launcher (⌘⇧K) and AI conversation thread import via the browser extension are not yet implemented.",
+  "token_count": 624,
+  "matched_features": [
+    "MCP",
+    "Companion",
+    "Spaces",
+    "Wiki",
+    "Graph",
+    "fastembed",
+    "Notes"
+  ],
+  "missing_features": [
+    "Milkdown",
+    "FTS5",
+    "citation"
+  ],
+  "recall": 0.7,
+  "length_compliance": "in_range",
+  "duration_ms": 82794,
+  "cost_usd": null,
+  "error": null
+}

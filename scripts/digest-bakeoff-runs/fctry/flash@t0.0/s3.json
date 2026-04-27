@@ -1,0 +1,28 @@
+{
+  "project": "fctry",
+  "config_label": "flash@t0.0",
+  "model": "google/gemini-2.5-flash",
+  "temperature": 0,
+  "sample": 3,
+  "digest": "fctry is a Claude Code plugin designed for autonomous software development from experience-first specifications. It orchestrates eight specialized agents through eight commands to convert conversational descriptions of user experiences into NLSpec v2 documents, generate scenario holdout sets, and manage the build-measure-learn loop until scenario satisfaction. The system prioritizes an \"experience language everywhere\" principle, ensuring all user-facing surfaces, including build plans, progress updates, error messages, and completion prompts, use plain English via a single operational-voice translation module, preventing internal factory vocabulary from leaking to the user.\n\nThe core commands include `/fctry:init` for conversational spec creation, `/fctry:evolve` for targeted spec updates with conflict resolution, `/fctry:ref` for incorporating external references and patterns, `/fctry:review` for gap analysis between spec and code, and `/fctry:execute` for plan-gated autonomous builds. A `/fctry:next` command provides instant, cached recommendations for the highest-priority action. The system supports multi-session interviews, allowing users to pause and resume conversations without losing context.\n\nThe spec viewer serves as a multi-project dashboard and a live mission control during builds. It features a recursive kanban interface for visual prioritization, auto-generated diagrams (entity relationships, user flows, agent pipelines, convergence phases, section dependency neighborhoods), and real-time updates via WebSocket. During builds, the viewer transforms into a visual dependency graph, showing chunk lifecycle states, progress, and activity heat. An async inbox in the viewer allows users to queue evolve ideas, references, and new features for background processing.\n\nfctry manages build processes autonomously after initial plan approval, handling failures, retries, and rearchitecting silently. It resurfaces only for experience-level questions when the spec is ambiguous. Build state is checkpointed to allow for resuming interrupted builds. The system maintains a version registry for automated versioning and propagation across project files. It also accumulates cross-session build learnings in a `lessons.md` file, which mature through a bidirectional lifecycle based on utility feedback.\n\nKey capabilities include automated reference discovery, scenario-driven build planning, goal-gate enforcement, and a two-path scenario evaluation architecture (structural proxy for quick estimates, LLM-as-judge for deep calibration). The system enforces its workflow, tracks section readiness, and minimizes token consumption through sectional spec loading and phased agent execution. It integrates with codebase indexing tools for efficient structural analysis and supports multi-model assessment for enhanced verification.\n\nThe system is designed as a Claude Code plugin, operating locally on macOS or Linux. All fctry-generated files are organized within a `.fctry/` directory, with `CLAUDE.md` at the project root providing evergreen instructions. Ephemeral files are git-ignored, while the spec, scenarios, changelog, and lessons are version-controlled. Hard constraints include the \"experience language everywhere\" principle, scenario holdout separation, plan-gated execution, and no human code review. Anti-patterns include avoiding becoming an IDE or a project management tool, and never silently overwriting user data.",
+  "token_count": 865,
+  "matched_features": [
+    "NLSpec",
+    "Claude Code plugin",
+    "scenarios",
+    "viewer",
+    "kanban"
+  ],
+  "missing_features": [
+    "Executor",
+    "Observer",
+    "Voice Translator",
+    "Spec Writer",
+    "State Owner"
+  ],
+  "recall": 0.5,
+  "length_compliance": "over_target",
+  "duration_ms": 10456,
+  "cost_usd": null,
+  "error": null
+}

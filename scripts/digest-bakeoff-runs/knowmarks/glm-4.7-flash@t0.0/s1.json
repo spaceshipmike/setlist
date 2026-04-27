@@ -1,0 +1,27 @@
+{
+  "project": "knowmarks",
+  "config_label": "glm-4.7-flash@t0.0",
+  "model": "z-ai/glm-4.7-flash",
+  "temperature": 0,
+  "sample": 1,
+  "digest": "Knowmarks is an open-source, local-first knowledge substrate serving humans and LLMs. It ingests everything—URLs, PDFs, Office documents, YouTube, GitHub, Readwise, browser clips, AI conversation threads, email, and local files—into a single format-agnostic corpus. Three ownership-clean surfaces sit over this corpus: Notes authored by the user, a Wiki compiled by the LLM under strict-compiler discipline (every claim traced to a source span), and a Graph extracted by the pipeline with per-claim provenance. Spaces—named, composable subsets defined by origin, membership rule, and lifetime intent—replace the older project/cluster/collection split, allowing humans and agents to request knowledge by context.\n\nRetrieval follows a surface cascade: wiki articles first for token efficiency, graph traversal second for structural questions, and passage-level retrieval third for open-ended semantic queries. Passage-level retrieval is active for long-form items, while the wiki and graph layers are proposed. The MCP server is the primary agent interface, exposing 35 tools for full CRUD and governance with progressive detail levels and token-budget awareness. The Companion is the conversational human surface, wrapping MCP verbs in confirm-flow language to handle triage, intake mediation, and space management, while hand-off to the user's chosen LLM handles heavy synthesis.\n\nGovernance features include staleness probes grounded in source signals, knowledge gap analysis, and persistent citations with verification states. Citations are active; the governance sweep and gap detection are active. Derived state is disposable and rebuildable. The system uses Python 3.11+, SQLite with FTS5, and pluggable embeddings (fastembed, Ollama, OpenAI-compatible). The dashboard runs on a web-standard toolchain (Vite + TypeScript) with a Milkdown-backed notes editor. The macOS desktop app (Electron + PyInstaller) and browser extension are active surfaces, alongside CLI and REST API.",
+  "token_count": 496,
+  "matched_features": [
+    "Milkdown",
+    "MCP",
+    "Companion",
+    "Spaces",
+    "Wiki",
+    "Graph",
+    "FTS5",
+    "fastembed",
+    "Notes",
+    "citation"
+  ],
+  "missing_features": [],
+  "recall": 1,
+  "length_compliance": "under",
+  "duration_ms": 81984,
+  "cost_usd": null,
+  "error": null
+}

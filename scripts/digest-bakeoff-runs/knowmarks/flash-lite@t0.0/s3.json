@@ -1,0 +1,28 @@
+{
+  "project": "knowmarks",
+  "config_label": "flash-lite@t0.0",
+  "model": "google/gemini-2.5-flash-lite",
+  "temperature": 0,
+  "sample": 3,
+  "digest": "Knowmarks is a local-first knowledge management system designed for the agentic era, ingesting diverse content types into a unified corpus. It provides three ownership-clean surfaces over this corpus: user-authored **Notes**, an LLM-compiled **Wiki** with claims traced to source spans, and a pipeline-extracted **Graph** of entities and relationships with provenance. **Spaces** — named, composable subsets of the corpus — allow humans and agents to request knowledge slices. Retrieval operates via a **surface cascade** (wiki → graph → passages) that honors token budgets and grounds citations. The **Companion** is a conversational interface for human interaction, mediating triage, intake, and mutations, while also offering a **hand-off** to the user's chosen frontier LLM for heavy synthesis. The system supports multiple interfaces: a web dashboard, CLI, REST API, MCP server for agent interaction, browser extension, and a native macOS desktop app. It features pluggable embedding providers (fastembed, Ollama, OpenAI-compatible), a zvec vector backend, and disposable derived state with fingerprint-versioning for rebuildability. Automation rules allow deterministic routing of incoming items, complementing automatic clustering and semantic search. Freshness is managed via time-based decay modulated by source-aware probes and user engagement signals. The system prioritizes speed, local-first operation, agent-equal access, and intentional space composition, with a strict LLM-as-compiler discipline for the wiki. The alpha deployment is invite-only, per-user isolated, and focused on collecting feedback via a simplified onboarding flow and integrated issue reporting.",
+  "token_count": 421,
+  "matched_features": [
+    "MCP",
+    "Companion",
+    "Spaces",
+    "Wiki",
+    "Graph",
+    "fastembed",
+    "Notes",
+    "citation"
+  ],
+  "missing_features": [
+    "Milkdown",
+    "FTS5"
+  ],
+  "recall": 0.8,
+  "length_compliance": "under",
+  "duration_ms": 2597,
+  "cost_usd": null,
+  "error": null
+}

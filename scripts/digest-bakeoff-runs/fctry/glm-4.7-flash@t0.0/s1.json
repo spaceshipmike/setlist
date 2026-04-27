@@ -1,0 +1,28 @@
+{
+  "project": "fctry",
+  "config_label": "glm-4.7-flash@t0.0",
+  "model": "z-ai/glm-4.7-flash",
+  "temperature": 0,
+  "sample": 1,
+  "digest": "fctry is a Claude Code plugin that orchestrates eight specialized agents to convert conversational user visions into experience-first specifications in NLSpec v2 format and drive autonomous builds from them. The system enforces a strict experience-first contract where the spec describes what users see, do, and feel, and uses a two-register voice system to block factory-internal vocabulary from user-facing surfaces. The core workflow involves commands for initialization, evolution, reference incorporation, review, execution, next-action recommendation, and viewer management. The build process is plan-gated and autonomous, where the user approves a plan once and the system executes chunks sequentially in dependency order, handling failures and retries silently while resurfacing only for experience-level questions. Build state persists through checkpoints, enabling resumption after session death or interruption. The Observer verifies chunk outputs against the spec using structural and behavioral checks, and the system tracks build learnings in a lessons file and maintains a version registry for automatic version management. The live spec viewer is a multi-project-aware server that renders the spec in real-time via WebSocket, offering a kanban board for prioritization, mission control for build progress, and an async inbox for queued ideas. The viewer supports dark mode, auto-generated diagrams, and keyboard navigation, while the terminal status line provides ambient progress feedback. Several features are specified but not yet implemented, including background-worker execution for parallel chunk processing, the viewer evolving into a control plane with a terminal emulator and MCP elicitation, a self-improvement loop command, an arbiter-tier disagreement resolver for build-time verification, and an experimental fully-autonomous loop. Other future directions include incremental build trace parsing, per-agent token attribution, retrospective context efficiency reporting, structural regression verification, verification debt tracking, agent behavioral compliance monitoring, quality ratchet coverage expansion, structural invariant checks, a score-refine loop, build smoothness rating, and automated section map maintenance.",
+  "token_count": 564,
+  "matched_features": [
+    "NLSpec",
+    "Claude Code plugin",
+    "Observer",
+    "viewer",
+    "kanban"
+  ],
+  "missing_features": [
+    "scenarios",
+    "Executor",
+    "Voice Translator",
+    "Spec Writer",
+    "State Owner"
+  ],
+  "recall": 0.5,
+  "length_compliance": "in_range",
+  "duration_ms": 66691,
+  "cost_usd": null,
+  "error": null
+}

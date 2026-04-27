@@ -1,0 +1,28 @@
+{
+  "project": "ensemble",
+  "config_label": "glm-4.7-flash@t0.2",
+  "model": "z-ai/glm-4.7-flash",
+  "temperature": 0.2,
+  "sample": 1,
+  "digest": "Ensemble is a TypeScript library, CLI, and Electron desktop application for centrally managing Claude Code extension artifacts. The project adopts a library-first architecture where the canonical store at `~/.config/ensemble/library/` serves as the single source of truth for all seven declarative resource types: MCP servers, skills, plugins, subagents, slash commands, hooks, and managed settings. Install state is modeled as a property of library resources rather than a separate tier, allowing resources to exist in the library without being installed anywhere. The CLI provides verbs for lifecycle management, though the noun-first lifecycle surface (`pull`, `install`, `uninstall`, `remove`, `library`) is currently unbuilt and listed as a v2.0.1 target. The desktop app offers a Matrix view with project and Claude Code as the primary axis, alongside pivots for By Project, By Group, By Client, and Marketplace. The platform supports 17 AI clients today, with 4 planned (Antigravity, CodeBuddy, Qoder, Trae), focusing depth-first on Claude Code before expanding breadth for other clients. Operations are pure functions using Zod schemas, and sync strategies vary by type: config-entry writes for servers and plugins, symlink fan-out for skills and agents, and non-destructive merge for hooks and settings. The system includes safe apply with rollback snapshots, drift detection via content hashing, and dual-field annotations where source-owned `description` coexists with user-authored `userNotes`. Registry integration supports the Official MCP Registry, Glama, and the claude-plugins.dev skills catalog. Setlist integration provides read-only portfolio capability awareness. Unbuilt features include dynamic marketplace auto-discovery, a unified source parser for `ensemble add`, fuzzy search across installed and discoverable resources, multi-group assignments, project registry write-back, and additional registries like Smithery and PulseMCP.",
+  "token_count": 489,
+  "matched_features": [
+    "Claude Code",
+    "MCP",
+    "skills",
+    "plugins",
+    "subagents",
+    "hooks",
+    "library",
+    "snapshot"
+  ],
+  "missing_features": [
+    "settings.json",
+    "multi-client"
+  ],
+  "recall": 0.8,
+  "length_compliance": "under",
+  "duration_ms": 82207,
+  "cost_usd": null,
+  "error": null
+}

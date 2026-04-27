@@ -1,0 +1,28 @@
+{
+  "project": "knowmarks",
+  "config_label": "glm-4.7-flash@t0.2",
+  "model": "z-ai/glm-4.7-flash",
+  "temperature": 0.2,
+  "sample": 2,
+  "digest": "Knowmarks is a local-first, open-source knowledge store serving as a shared substrate for humans and AI agents. It ingests everything—URLs, PDFs, Office docs, YouTube, GitHub, Readwise, browser clips, AI conversation threads, email, and local files—into a single format-agnostic corpus. Over this corpus sit three ownership-clean surfaces: Notes (user-authored markdown), Wiki (LLM-compiled under strict-compiler discipline with every claim traced to a source span), and Graph (pipeline-extracted entities and edges with per-claim provenance). Spaces unify projects, clusters, and curated collections into one composable type with origin, membership rule, and lifetime-intent attributes.\n\nThe MCP server is the primary agent interface, offering 35 tools for CRUD, governance, and retrieval with a surface cascade (wiki first, graph second, passages third) that honors token budgets. The Companion is the conversational human surface, wrapping MCP verbs in confirm-flow language to handle triage, intake mediation, and retrieval preview. CLI, REST API, web dashboard, browser extension, and macOS desktop app remain peer surfaces. The system uses hybrid search (vector + FTS5 + RRF) with personalized relevance, automatic clustering, and freshness monitoring via source-aware staleness probes.\n\nSeveral major surfaces are proposed but not yet built. The Wiki compiler (strict-compiler discipline, per-paragraph citations, coverage indicators) and Graph entity resolution layer (canonical IDs, merge/split history, negative evidence) are target behavior. Passage-level retrieval for long-form items (chunking, passage embeddings) is active but the citation verbs are proposed. The Global Launcher (system-wide ⌘⇧K shortcut) and in-document highlighting overlay (recogito, W3C selectors) are proposed. Email and filesystem connectors are proposed. Docling is proposed as an evaluation-gated replacement for the current PDF/Office extraction path. Structured fact extraction, LLM extraction filtering, and citation verification are proposed. Knowledge gap analysis (project-anchored, conceptual bridges) and the knowledge pulse governance surface are active.",
+  "token_count": 539,
+  "matched_features": [
+    "MCP",
+    "Companion",
+    "Spaces",
+    "Wiki",
+    "Graph",
+    "FTS5",
+    "Notes",
+    "citation"
+  ],
+  "missing_features": [
+    "Milkdown",
+    "fastembed"
+  ],
+  "recall": 0.8,
+  "length_compliance": "in_range",
+  "duration_ms": 103032,
+  "cost_usd": null,
+  "error": null
+}

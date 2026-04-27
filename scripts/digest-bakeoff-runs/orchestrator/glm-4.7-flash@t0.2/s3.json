@@ -1,0 +1,28 @@
+{
+  "project": "orchestrator",
+  "config_label": "glm-4.7-flash@t0.2",
+  "model": "z-ai/glm-4.7-flash",
+  "temperature": 0.2,
+  "sample": 3,
+  "digest": "Orchestrator is a reactive Claude Code skill acting as a portfolio intelligence agent that answers cross-project questions by assembling knowledge from the project registry, live source files, and a persistent layer of distilled insight cards. It classifies questions as atomic or composite, determines scope, reads specs, CLAUDE.md, and code fresh on every query, and responds with cited evidence while flagging speculation. The skill does not maintain its own state or memory system; findings are retained to the registry via `retain`, and the only persistent storage it owns is a SQLite database of insight cards extracted from knowmarks.\n\nThe primary action mode is reference routing via `/orchestrator ref`, which handles inline, batch, and project-specific queries. It saves URLs to knowmarks, extracts clean text, and distills above-floor items into structured insight cards (thesis, intent tags, patterns, claims) stored in `~/Code/.cache/insight-cards.db`. Cards are the ingest atom; reasoning is fresh, but cards are reused. Before per-item routing, it clusters cards into \"waves\" (emergent themes) and scores items against project digests using tiers T1 (≥0.75) to T3 (0.55–0.65). Confirmed routings delegate to per-project `/fctry:ref` for spec incorporation and register reference-topics in setlist memory (currently staged in the orchestrator's SQLite until a setlist evolve lands).\n\nThe skill handles seven core question types: dependency tracing (including co-change coupling), impact analysis, portfolio health (claim extraction, dual-axis staleness, severity tagging), pattern comparison, project briefing, disruptive opportunities (grounded in portfolio goals), and connection scans (three-layer abstraction over changes, relationships, and connections). It uses the registry MCP for the thin index and portfolio topology, and direct file reads for substance. It validates spec claims mechanically and detects convergence opportunities where multiple projects independently solve the same problem. It employs a \"generator\" coordination pattern in v1, meaning it performs all reasoning itself rather than dispatching to sub-agents.\n\nThe current implementation is reactive only (v1). Future autonomous monitoring is explicitly out of scope for v1 but planned in stages: event-triggered suggestions and autonomous low-risk actions. The reference-as-topic mechanism is currently staged in the orchestrator's SQLite. Wave detection relies on thesis-based clustering and is pending sqlite-vec integration. The skill strictly avoids anti-patterns: it does not perform proactive monitoring, write to specs directly (delegating to `/fctry:ref`), or act as a general coordinator.",
+  "token_count": 672,
+  "matched_features": [
+    "portfolio",
+    "Claude Code skill",
+    "insight cards",
+    "knowmarks",
+    "reference routing",
+    "waves",
+    "SQLite",
+    "registry",
+    "speculation"
+  ],
+  "missing_features": [
+    "facet"
+  ],
+  "recall": 0.9,
+  "length_compliance": "in_range",
+  "duration_ms": 67675,
+  "cost_usd": null,
+  "error": null
+}

@@ -1,0 +1,27 @@
+{
+  "project": "ensemble",
+  "config_label": "glm-4.7-flash@t0.0",
+  "model": "z-ai/glm-4.7-flash",
+  "temperature": 0,
+  "sample": 3,
+  "digest": "Ensemble is a library-first TypeScript toolkit for centrally managing Claude Code extension artifacts across AI clients. The library at `~/.config/ensemble/library/` is the authoritative inventory of seven resource types—MCP servers, skills, plugins, subagents, slash commands, hooks, and managed settings—each carrying dual annotations (source-owned `description` and user-authored `userNotes`). Install state is a per-client/per-project property of library resources, not a separate tier. Operations are pure functions using Zod schemas, and sync projects this state to clients via additive writes, non-destructive merges for settings and hooks, and symlink fan-out for file-based resources. The platform adopts a \"Claude-Code-first, multi-client second\" stance, managing all seven types end-to-end for Claude Code before expanding to other clients.\n\nThe platform supports 17 AI clients (Claude Desktop, Code, Cursor, VS Code, Windsurf, Zed, JetBrains, etc.) with 4 planned. Sync strategies vary by type: servers and plugins use config-entry writes; skills, agents, and commands use symlink fan-out from a canonical store; hooks and settings merge non-destructively into `settings.json`. Every sync run produces a rollback-capable snapshot. Drift detection tracks local content hash changes and upstream tree hash changes (for GitHub sources). The desktop app provides a pivot-based sidebar (Library, By Project, By Group, By Client, Marketplace) and a project × Claude Code matrix view for wiring resources. Features include typed variables with inheritance, profile-as-plugin packaging, and read-only integration with the project registry and setlist capability registry.\n\nThe CLI uses Commander.js with a v1.3-style verb surface (e.g., `ensemble plugins install`) while the v2.0.1 lifecycle verbs (`pull`, `add`, `install`, `uninstall`, `remove`) and library subcommands are unbuilt. The Electron desktop app uses React + Tailwind with a tRPC bridge. Unbuilt work includes the `ensemble browse` discovery engine, the `ensemble settings` group wiring, and the `ensemble import-legacy` throwaway transitional command. The `ensemble doctor` command performs deterministic health audits. The `ensemble init` command provides guided onboarding. The `ensemble registry` module supports the Official MCP Registry and Glama.",
+  "token_count": 581,
+  "matched_features": [
+    "Claude Code",
+    "MCP",
+    "skills",
+    "plugins",
+    "subagents",
+    "hooks",
+    "settings.json",
+    "multi-client",
+    "library",
+    "snapshot"
+  ],
+  "missing_features": [],
+  "recall": 1,
+  "length_compliance": "in_range",
+  "duration_ms": 76203,
+  "cost_usd": null,
+  "error": null
+}

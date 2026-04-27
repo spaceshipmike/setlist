@@ -1,0 +1,28 @@
+{
+  "project": "knowmarks",
+  "config_label": "glm-4.7-flash@t0.0",
+  "model": "z-ai/glm-4.7-flash",
+  "temperature": 0,
+  "sample": 2,
+  "digest": "Knowmarks is an open-source, local-first knowledge substrate for the agentic era. It ingests everything—URLs, PDFs, Office docs, YouTube, GitHub, Readwise, browser clips, AI threads, email, and local files—into a single format-agnostic corpus. Over this corpus sit three ownership-clean surfaces: user-authored Notes (file-backed markdown), an LLM-compiled Wiki under strict-compiler discipline (every claim traced to a source span), and a pipeline-extracted Graph with per-claim provenance. Spaces—named, composable subsets defined by origin, membership rule, and lifetime intent—replace the older three-way split of projects/clusters/collections, serving as the unit for both human and agent retrieval.\n\nThe MCP server is the primary agent interface, serving space-scoped retrieval via a surface cascade (wiki first, graph second, passages third) that honors token budgets and grounds citations. The Companion mediates intake, triage, and space management through confirm-flow language. CLI, REST API, web dashboard, browser extension, and native desktop app remain peer surfaces under the agent-equal principle. The system routes LLM inference on two orthogonal axes—capability (fast/deep) and timing (sync/async)—so user-blocking calls stay inline while background enrichment flows through a durable per-user batch queue.\n\nIntake follows a \"drop into a space\" verb across all surfaces, with the Companion mediating ambiguous routing. Extraction handles HTML, PDF (tables/formulas/OCR), YouTube (transcript + visual frames), Office docs, and GitHub repos. Pluggable embeddings and source-aware staleness probes drive governance. The system maintains disposable derived state—vectors, entities, edges, wiki articles, and summaries are fingerprint-versioned and rebuildable from source. Governance surfaces include Pulse (knowledge briefing), triage (Companion-led), gap analysis (cluster/project/bridge), and persistent citations with W3C Web Annotation selectors for drift resilience.\n\nUnbuilt sections include the Wiki compilation pipeline (strict-compiler discipline), Entity Resolution Layer (canonical IDs, aliases, merge/split history), and Graph algorithms (community detection, traversal). Passage-level retrieval and chunking for long-form items are target behavior, as is the zvec vector backend replacing the current numpy implementation. The Email connector (IMAP/Gmail) and Filesystem connector (watching) are proposed, along with the Global Launcher (⌘⇧K) and Docling (evaluation-gated for structured PDF/Office extraction).",
+  "token_count": 635,
+  "matched_features": [
+    "MCP",
+    "Companion",
+    "Spaces",
+    "Wiki",
+    "Graph",
+    "Notes",
+    "citation"
+  ],
+  "missing_features": [
+    "Milkdown",
+    "FTS5",
+    "fastembed"
+  ],
+  "recall": 0.7,
+  "length_compliance": "in_range",
+  "duration_ms": 122011,
+  "cost_usd": null,
+  "error": null
+}

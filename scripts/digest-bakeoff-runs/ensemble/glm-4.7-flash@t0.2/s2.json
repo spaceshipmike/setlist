@@ -1,0 +1,28 @@
+{
+  "project": "ensemble",
+  "config_label": "glm-4.7-flash@t0.2",
+  "model": "z-ai/glm-4.7-flash",
+  "temperature": 0.2,
+  "sample": 2,
+  "digest": "Ensemble is a TypeScript library-first platform for managing Claude Code extensions across AI clients. It provides a central canonical store at `~/.config/ensemble/library/` for seven declarative resource types: MCP servers, skills, plugins, subagents, slash commands, hooks, and managed settings. Install state is modeled as a per-client/per-project property of each library resource, distinct from library membership. Resources carry dual-field annotations: source-owned `description` and user-authored `userNotes`. The project exposes pure-function operations via Zod schemas, a CLI with lifecycle verbs, and an Electron desktop app with a pivot-based sidebar and project × Claude Code matrix view. The desktop app uses a tRPC bridge for IPC, React, and Tailwind CSS. Sync is additive-only with non-destructive settings.json merge, safe apply, and rollback snapshots. Drift detection uses artifact-level content hashes. Registry integration supports the Official MCP Registry, Glama, and claude-plugins.dev for skills. Optional read-only integrations exist for setlist capability awareness and the project registry. The v2.0.1 target modules (agents, commands, hooks, settings, snapshots, doctor, browse) are built. The v1.3 install-state verbs (enableServer, disableServer, etc.) remain in exports pending a coordinated rename sweep. The `import-legacy.ts` module is a throwaway transitional subsystem.",
+  "token_count": 352,
+  "matched_features": [
+    "Claude Code",
+    "MCP",
+    "skills",
+    "plugins",
+    "subagents",
+    "hooks",
+    "settings.json",
+    "library",
+    "snapshot"
+  ],
+  "missing_features": [
+    "multi-client"
+  ],
+  "recall": 0.9,
+  "length_compliance": "under",
+  "duration_ms": 122291,
+  "cost_usd": null,
+  "error": null
+}

@@ -1,0 +1,28 @@
+{
+  "project": "knowmarks",
+  "config_label": "flash@t0.0",
+  "model": "google/gemini-2.5-flash",
+  "temperature": 0,
+  "sample": 3,
+  "digest": "Knowmarks is an open-source, local-first knowledge management system designed for humans and AI agents. It ingests diverse content types—URLs, PDFs, Office documents, YouTube videos, GitHub repositories, Readwise highlights, browser clips, AI conversation threads, email, and local files—into a single, format-agnostic corpus. This corpus is then accessible via a conversational Companion, a web dashboard, CLI, REST API, and an MCP server.\n\nThe system organizes knowledge through three ownership-clean surfaces: user-authored Notes, an LLM-compiled Wiki, and a pipeline-extracted Graph. The Wiki adheres to a \"strict-compiler\" discipline, ensuring every claim is traceable to a source span. The Graph extracts entities, edges, and communities with per-claim provenance and confidence scores, supporting reviewable entity resolution and merge/split history. Spaces, which are named, composable subsets of the corpus, allow both humans and agents to retrieve knowledge by context. Each space has orthogonal attributes for origin (machine-suggested, user-created, LLM-proposed), membership rule (explicit, semantic, hybrid), and lifetime intent (reference, project, exploration). Retrieval prioritizes token efficiency through a surface cascade: wiki articles first, then graph traversal, and finally passage-level results, with all citations grounded by passage-fingerprint verification.\n\nThe Companion serves as the in-app conversational interface, mediating triage, intake, retrieval preview, and space management by wrapping existing MCP verbs in confirm-flow dialogue. It renders the Pulse Brief, surfaces proactive observations, and handles light mutations, while explicitly handing off heavy synthesis and long-form reasoning to the user's chosen frontier LLM via direct MCP verbs. LLM inference is routed on two axes: capability (fast/deep) and timing (sync/async). User-blocking calls remain inline, while background enrichment (e.g., auto-summaries, gap detection) flows through a durable per-user batch queue with priority lanes. Providers without batch API support fall back to inline fast-tier submission.\n\nKey features include content-type-aware extraction (handling tables/formulas in PDFs, visual OCR in YouTube videos, structured data from Office documents and GitHub repos), pluggable embedding providers (fastembed/Ollama/OpenAI-compatible), source-aware staleness probes, and progressive search refinement. A fingerprint-driven reconciler ensures all derived state (embeddings, wiki articles, graph structures) is disposable and rebuildable from source content, maintaining data integrity across model or schema upgrades. Persistent citations allow users to create durable, verifiable references to specific passages within knowmarks, with retention classes and verification states. A global launcher (⌘⇧K) provides system-wide search and paste functionality.\n\nThe project is available as a macOS desktop app (Electron + PyInstaller), a Python package (`pip install knowmarks`), a Docker image, or from source. An alpha hosted deployment supports invite-only multi-user testing with per-user isolation, focusing on time-to-first-value through pre-populated states, a dominant URL paste box, and the Companion as a first-run helper. The front-end uses Vite, TypeScript, and Vitest, with a Milkdown-backed WYSIWYG Notes editor supporting `[[wikilink]]` autocomplete. Unbuilt sections include the full Wiki and Graph layers, and the email/filesystem connectors are proposed for corpus expansion.",
+  "token_count": 878,
+  "matched_features": [
+    "Milkdown",
+    "MCP",
+    "Companion",
+    "Spaces",
+    "Wiki",
+    "Graph",
+    "fastembed",
+    "Notes",
+    "citation"
+  ],
+  "missing_features": [
+    "FTS5"
+  ],
+  "recall": 0.9,
+  "length_compliance": "over_target",
+  "duration_ms": 5811,
+  "cost_usd": null,
+  "error": null
+}

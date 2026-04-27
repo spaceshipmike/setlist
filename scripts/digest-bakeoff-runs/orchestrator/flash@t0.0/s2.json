@@ -1,0 +1,27 @@
+{
+  "project": "orchestrator",
+  "config_label": "flash@t0.0",
+  "model": "google/gemini-2.5-flash",
+  "temperature": 0,
+  "sample": 2,
+  "digest": "Orchestrator is a portfolio intelligence agent implemented as a reactive Claude Code skill. It understands active projects, their architectures, dependencies, and patterns, reasoning about them as a unified system. It classifies user questions as atomic or composite, identifies scope, assembles knowledge by reading relevant specs, CLAUDE.md files, and code from disk, and then reasons to synthesize an answer. Answers are concise (3-5 sentences), cite specific sources, and flag speculation. Non-obvious connections are surfaced, and drill-down is conversational. Findings deemed non-obvious are retained as portfolio-scoped observations in setlist memory.\n\nThe agent handles seven question types: dependency tracing (including implicit co-change coupling), impact analysis, portfolio health and drift (with mechanical claim validation and dual-axis staleness), pattern comparison, project briefings, disruptive opportunity identification (grounded in user priorities), and connection scans (operating at item, relationship, and abstract connection layers). It integrates with the project registry (setlist) via MCP tools for project indexing and portfolio memory, and performs direct file reads for project sources. It also uses a `codebase-memory` MCP for single-project structural understanding.\n\nFor reference routing, Orchestrator processes external references (e.g., GitHub stars) by first saving them to knowmarks. It then distills above-floor saves into structured **insight cards**, which are stored in a local SQLite database (`~/Code/.cache/insight-cards.db`). Cards capture thesis, intent tags, patterns, claims with evidence strength, and source quality. Extraction uses a hybrid prompt (portfolio-agnostic core + scan-time project overlay) and tiered models (Gemini 2.5 Flash-Lite default, local Qwen fallback, Gemini 2.5 Flash upgrade). Cards are lazily created for above-floor items and refreshed opportunistically.\n\nBefore per-item routing, the orchestrator clusters cards within a scan window into **waves** to surface emergent themes. It then analyzes each card against portfolio topology to determine relevant projects and potential disruptive opportunities. A routing table is presented to the user, and confirmed routings are dispatched to target projects' `/fctry:ref` and registered as persistent **reference-topics** in setlist memory for ongoing evidence tracking. Project-mode routing mines existing knowmarks for a specific project by decomposing goals into facets, expanding through semantic clusters, and using iterative refinement and related-neighbor walks.\n\nOrchestrator maintains a local, append-only JSONL ledger (`~/Code/.cache/orchestrator-cost-trace.jsonl`) for extraction cost telemetry. It does not write to specs or source files directly, beyond appending to `.fctry/inbox.json` for handoff. It does not become a dashboard, general coordinator, or separate memory system. Future autonomy is planned as a graduated path from reactive to event-triggered suggestions and autonomous low-risk actions, governed by tiered self-modification rules.",
+  "token_count": 771,
+  "matched_features": [
+    "portfolio",
+    "Claude Code skill",
+    "insight cards",
+    "knowmarks",
+    "reference routing",
+    "waves",
+    "SQLite",
+    "registry",
+    "speculation",
+    "facet"
+  ],
+  "missing_features": [],
+  "recall": 1,
+  "length_compliance": "in_range",
+  "duration_ms": 3761,
+  "cost_usd": null,
+  "error": null
+}

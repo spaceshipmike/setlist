@@ -1,0 +1,28 @@
+{
+  "project": "orchestrator",
+  "config_label": "glm-4.7-flash@t0.2",
+  "model": "z-ai/glm-4.7-flash",
+  "temperature": 0.2,
+  "sample": 2,
+  "digest": "Orchestrator is a reactive Claude Code skill that functions as a portfolio intelligence agent. It answers natural-language questions about the entire portfolio by assembling knowledge from the project registry, live source files (specs, CLAUDE.md, code), and a persistent layer of distilled insight cards. The skill is invoked via `/orchestrator` or `/portfolio` followed by a question. It classifies questions as atomic or composite before reading, determines scope, reads sources fresh every time, reasons across projects, and cites specific evidence while flagging speculation. It retains non-obvious findings to the setlist portfolio memory but does not maintain its own reasoning state.\n\nThe system relies on a thin index provided by the project registry for navigation and a persistent SQLite store at `~/Code/.cache/insight-cards.db` for distilled knowmark content. Insight cards are extracted from above-floor knowmarks using a hybrid prompt (portfolio-agnostic core + scan-time project overlay) with default extraction via Gemini 2.5 Flash-Lite and local Qwen3.6-35B-A3B-8bit as a fallback. Cards capture thesis, intent tags, patterns, claims with evidence strength, and counter-examples. The orchestrator reads these cards alongside live specs to answer queries, ensuring reasoning is fresh while reusing durable distillations. It also maintains a cost-trace ledger at `~/Code/.cache/orchestrator-cost-trace.jsonl`.\n\nReference routing is a primary mode of operation, triggered by `/orchestrator ref`. It handles three sub-modes: inline routing for specific URLs, batch routing for recent knowmarks saves, and project mode to mine existing knowledge for a specific project. The process involves saving URLs to knowmarks, extracting insight cards, clustering cards into \"waves\" to surface emergent themes, and scoring them against project digests. The orchestrator presents a routing table with tiered recommendations and, upon confirmation, delegates to per-project `/fctry:ref` for spec incorporation. It also stages reference-topic state in its SQLite until a setlist evolve implements the feature.\n\nThe skill handles seven core question types: dependency tracing (including implicit co-change coupling), impact analysis, portfolio health and drift (with mechanical claim validation and dual-axis staleness), pattern comparison, project briefings, disruptive opportunity identification (grounded in user priorities), and connection scans (three-layer analysis of changes, relationships, and connections). It uses the portfolio topology to understand infrastructure, tooling, and application layers, identifying convergence opportunities where multiple projects solve the same problem. Answers are tight by default (3-5 sentences) and cite specific sources.\n\nThe current implementation is reactive only. Future autonomy is planned in stages: event-triggered suggestions and autonomous low-risk actions. The reference-as-topic feature is currently staged in the orchestrator's SQLite database and awaits a setlist evolve. The system currently uses semantic similarity over thesis content for wave detection; the sqlite-vec layer is a non-breaking addition planned for future wave detection or cross-card similarity needs. The orchestrator does not currently perform proactive monitoring, dashboard generation, or write operations beyond its own card store and bounded inbox handoffs.",
+  "token_count": 848,
+  "matched_features": [
+    "portfolio",
+    "Claude Code skill",
+    "insight cards",
+    "knowmarks",
+    "reference routing",
+    "waves",
+    "SQLite",
+    "registry",
+    "speculation"
+  ],
+  "missing_features": [
+    "facet"
+  ],
+  "recall": 0.9,
+  "length_compliance": "over_target",
+  "duration_ms": 72885,
+  "cost_usd": null,
+  "error": null
+}

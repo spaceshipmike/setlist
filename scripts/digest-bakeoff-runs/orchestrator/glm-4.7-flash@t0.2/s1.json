@@ -1,0 +1,27 @@
+{
+  "project": "orchestrator",
+  "config_label": "glm-4.7-flash@t0.2",
+  "model": "z-ai/glm-4.7-flash",
+  "temperature": 0.2,
+  "sample": 1,
+  "digest": "Orchestrator is a reactive Claude Code skill that answers cross-project questions by assembling knowledge from the project registry, specs, CLAUDE.md files, and code at query time. It classifies questions as atomic or composite, scopes to relevant projects, and reasons over sources to produce cited answers that flag speculation. The system relies on a \"thin index\" provided by the setlist registry for navigation and performs fresh reads of `.fctry/spec.md`, `CLAUDE.md`, and architecture files. It supports dependency tracing, impact analysis, portfolio health assessment (including mechanical claim validation and dual-axis staleness), pattern comparison, project briefings, disruptive opportunity identification, and connection scans.\n\nReference routing is the primary action mode, triggered by `/orchestrator ref` commands. The orchestrator uses Knowmarks MCP to ingest URLs and extract clean text, then distills content into structured \"insight cards\" stored in a local SQLite database (`insight-cards.db`). Cards capture thesis, intent tags, patterns, and claims with evidence strength. The system employs a hybrid extraction prompt (portfolio-agnostic core plus scan-time project overlay) and lazy carding for above-floor items only. Before per-item routing, it clusters cards into \"waves\" to surface emergent themes, scores them against project digests, and presents tiered routings. Confirmed routings delegate to per-project `/fctry:ref` workflows and register reference topics in setlist memory. The orchestrator also mines existing knowmarks for project-mode inspiration using facet decomposition, semantic clusters, and iterative refinement.\n\nThe orchestrator maintains a portfolio topology map spanning infrastructure, tooling, and application layers, identifying cross-project patterns and convergence opportunities. It detects drift through mechanical claim verification and severity-tagged health findings. Unbuilt capabilities include autonomous monitoring stages (event-triggered suggestions and low-risk actions), a reference-as-topic memory type currently staged in the orchestrator SQLite, and a vector search layer for cards. The system is currently in the \"generator\" coordination pattern and targets the \"orchestrator-subagent\" pattern for future autonomy.",
+  "token_count": 571,
+  "matched_features": [
+    "portfolio",
+    "Claude Code skill",
+    "insight cards",
+    "knowmarks",
+    "reference routing",
+    "waves",
+    "SQLite",
+    "registry",
+    "speculation",
+    "facet"
+  ],
+  "missing_features": [],
+  "recall": 1,
+  "length_compliance": "in_range",
+  "duration_ms": 49558,
+  "cost_usd": null,
+  "error": null
+}

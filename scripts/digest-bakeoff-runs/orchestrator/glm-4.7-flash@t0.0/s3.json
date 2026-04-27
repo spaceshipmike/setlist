@@ -1,0 +1,28 @@
+{
+  "project": "orchestrator",
+  "config_label": "glm-4.7-flash@t0.0",
+  "model": "z-ai/glm-4.7-flash",
+  "temperature": 0,
+  "sample": 3,
+  "digest": "Orchestrator is a reactive Claude Code skill that answers cross-project questions by reading portfolio sources fresh at query time. It classifies questions as atomic or composite, scopes relevant projects via the project registry, and synthesizes answers citing specific evidence. The user invokes it with `/orchestrator` or `/portfolio` followed by a question, and it responds with tight, cited summaries (3-5 sentences) while flagging speculation. It retains non-obvious findings to the registry memory for future recall. The skill reads specs, CLAUDE.md files, architecture snapshots, and git state selectively, avoiding exhaustive code analysis unless explicitly requested. It operates statelessly for reasoning, relying on the registry for project identity and a local SQLite store for persistent insight cards.\n\nThe skill handles reference routing through three modes: inline URL routing, batch processing of recent knowmarks saves, and project-specific mining of the existing knowledge base. It distills above-floor knowmarks into structured insight cards stored in a local SQLite database, using a hybrid extraction prompt (portfolio-agnostic core + scan-time project overlay) to produce thesis, intent tags, patterns, and claims. Before per-item routing, it clusters cards into emergent waves to surface shared themes, scores items against project digests, and presents tiered routings. Confirmed routings delegate to per-project `/fctry:ref` for spec incorporation and register persistent reference-topic memories in the registry. Extraction uses model tiers: Gemini 2.5 Flash-Lite as default, Qwen3.6-35B-A3B-8bit as local fallback, and Gemini 2.5 Flash for long-form content. The system employs a lazy carding policy, only extracting cards for items scoring above a relevance floor.\n\nKnowledge assembly relies on the project registry as a thin index and direct file reads of specs, CLAUDE.md files, and architecture snapshots. It supports seven question types: dependency tracing (including co-change coupling), impact analysis, portfolio health (measuring staleness on calendar and commit axes with mechanical claim validation), pattern comparison, project briefings, disruptive opportunity identification (grounded in user goals), and connection scans (three-layer analysis of changes, relationships, and non-obvious connections). The system uses extraction model tiers (Gemini 2.5 Flash-Lite as default, Qwen3.6-35B-A3B-8bit as local fallback) and maintains a cost trace ledger. It also uses a pre-computation cache for health snapshots and recent changes to optimize latency. The skill explicitly avoids becoming a dashboard or general coordinator, focusing solely on answering questions and routing references.\n\nThe current implementation is strictly reactive; it does not perform proactive monitoring, background tasks, or sub-agent invocation for general reasoning. It reads and writes only to its own SQLite store for insight cards and a cost trace, and delegates spec writes to per-project agents. The future autonomy path is graduated: Stage 2 will introduce event-triggered suggestions and periodic health/connection scans, while Stage 3 will allow autonomous low-risk actions like inbox triage and drift alerts, governed by tiered self-modification rules to prevent scope creep. The system explicitly avoids becoming a dashboard or general coordinator, focusing solely on answering questions and routing references.",
+  "token_count": 860,
+  "matched_features": [
+    "portfolio",
+    "Claude Code skill",
+    "insight cards",
+    "knowmarks",
+    "reference routing",
+    "waves",
+    "SQLite",
+    "registry",
+    "speculation"
+  ],
+  "missing_features": [
+    "facet"
+  ],
+  "recall": 0.9,
+  "length_compliance": "over_target",
+  "duration_ms": 25937,
+  "cost_usd": null,
+  "error": null
+}

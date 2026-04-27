@@ -1,0 +1,27 @@
+{
+  "project": "ensemble",
+  "config_label": "flash-lite@t0.0",
+  "model": "google/gemini-2.5-flash-lite",
+  "temperature": 0,
+  "sample": 2,
+  "digest": "Ensemble is a Claude Code extension platform manager. It manages the full lifecycle of seven declarative artifact types for Claude Code: MCP servers, skills, plugins, subagents, slash commands, hooks, and managed settings.json values. MCP servers and skills additionally mirror across 16 other AI clients. The platform prioritizes a Claude Code-first experience, with other client types expanding type-by-type after the Claude Code experience is robust.\n\nThe core architecture is library-first, meaning Ensemble is equally useful as an imported dependency for applications like Chorus, a standalone CLI tool, or a desktop application. All operations are pure functions, taking a configuration object and returning an updated configuration plus a result, ensuring deterministic behavior and testability. Ensemble manages its own configurations and extensions through additive writes to client files, preserving any unmanaged entries. Safe apply with rollback snapshots is implemented for all sync operations, allowing any change to be undone.\n\nEnsemble manages MCP servers, skills, plugins, subagents, slash commands, hooks, and settings declaratively. MCP servers are defined with name, command, arguments, environment variables, and transport details. Skills are markdown files with YAML frontmatter, managed via a canonical store and symlink fan-out to client directories. Plugins are managed through Claude Code's `enabledPlugins` setting, with Ensemble tracking their installation and enablement state. Agents and commands are markdown files with YAML frontmatter, stored in canonical locations and symlinked to client directories. Hooks and settings are managed via non-destructive merges into `settings.json`.\n\nThe platform features a unified library store (`~/.config/ensemble/library/`) that acts as the user's owned inventory, independent of any client scope. Install state is a property of library resources, indicating where they are installed across clients and projects. A pivot-based information architecture in the desktop app allows users to view the library through different lenses: by project, by group, by client, or by marketplace.\n\nDiscovery is facilitated through a unified Explore surface that blends curated catalogs, live registry search, local directory sources, and Git repositories. Fuzzy search across installed and discoverable resources is powered by a shared engine, with results weighted by quality signals and optional usage data. Type-aware install destinations ensure that MCP servers and skills can be mirrored across multiple clients, while plugins, agents, commands, hooks, and settings are scoped to Claude Code only.\n\nThe CLI provides a noun-first interface for managing resources, with verbs like `pull`, `add`, `install`, `uninstall`, and `remove` governing library membership and install state. The desktop application offers a visual management interface with a sidebar for navigation and a detail panel for content, including a matrix view that visualizes resource installation across projects and clients.\n\nKey features include:\n- **Full lifecycle management** for all seven declarative artifact types.\n- **Multi-client mirroring** for MCP servers and skills across 17 supported AI clients (with 4 more planned).\n- **Library-first architecture** with pure-function operations and Zod-validated schemas.\n- **Safe apply and rollback snapshots** for all sync operations.\n- **Unified discovery engine** for local and marketplace resources.\n- **Type-aware install destinations** ensuring correct scoping.\n- **Non-destructive settings.json merge** preserving unmanaged keys.\n- **Atomic write primitive** ensuring filesystem integrity.\n- **Typed variables** with kinds (`text`, `note`, `api-key`, `password`) and root-to-leaf inheritance.\n- **Profile-as-plugin packaging** and **profiles as live scope** for managing switchable configurations.\n- **Secret redaction at serialization boundary** for secure export.\n- **Drift detection** for managed resources, including upstream hash comparison with GitHub compare URLs.\n- **Guided onboarding** via `ensemble init`.\n- **Deterministic health audit** via `ensemble doctor`.\n- **Project registry integration** for project-aware scoping.\n- **Setlist capability integration** for portfolio-wide awareness.\n\nThe platform is built with TypeScript, Node.js, Commander.js, Zod, Vitest, Playwright, Electron, React, and Tailwind CSS. It emphasizes a frictionless user experience through anticipation, ambient state rendering, and a library-first approach. Future work includes enhancing profile composability, expanding registry support, implementing dynamic marketplace discovery, and refining the capability-driven recommendation system.",
+  "token_count": 1180,
+  "matched_features": [
+    "Claude Code",
+    "MCP",
+    "skills",
+    "plugins",
+    "subagents",
+    "hooks",
+    "settings.json",
+    "multi-client",
+    "library",
+    "snapshot"
+  ],
+  "missing_features": [],
+  "recall": 1,
+  "length_compliance": "over_target",
+  "duration_ms": 4407,
+  "cost_usd": null,
+  "error": null
+}

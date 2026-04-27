@@ -1,0 +1,69 @@
+{
+  "_comment": "Per-project named features that a faithful digest must mention. Used by digest-bakeoff.ts as ground truth. Case-insensitive substring match against the digest text. The original canary is 'Milkdown' for knowmarks — the GLM digest mentioned it once (lucky sample) and once didn't (real variance), motivating this whole bake-off.",
+  "fixtures": [
+    {
+      "project": "knowmarks",
+      "source_path": "/Users/mike/Code/knowmarks/.fctry/spec.md",
+      "features": [
+        "Milkdown",
+        "MCP",
+        "Companion",
+        "Spaces",
+        "Wiki",
+        "Graph",
+        "FTS5",
+        "fastembed",
+        "Notes",
+        "citation"
+      ]
+    },
+    {
+      "project": "fctry",
+      "source_path": "/Users/mike/Code/fctry/.fctry/spec.md",
+      "features": [
+        "NLSpec",
+        "Claude Code plugin",
+        "scenarios",
+        "Executor",
+        "Observer",
+        "Voice Translator",
+        "Spec Writer",
+        "State Owner",
+        "viewer",
+        "kanban"
+      ]
+    },
+    {
+      "project": "orchestrator",
+      "source_path": "/Users/mike/Code/.fctry/spec.md",
+      "features": [
+        "portfolio",
+        "Claude Code skill",
+        "insight cards",
+        "knowmarks",
+        "reference routing",
+        "waves",
+        "SQLite",
+        "registry",
+        "speculation",
+        "facet"
+      ]
+    },
+    {
+      "project": "ensemble",
+      "source_path": "/Users/mike/Code/ensemble/.fctry/spec.md",
+      "features": [
+        "Claude Code",
+        "MCP",
+        "skills",
+        "plugins",
+        "subagents",
+        "hooks",
+        "settings.json",
+        "multi-client",
+        "library",
+        "snapshot"
+      ]
+    }
+  ]
+}

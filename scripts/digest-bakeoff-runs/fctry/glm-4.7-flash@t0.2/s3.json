@@ -1,0 +1,28 @@
+{
+  "project": "fctry",
+  "config_label": "glm-4.7-flash@t0.2",
+  "model": "z-ai/glm-4.7-flash",
+  "temperature": 0.2,
+  "sample": 3,
+  "digest": "fctry is a Claude Code plugin that orchestrates eight specialized agents to produce experience-first specifications in NLSpec v2 format and drive autonomous builds from them. The system converts conversational descriptions of user experiences into complete specs and manages the build-measure-learn loop until scenario satisfaction is achieved. Every user-facing surface speaks plain English through a single translation module, blocking factory-internal vocabulary like chunk, readiness, and memory digest. The user approves a build plan once; the system executes autonomously, handling failures and rearchitecting silently, resurfacing only for experience-level questions. The State Owner scans the codebase and produces a briefing before any other agent acts, detecting drift between spec and code. The Executor proposes a plan, which the user approves, after which the system executes chunks autonomously in dependency order. The Viewer provides a multi-project-aware web interface with real-time updates and mission control during builds. The Next command reads cached state to recommend the highest-priority action. The system maintains a version registry in `.fctry/config.json` to manage project and spec versions automatically, propagating changes to declared targets. It tracks build learnings in `lessons.md` with a maturation lifecycle and utility feedback. The Spec Index uses SQLite to cache section content and embeddings for efficient querying. The Observer verifies chunk outputs through structural and behavioral checks, with a quality ratchet enforcing monotonic improvement. The async inbox in the viewer accepts evolve ideas and reference URLs for background processing. Future directions include background-worker execution for parallel chunks, a self-improvement loop via `/fctry:reflect`, and the viewer evolving into a control plane with embedded terminal emulation.",
+  "token_count": 473,
+  "matched_features": [
+    "NLSpec",
+    "Claude Code plugin",
+    "Executor",
+    "Observer",
+    "State Owner",
+    "viewer"
+  ],
+  "missing_features": [
+    "scenarios",
+    "Voice Translator",
+    "Spec Writer",
+    "kanban"
+  ],
+  "recall": 0.6,
+  "length_compliance": "under",
+  "duration_ms": 21864,
+  "cost_usd": null,
+  "error": null
+}

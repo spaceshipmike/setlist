@@ -1,0 +1,28 @@
+{
+  "project": "ensemble",
+  "config_label": "glm-4.7-flash@t0.0",
+  "model": "z-ai/glm-4.7-flash",
+  "temperature": 0,
+  "sample": 1,
+  "digest": "Ensemble is a TypeScript library, CLI tool, and Electron desktop application that centrally manages the full lifecycle of Claude Code extension artifacts. The project adopts a library-first architecture where the canonical store resides at `~/.config/ensemble/library/`, treating library membership and install state as orthogonal properties of resources rather than hierarchical tiers. It manages seven declarative resource types: MCP servers, skills, plugins, subagents, slash commands, hooks, and managed settings.json values. The library serves as the single source of truth from which clients are projected, supporting additive sync, non-destructive settings merges, and safe apply with rollback snapshots.\n\nThe sync engine projects install state into client configurations using type-aware strategies: servers and plugins write config entries, skills and agents use symlink fan-out to a canonical store, and hooks and settings perform non-destructive key-level merges. Ensemble operates with a depth-first stance on Claude Code, fully managing all seven resource types for Claude Code before expanding breadth to other clients. MCP servers and skills mirror across 17 supported AI clients (Claude Desktop, Cursor, VS Code, Windsurf, Zed, JetBrains, Antigravity, CodeBuddy, Qoder, Trae, and others), while plugins, agents, commands, hooks, and settings are Claude-Code-only. The Electron desktop app provides a pivot-based sidebar (Library, By Project, By Group, By Client, Marketplace) and a Matrix view that visualizes project × Claude Code resource types with ambient installation states.\n\nThe CLI and library API expose pure-function operations validated by Zod schemas, designed for integration by consumers like Chorus. The current CLI surface retains a v1.3-style verb set as a stopgap; the v2.0.1 lifecycle verbs (`pull`, `add`, `install`, `uninstall`, `remove`, `library` subcommands) and the `browse` discovery engine are unbuilt target modules. Desktop IPC sub-routers for `agents`, `commands`, `hooks`, `settings`, and `browse` are also unbuilt. Future capabilities include a unified source parser for `ensemble add`, profile-as-plugin packaging with typed variables and secret redaction, and integration with the project registry and setlist capability registry.",
+  "token_count": 570,
+  "matched_features": [
+    "Claude Code",
+    "MCP",
+    "skills",
+    "plugins",
+    "subagents",
+    "hooks",
+    "settings.json",
+    "library",
+    "snapshot"
+  ],
+  "missing_features": [
+    "multi-client"
+  ],
+  "recall": 0.9,
+  "length_compliance": "in_range",
+  "duration_ms": 50778,
+  "cost_usd": null,
+  "error": null
+}
