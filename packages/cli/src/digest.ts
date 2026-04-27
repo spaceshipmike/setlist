@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url';
 import { Registry, computeProjectVersion, listProjectDocuments } from '@setlist/core';
 
 const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
+const OPENROUTER_GLM_FLASH = 'z-ai/glm-4.7-flash';
 const OPENROUTER_FLASH_LITE = 'google/gemini-2.5-flash-lite';
 const OPENROUTER_FLASH = 'google/gemini-2.5-flash';
 
@@ -19,7 +20,11 @@ const TARGET_MIN = 500;
 const TARGET_MAX = 800;
 const CEILING = 1200;
 
-type ProviderName = 'openrouter-flash-lite' | 'openrouter-flash' | 'local-mlx';
+type ProviderName =
+  | 'openrouter-glm-flash'
+  | 'openrouter-flash-lite'
+  | 'openrouter-flash'
+  | 'local-mlx';
 
 interface ProviderCall {
   provider: ProviderName;
@@ -38,7 +43,7 @@ Content requirements:
 - **Describe current state only.** Omit historical context, port origins, retired peer implementations, and claims about deprecated or archived components unless they constrain current behavior. If the source contains port-era framing or "originally a port of X" language, reflect what the project *is today*, not what it *came from*.
 - **Factual and dense; no marketing voice.** Strip phrases like "at the center of the user's personal ecosystem," "directly operable," "invisible infrastructure." Claims must be concrete and capability-specific.
 - **Name unbuilt sections explicitly.** The digest is used to match external references against projects that could benefit from them; references are most valuable for unbuilt work, so call out what's specced-but-not-built, what's in progress, and what's explicitly deferred.
-- **Structure: one paragraph per major surface.** No bullet lists. No section headers. No markdown.
+- **Structure: multiple paragraphs, one per major surface area, separated by blank lines.** Do NOT emit a single mega-paragraph. Do NOT use bullet lists. Do NOT use section headers. No markdown.
 - **Do not invent facts.** If the source doesn't name something, don't name it. If you're uncertain whether a capability is current or historical, omit it.
 
 Respond with only the digest text. Do not preface it, do not label it, do not wrap it in code fences or quotes.`;
@@ -58,17 +63,38 @@ async function fileExists(path: string): Promise<boolean> {
 
 function selectProvider(): ProviderName {
   const explicit = (process.env.SETLIST_DIGEST_PROVIDER ?? '').trim() as ProviderName | '';
-  if (explicit === 'openrouter-flash-lite' || explicit === 'openrouter-flash' || explicit === 'local-mlx') {
+  if (
+    explicit === 'openrouter-glm-flash' ||
+    explicit === 'openrouter-flash-lite' ||
+    explicit === 'openrouter-flash' ||
+    explicit === 'local-mlx'
+  ) {
     return explicit;
   }
-  if (process.env.SETLIST_OPENROUTER_API_KEY) return 'openrouter-flash-lite';
+  // Default hosted provider promoted to GLM 4.7 Flash (2026-04-26 bake-off
+  // across setlist / chorus-app / knowmarks): GLM was the only model that
+  // surfaced concrete implementation dependencies (e.g. knowmarks's Milkdown
+  // editor) and named unbuilt sections in every run, while staying clean of
+  // marketing voice. Flash Lite remains available via SETLIST_DIGEST_PROVIDER
+  // as a fast-tier alternative; it is faster (~4s vs ~50s) but tends to
+  // undershoot detail for ref-routing scoring.
+  if (process.env.SETLIST_OPENROUTER_API_KEY) return 'openrouter-glm-flash';
   return 'local-mlx';
 }
 
 function buildProviderCall(provider: ProviderName): ProviderCall {
-  if (provider === 'openrouter-flash-lite' || provider === 'openrouter-flash') {
+  if (
+    provider === 'openrouter-glm-flash' ||
+    provider === 'openrouter-flash-lite' ||
+    provider === 'openrouter-flash'
+  ) {
     const apiKey = process.env.SETLIST_OPENROUTER_API_KEY ?? '';
-    const model = provider === 'openrouter-flash-lite' ? OPENROUTER_FLASH_LITE : OPENROUTER_FLASH;
+    const model =
+      provider === 'openrouter-glm-flash'
+        ? OPENROUTER_GLM_FLASH
+        : provider === 'openrouter-flash-lite'
+          ? OPENROUTER_FLASH_LITE
+          : OPENROUTER_FLASH;
     return {
       provider,
       model,
@@ -116,7 +142,7 @@ async function callLLM(
       { role: 'system', content: system },
       { role: 'user', content: `Project: ${projectName}\n\nSource:\n\n${effectiveSource}` },
     ],
-    temperature: 0.2,
+    temperature: 0,
     max_tokens: 6000,
   };
   const response = await fetch(call.url, {
