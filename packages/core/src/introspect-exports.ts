@@ -153,6 +153,12 @@ const LIBRARY_EXPORTS_MANIFEST: LibraryExportManifestEntry[] = [
     description: 'Enumerate the documents that feed computeProjectVersion for a given project (paths relative to project root).',
   },
 
+  {
+    name: 'extractNamedTerms',
+    kind: 'function',
+    description: 'Extract named-entity phrases (tech-stack, patterns, goals) from a project source-text frontmatter for hybrid retrieval. Backs the named_terms column on project_digests.',
+  },
+
   // Constants
   {
     name: 'SCHEMA_VERSION',

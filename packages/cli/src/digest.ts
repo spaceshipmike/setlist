@@ -3,7 +3,7 @@ import { existsSync } from 'node:fs';
 import { join, dirname, resolve as pathResolve } from 'node:path';
 import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { Registry, computeProjectVersion, listProjectDocuments } from '@setlist/core';
+import { Registry, computeProjectVersion, listProjectDocuments, extractNamedTerms } from '@setlist/core';
 
 const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
 const OPENROUTER_GLM_FLASH = 'z-ai/glm-4.7-flash';
@@ -338,6 +338,7 @@ export async function refreshProjectDigest(registry: Registry, projectName: stri
 
   const provider = selectProvider();
   const call = buildProviderCall(provider);
+  const namedTerms = extractNamedTerms(sourceText);
 
   let result: LlmResponse;
   try {
@@ -349,7 +350,7 @@ export async function refreshProjectDigest(registry: Registry, projectName: stri
       try {
         result = await callLLM(buildProviderCall('local-mlx'), sourceText, projectName);
         const producerTag = composeProducer('local-mlx', LOCAL_MODEL, extractorTag);
-        return writeAndReturn(registry, projectName, result, sourceDescriptor, versionInfo, producerTag);
+        return writeAndReturn(registry, projectName, result, sourceDescriptor, versionInfo, producerTag, namedTerms);
       } catch (fallbackErr) {
         return {
           project_name: projectName,
@@ -401,7 +402,7 @@ export async function refreshProjectDigest(registry: Registry, projectName: stri
   }
 
   const producerTag = composeProducer(call.provider, call.model, extractorTag);
-  return writeAndReturn(registry, projectName, result, sourceDescriptor, versionInfo, producerTag);
+  return writeAndReturn(registry, projectName, result, sourceDescriptor, versionInfo, producerTag, namedTerms);
 }
 
 function composeProducer(provider: ProviderName, model: string, extractorTag: string | null): string {
@@ -416,6 +417,7 @@ function writeAndReturn(
   sourceDescriptor: string,
   versionInfo: { kind: 'spec' | 'filetree' | 'none'; version: string | null },
   producerTag: string,
+  namedTerms: string[],
 ): RefreshResult {
   const writeResult = registry.refreshProjectDigest({
     project_name: projectName,
@@ -423,6 +425,7 @@ function writeAndReturn(
     spec_version: versionInfo.version ?? '',
     producer: producerTag,
     token_count: result.tokenCount,
+    named_terms: namedTerms,
   });
   return {
     project_name: projectName,

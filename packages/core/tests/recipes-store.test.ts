@@ -37,9 +37,9 @@ beforeEach(() => {
   db.pragma('foreign_keys = ON');
 });
 
-describe('Schema v14', () => {
+describe('Schema v15', () => {
   it('reports SCHEMA_VERSION = 14', () => {
-    expect(SCHEMA_VERSION).toBe(14);
+    expect(SCHEMA_VERSION).toBe(15);
   });
 
   it('has bootstrap_primitives table', () => {
@@ -60,7 +60,7 @@ describe('Schema v14', () => {
     const row = db
       .prepare(`SELECT value FROM schema_meta WHERE key = 'schema_version'`)
       .get() as { value: string };
-    expect(row.value).toBe('14');
+    expect(row.value).toBe('15');
   });
 });
 

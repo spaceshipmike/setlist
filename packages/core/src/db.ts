@@ -6,7 +6,7 @@ import { seedAreas as seedAreasFromModule, SEED_AREAS } from './areas.js';
 import { seedProjectTypes } from './project-types.js';
 import { seedBuiltinPrimitives, seedBuiltinRecipes } from './recipes/store.js';
 
-export const SCHEMA_VERSION = 14;
+export const SCHEMA_VERSION = 15;
 
 /**
  * Legacy alias kept for any callers that still expect the constant name.
@@ -255,6 +255,7 @@ CREATE TABLE IF NOT EXISTS project_digests (
     producer TEXT NOT NULL,
     generated_at TEXT NOT NULL,
     token_count INTEGER,
+    named_terms TEXT NOT NULL DEFAULT '[]',
     PRIMARY KEY (project_id, digest_kind)
 );
 
@@ -474,6 +475,15 @@ function ensureColumns(db: Database.Database): void {
   db.exec(`CREATE INDEX IF NOT EXISTS idx_projects_area_id ON projects(area_id)`);
   db.exec(`CREATE INDEX IF NOT EXISTS idx_projects_parent_project_id ON projects(parent_project_id)`);
   db.exec(`CREATE INDEX IF NOT EXISTS idx_projects_project_type_id ON projects(project_type_id)`);
+
+  // v15: named_terms on project_digests for hybrid retrieval. Stores
+  // frontmatter-extracted phrases (tech-stack/patterns/goals) as a JSON
+  // array so canary names buried in long lists survive even when the
+  // digest summary compresses them away. See packages/core/src/named-terms.ts.
+  const digestCols = db.prepare("PRAGMA table_info(project_digests)").all() as { name: string }[];
+  if (!digestCols.some(c => c.name === 'named_terms')) {
+    db.exec(`ALTER TABLE project_digests ADD COLUMN named_terms TEXT NOT NULL DEFAULT '[]'`);
+  }
 }
 
 function upgradeSchema(db: Database.Database): void {

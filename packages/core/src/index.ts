@@ -1,4 +1,5 @@
 export { initDb, connect, getDbPath, getTemplateFields, SCHEMA_VERSION } from './db.js';
+export { extractNamedTerms } from './named-terms.js';
 export * from './models.js';
 export * from './errors.js';
 export {

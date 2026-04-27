@@ -1243,18 +1243,19 @@ export class Registry {
     producer: string;
     generated_at: string;
     token_count: number | null;
+    named_terms: string[];
     stale: boolean;
   } | null {
     const kind = opts?.digest_kind ?? 'essence';
     const db = this.open();
     try {
       const row = db.prepare(`
-        SELECT pd.digest_kind, pd.digest_text, pd.spec_version, pd.producer, pd.generated_at, pd.token_count
+        SELECT pd.digest_kind, pd.digest_text, pd.spec_version, pd.producer, pd.generated_at, pd.token_count, pd.named_terms
         FROM project_digests pd
         JOIN projects p ON p.id = pd.project_id
         WHERE p.name = ? AND pd.digest_kind = ?
       `).get(project_name, kind) as
-        | { digest_kind: string; digest_text: string; spec_version: string; producer: string; generated_at: string; token_count: number | null }
+        | { digest_kind: string; digest_text: string; spec_version: string; producer: string; generated_at: string; token_count: number | null; named_terms: string }
         | undefined;
       if (!row) return null;
       const stale = opts?.current_spec_version != null ? row.spec_version !== opts.current_spec_version : false;
@@ -1266,6 +1267,7 @@ export class Registry {
         producer: row.producer,
         generated_at: row.generated_at,
         token_count: row.token_count,
+        named_terms: parseTermsField(row.named_terms),
         stale,
       };
     } finally {
@@ -1291,6 +1293,7 @@ export class Registry {
     producer: string | null;
     generated_at: string | null;
     token_count: number | null;
+    named_terms: string[];
     stale: boolean;
   }> {
     const kind = opts?.digest_kind ?? 'essence';
@@ -1300,7 +1303,7 @@ export class Registry {
     const db = this.open();
     try {
       let sql = `
-        SELECT p.name AS project_name, pd.digest_text, pd.spec_version, pd.producer, pd.generated_at, pd.token_count
+        SELECT p.name AS project_name, pd.digest_text, pd.spec_version, pd.producer, pd.generated_at, pd.token_count, pd.named_terms
         FROM projects p
         LEFT JOIN project_digests pd ON pd.project_id = p.id AND pd.digest_kind = ?
       `;
@@ -1318,6 +1321,7 @@ export class Registry {
         producer: string | null;
         generated_at: string | null;
         token_count: number | null;
+        named_terms: string | null;
       }[];
       const result: Record<string, {
         digest_text: string | null;
@@ -1325,6 +1329,7 @@ export class Registry {
         producer: string | null;
         generated_at: string | null;
         token_count: number | null;
+        named_terms: string[];
         stale: boolean;
       }> = {};
       for (const r of rows) {
@@ -1339,6 +1344,7 @@ export class Registry {
           producer: r.producer,
           generated_at: r.generated_at,
           token_count: r.token_count,
+          named_terms: parseTermsField(r.named_terms),
           stale,
         };
       }
@@ -1361,6 +1367,7 @@ export class Registry {
     spec_version: string;
     producer: string;
     token_count?: number;
+    named_terms?: string[];
   }): { project_name: string; digest_kind: string; written: true; prior_spec_version: string | null } {
     const kind = opts.digest_kind ?? 'essence';
     const DIGEST_CEILINGS: Record<string, number> = { essence: 1200 };
@@ -1375,15 +1382,17 @@ export class Registry {
       const prior = db.prepare(`
         SELECT spec_version FROM project_digests WHERE project_id = ? AND digest_kind = ?
       `).get(project.id, kind) as { spec_version: string } | undefined;
+      const namedTermsJson = JSON.stringify(opts.named_terms ?? []);
       db.prepare(`
-        INSERT INTO project_digests (project_id, digest_kind, digest_text, spec_version, producer, generated_at, token_count)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO project_digests (project_id, digest_kind, digest_text, spec_version, producer, generated_at, token_count, named_terms)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT (project_id, digest_kind) DO UPDATE SET
           digest_text = excluded.digest_text,
           spec_version = excluded.spec_version,
           producer = excluded.producer,
           generated_at = excluded.generated_at,
-          token_count = excluded.token_count
+          token_count = excluded.token_count,
+          named_terms = excluded.named_terms
       `).run(
         project.id,
         kind,
@@ -1392,6 +1401,7 @@ export class Registry {
         opts.producer,
         new Date().toISOString(),
         opts.token_count ?? null,
+        namedTermsJson,
       );
       return {
         project_name: opts.project_name,
@@ -1728,5 +1738,15 @@ export class Registry {
       if (!claimedSet.has(p)) return p;
     }
     throw new InvalidInputError('No available ports in range 3000-9999.');
+  }
+}
+
+function parseTermsField(raw: string | null | undefined): string[] {
+  if (!raw) return [];
+  try {
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed.filter(x => typeof x === 'string') : [];
+  } catch {
+    return [];
   }
 }
