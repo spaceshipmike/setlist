@@ -1,0 +1,29 @@
+{
+  "project": "fctry",
+  "config_label": "glm-4.7-flash@t0.0+lean",
+  "model": "z-ai/glm-4.7-flash",
+  "temperature": 0,
+  "prompt_variant": "v4",
+  "sample": 1,
+  "digest": "fctry is a Claude Code plugin that orchestrates eight specialized agents to convert conversational user visions into experience-first specifications in NLSpec v2 format and then drive autonomous builds from them. The system uses an interview process where the Interviewer asks questions, the State Owner scans the codebase for reality grounding, the Scenario Crafter creates a holdout set, and the Spec Writer synthesizes everything into a complete spec. The Executor proposes a build plan, which the user approves once, after which the system executes autonomously, handling failures and retries silently while resurfacing only for experience-level questions. The Observer verifies chunk outputs through structural and behavioral checks. The live spec viewer provides real-time updates, a kanban board for prioritization, and mission control during builds. The system enforces experience language on all user-facing surfaces, maintains a version registry for automatic versioning, and uses a SQLite cache for efficient spec querying. It is designed for non-coders to build software from vision without learning to code. The project maintains a structured state in `state.json` for workflow tracking and section readiness, a SQLite cache in `spec.db` for efficient querying, and a global memory store for cross-session knowledge. The spec viewer is a single multi-project server that renders markdown directly in the browser with WebSocket updates, offering a kanban board, change history, and mission control during builds. The system enforces a strict workflow where the State Owner runs first, scenarios are kept separate from the spec to prevent overfitting, and the user controls scope through plan approval while the agent handles implementation details. It supports multi-session interviews with save and pause, addressable sections using both aliases and numbers, and an async inbox for background processing of evolve ideas and references.",
+  "token_count": 487,
+  "matched_features": [
+    "NLSpec",
+    "Claude Code plugin",
+    "scenarios",
+    "Executor",
+    "Observer",
+    "Spec Writer",
+    "State Owner",
+    "viewer",
+    "kanban"
+  ],
+  "missing_features": [
+    "Voice Translator"
+  ],
+  "recall": 0.9,
+  "length_compliance": "under",
+  "duration_ms": 64387,
+  "cost_usd": null,
+  "error": null
+}

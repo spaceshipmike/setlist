@@ -1,0 +1,29 @@
+{
+  "project": "ensemble",
+  "config_label": "glm-4.7-flash@t0.0+lean",
+  "model": "z-ai/glm-4.7-flash",
+  "temperature": 0,
+  "prompt_variant": "v4",
+  "sample": 3,
+  "digest": "Ensemble is a Claude-Code-first extension platform manager that maintains a central library of seven declarative artifact types: MCP servers, skills, plugins, subagents, slash commands, hooks, and managed settings.json values. The library, stored at `~/.config/ensemble/library/`, is the authoritative source of truth. Install state is a property of each library resource, tracked per-client and per-project, rather than a separate tier. The system is library-first, with pure-function operations that take a config object and return an updated config, making it usable as a CLI, a desktop app, or an imported library for other applications like Chorus.\n\nEnsemble supports 17 AI clients, including Claude Desktop, Claude Code, Cursor, VS Code, Windsurf, Zed, and JetBrains. MCP servers and skills mirror across these clients, while plugins, agents, commands, hooks, and settings are Claude-Code-only under the current depth-first stance. Sync is additive and non-destructive, preserving unmanaged keys in `settings.json`. It uses a canonical store for file-based resources (skills, agents, commands) with symlink fan-out, and writes config entries for servers and plugins. Every sync run produces a rollback-capable snapshot and uses atomic writes (temp file + Zod validation + rename) to prevent corruption.\n\nThe Electron desktop app provides a pivot-based sidebar (Library, By Project, By Group, By Client, Marketplace) and a Matrix view that visualizes project × Claude Code resource types. The app uses a tRPC bridge between the main process and React renderer, with sandboxing and a strict CSP. It features a shared discovery engine for fuzzy search, drag-and-drop group assignment, visual drift detection, and inline editing for user notes. The UI emphasizes \"frictionless through anticipation,\" rendering state and scope ambiently rather than hidden behind navigation.\n\nThe CLI, built with Commander.js, exposes lifecycle verbs like `pull`, `add`, `install`, `uninstall`, and `remove`, alongside subcommands for `library`, `browse`, `sync`, and `doctor`. Operations are pure functions exported via Zod schemas. The CLI supports fuzzy search with `@marketplace-name` filter syntax, registry integration for discovering servers and skills, and a health audit that checks for drift, missing env vars, and broken symlinks. The `ensemble doctor` command provides structured scoring and actionable fixes.\n\nThe platform includes typed variables with inheritance (profile → group → resource) and secret redaction at the serialization boundary. It supports configuration profiles for saving and switching client assignments and rules. Setlist integration provides read-only capability awareness for portfolio-wide search. The system detects drift via content hashes (SHA-256) for file-based resources and description hashes for others, with upstream tree-hash checks for GitHub sources. The library supports dual annotations: source-owned `description` and user-authored `userNotes`, with the latter never overwritten by re-import.",
+  "token_count": 758,
+  "matched_features": [
+    "Claude Code",
+    "MCP",
+    "skills",
+    "plugins",
+    "subagents",
+    "hooks",
+    "settings.json",
+    "library",
+    "snapshot"
+  ],
+  "missing_features": [
+    "multi-client"
+  ],
+  "recall": 0.9,
+  "length_compliance": "in_range",
+  "duration_ms": 51299,
+  "cost_usd": null,
+  "error": null
+}

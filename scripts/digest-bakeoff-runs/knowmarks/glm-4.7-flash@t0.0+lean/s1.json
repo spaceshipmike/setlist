@@ -1,0 +1,29 @@
+{
+  "project": "knowmarks",
+  "config_label": "glm-4.7-flash@t0.0+lean",
+  "model": "z-ai/glm-4.7-flash",
+  "temperature": 0,
+  "prompt_variant": "v4",
+  "sample": 1,
+  "digest": "Knowmarks is an open-source, local-first knowledge layer designed as a shared substrate for humans and AI agents. The system ingests a wide variety of sources—URLs, PDFs, Office documents, YouTube videos, GitHub repositories, Readwise highlights, browser clips, AI conversation threads, email, and local files—into a single, format-agnostic corpus. Over this corpus sit three ownership-clean surfaces: user-authored notes, a Wiki (proposed) compiled by the LLM under strict-compiler discipline, and a Graph (proposed) extracted by the pipeline with per-claim provenance. Spaces are the primary composable unit, replacing the previous three-way split of projects, clusters, and curated collections. Spaces are defined by origin, membership rule, and lifetime intent. The MCP server is the primary agent interface, offering 35 tools for CRUD and governance, and implements a surface cascade (wiki first, graph second, passages third) for token-efficient retrieval. The Companion is the conversational human interface, wrapping MCP verbs in confirm-flow language and handling triage, intake mediation, and proactive observations. The system supports CLI, REST API, web dashboard, browser extension, and native macOS desktop app. Core capabilities include hybrid semantic and keyword search, automatic clustering, freshness monitoring with source-aware staleness probes, and connector sync for platforms like GitHub, Readwise, and RSS feeds. The architecture emphasizes disposable derived state, pluggable embedding providers, and a two-tier LLM routing system (fast/deep × sync/async) to optimize cost and latency.",
+  "token_count": 403,
+  "matched_features": [
+    "MCP",
+    "Companion",
+    "Spaces",
+    "Wiki",
+    "Graph",
+    "Notes"
+  ],
+  "missing_features": [
+    "Milkdown",
+    "FTS5",
+    "fastembed",
+    "citation"
+  ],
+  "recall": 0.6,
+  "length_compliance": "under",
+  "duration_ms": 56195,
+  "cost_usd": null,
+  "error": null
+}

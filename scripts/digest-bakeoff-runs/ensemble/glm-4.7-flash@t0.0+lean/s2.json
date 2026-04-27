@@ -1,0 +1,28 @@
+{
+  "project": "ensemble",
+  "config_label": "glm-4.7-flash@t0.0+lean",
+  "model": "z-ai/glm-4.7-flash",
+  "temperature": 0,
+  "prompt_variant": "v4",
+  "sample": 2,
+  "digest": "",
+  "token_count": 0,
+  "matched_features": [],
+  "missing_features": [
+    "Claude Code",
+    "MCP",
+    "skills",
+    "plugins",
+    "subagents",
+    "hooks",
+    "settings.json",
+    "multi-client",
+    "library",
+    "snapshot"
+  ],
+  "recall": 0,
+  "length_compliance": "under",
+  "duration_ms": 66469,
+  "cost_usd": null,
+  "error": "glm-4.7-flash@t0.0+lean returned empty content (finish=length, reasoning=28989 chars)"
+}

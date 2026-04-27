@@ -1,0 +1,29 @@
+{
+  "project": "ensemble",
+  "config_label": "glm-4.7-flash@t0.0+lean",
+  "model": "z-ai/glm-4.7-flash",
+  "temperature": 0,
+  "prompt_variant": "v4",
+  "sample": 1,
+  "digest": "Ensemble is a TypeScript library and CLI for centrally managing Claude Code extension artifacts across AI clients. The project adopts a library-first architecture where a canonical library at `~/.config/ensemble/library/` serves as the single source of truth. It manages seven declarative resource types—MCP servers, skills, plugins, subagents, slash commands, hooks, and managed settings.json values—organizing them into groups and syncing the correct configuration to the right clients. Install state is a property of each library resource rather than a separate tier, allowing resources to exist in the library without being installed anywhere.\n\nThe platform supports 17 AI clients, including Claude Desktop, Claude Code, Cursor, VS Code, Windsurf, Zed, and JetBrains. MCP servers and skills mirror across these clients, while plugins, agents, commands, hooks, and settings are Claude-Code-first. The tech stack is built on TypeScript, Zod for validation, Commander.js for the CLI, and Electron with React for the desktop application. The desktop app uses a tRPC bridge to call pure operations, featuring a pivot-based sidebar and a project-by-Claude-Code matrix view for visual management.\n\nCore operations are pure functions that take a config object and return an updated config, ensuring deterministic behavior. The sync engine handles different strategies per resource type, including config-entry writes for servers, symlink fan-out for skills and agents, and non-destructive key-level merges for hooks and settings. Every sync run produces a rollback-capable snapshot. The project includes a discovery engine for fuzzy search, a registry adapter system for MCP and skills catalogs, and a doctor command for deterministic health auditing. Additional features include typed variables with inheritance, profile-as-plugin packaging, and read-only integration with the setlist capability registry.",
+  "token_count": 476,
+  "matched_features": [
+    "Claude Code",
+    "MCP",
+    "skills",
+    "plugins",
+    "subagents",
+    "hooks",
+    "settings.json",
+    "library",
+    "snapshot"
+  ],
+  "missing_features": [
+    "multi-client"
+  ],
+  "recall": 0.9,
+  "length_compliance": "under",
+  "duration_ms": 31331,
+  "cost_usd": null,
+  "error": null
+}

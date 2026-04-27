@@ -67,7 +67,7 @@
     "freshAudit": "codex",
     "localPrefilter": "oss"
   },
-  "formatVersion": "0.85.2",
+  "formatVersion": "0.85.3",
   "evaluation": {
     "trials": 3,
     "passThreshold": 2,

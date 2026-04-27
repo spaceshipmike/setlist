@@ -1,0 +1,29 @@
+{
+  "project": "knowmarks",
+  "config_label": "glm-4.7-flash@t0.0+lean",
+  "model": "z-ai/glm-4.7-flash",
+  "temperature": 0,
+  "prompt_variant": "v4",
+  "sample": 2,
+  "digest": "Knowmarks is an open-source, local-first knowledge management system designed to serve as a shared substrate for humans and AI agents. It ingests a wide variety of content types—URLs, PDFs, Office documents, YouTube videos, GitHub repositories, Readwise highlights, browser clips, AI conversation threads, email, and local files—into a single, format-agnostic corpus. The system organizes this corpus through three ownership-clean surfaces: user-authored Notes, an LLM-compiled Wiki (proposed), and a pipeline-extracted Graph (proposed). Spaces unify the previous concepts of projects, clusters, and curated collections into a single composable type with attributes for origin, membership rule, and lifetime intent.\n\nRetrieval is optimized for agents via an MCP server that employs a surface cascade, prioritizing wiki articles for token efficiency, followed by graph traversal and passage-level retrieval. The system supports space-scoped queries with token budgets and citation grounding. Humans interact with the knowledge base through a Conversational Companion surface, a web dashboard featuring a knowledge pulse, CLI tools, a REST API, a Chrome browser extension, and a macOS desktop app. The tech stack is built on Python 3.11+, SQLite, and FastAPI, with pluggable embedding providers and a front-end built with Vite and TypeScript.",
+  "token_count": 335,
+  "matched_features": [
+    "MCP",
+    "Companion",
+    "Spaces",
+    "Wiki",
+    "Graph",
+    "Notes",
+    "citation"
+  ],
+  "missing_features": [
+    "Milkdown",
+    "FTS5",
+    "fastembed"
+  ],
+  "recall": 0.7,
+  "length_compliance": "under",
+  "duration_ms": 24840,
+  "cost_usd": null,
+  "error": null
+}

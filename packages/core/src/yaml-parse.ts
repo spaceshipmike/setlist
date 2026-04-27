@@ -1,7 +1,8 @@
 /**
  * Minimal YAML parser for NLSpec frontmatter.
- * Handles: scalar values, arrays (both inline [] and block - items),
- * nested objects (synopsis block), quoted strings.
+ * Handles: scalar values, arrays (inline `[...]` on one line, inline arrays
+ * spanning multiple lines, and block `- items`), nested objects (synopsis
+ * block), quoted strings.
  * Does NOT handle: multiline strings, anchors, complex nesting beyond 2 levels.
  */
 export function parse(text: string): Record<string, unknown> {
@@ -39,6 +40,14 @@ export function parse(text: string): Record<string, unknown> {
             }
           }
           nestedObj[innerKey] = isBlockArray ? [] : '';
+        } else if (innerValue.trim().startsWith('[')) {
+          const consumed = consumeInlineArray(innerValue.trim(), lines, i);
+          if (consumed) {
+            nestedObj[innerKey] = consumed.items;
+            i = consumed.endIdx;
+          } else {
+            nestedObj[innerKey] = parseValue(innerValue);
+          }
         } else {
           nestedObj[innerKey] = parseValue(innerValue);
         }
@@ -93,6 +102,14 @@ export function parse(text: string): Record<string, unknown> {
           }
         }
         result[key] = '';
+      } else if (rawValue.trim().startsWith('[')) {
+        const consumed = consumeInlineArray(rawValue.trim(), lines, i);
+        if (consumed) {
+          result[key] = consumed.items;
+          i = consumed.endIdx;
+        } else {
+          result[key] = parseValue(rawValue);
+        }
       } else {
         result[key] = parseValue(rawValue);
       }
@@ -103,11 +120,16 @@ export function parse(text: string): Record<string, unknown> {
 
     // Block array item at top level
     if (trimmed.startsWith('- ') && currentKey) {
+      let item = trimmed.slice(2).trim();
+      if ((item.startsWith('"') && item.endsWith('"')) ||
+          (item.startsWith("'") && item.endsWith("'"))) {
+        item = item.slice(1, -1);
+      }
       const existing = result[currentKey];
       if (Array.isArray(existing)) {
-        existing.push(trimmed.slice(2).trim());
+        existing.push(item);
       } else {
-        result[currentKey] = [trimmed.slice(2).trim()];
+        result[currentKey] = [item];
       }
     }
   }
@@ -120,6 +142,110 @@ export function parse(text: string): Record<string, unknown> {
   return result;
 }
 
+/**
+ * Consume an inline array that may span multiple lines.
+ * `initial` must start with `[`. If the matching `]` is on the same line
+ * (`endIdx === startIdx`) or on a later line, returns the parsed items
+ * and the index of the line containing the closing bracket. Returns null
+ * if the bracket never closes (caller falls back to scalar parsing).
+ */
+function consumeInlineArray(
+  initial: string,
+  lines: string[],
+  startIdx: number,
+): { items: string[]; endIdx: number } | null {
+  if (!initial.startsWith('[')) return null;
+  const state = { depth: 0, inQuote: null as string | null };
+  let buf = initial;
+  let endIdx = startIdx;
+  if (scanBrackets(initial, state)) {
+    return { items: parseInlineArrayContent(buf), endIdx };
+  }
+  for (let j = startIdx + 1; j < lines.length; j++) {
+    const next = lines[j];
+    buf += '\n' + next;
+    endIdx = j;
+    if (scanBrackets(next, state)) {
+      return { items: parseInlineArrayContent(buf), endIdx };
+    }
+  }
+  return null;
+}
+
+/**
+ * Walk `s` and update bracket/quote state. Returns true when the bracket
+ * depth returns to zero within `s` (i.e. the array literal closes here).
+ * State is mutated across calls so a multi-line scan can resume.
+ */
+function scanBrackets(
+  s: string,
+  state: { depth: number; inQuote: string | null },
+): boolean {
+  for (let k = 0; k < s.length; k++) {
+    const ch = s[k];
+    if (state.inQuote) {
+      if (ch === state.inQuote && s[k - 1] !== '\\') state.inQuote = null;
+      continue;
+    }
+    if (ch === '"' || ch === "'") { state.inQuote = ch; continue; }
+    if (ch === '[' || ch === '{') { state.depth++; continue; }
+    if (ch === ']' || ch === '}') {
+      state.depth--;
+      if (state.depth === 0) return true;
+    }
+  }
+  return false;
+}
+
+/**
+ * Parse a fully-bracketed inline array string (e.g. `[a, "b, c", d]`,
+ * possibly containing newlines) into its element list. Quote- and
+ * bracket-aware, so commas inside `"..."` or nested `[...]` don't split.
+ */
+function parseInlineArrayContent(bracketed: string): string[] {
+  const open = bracketed.indexOf('[');
+  const close = bracketed.lastIndexOf(']');
+  if (open < 0 || close <= open) return [];
+  const inner = bracketed.slice(open + 1, close);
+  return splitArrayItems(inner);
+}
+
+function splitArrayItems(inner: string): string[] {
+  const items: string[] = [];
+  let buf = '';
+  let depth = 0;
+  let inQuote: string | null = null;
+  for (let k = 0; k < inner.length; k++) {
+    const ch = inner[k];
+    if (inQuote) {
+      if (ch === inQuote && inner[k - 1] !== '\\') inQuote = null;
+      buf += ch;
+      continue;
+    }
+    if (ch === '"' || ch === "'") { inQuote = ch; buf += ch; continue; }
+    if (ch === '[' || ch === '{') { depth++; buf += ch; continue; }
+    if (ch === ']' || ch === '}') { depth = Math.max(0, depth - 1); buf += ch; continue; }
+    if (ch === ',' && depth === 0) {
+      pushItem(items, buf);
+      buf = '';
+      continue;
+    }
+    buf += ch;
+  }
+  pushItem(items, buf);
+  return items;
+}
+
+function pushItem(items: string[], raw: string): void {
+  let t = raw.trim();
+  if (!t) return;
+  if ((t.startsWith('"') && t.endsWith('"')) ||
+      (t.startsWith("'") && t.endsWith("'"))) {
+    t = t.slice(1, -1);
+  }
+  items.push(t);
+}
+
 function parseValue(raw: string): unknown {
   const trimmed = raw.trim();
 
@@ -129,17 +255,9 @@ function parseValue(raw: string): unknown {
     return trimmed.slice(1, -1);
   }
 
-  // Inline array: [a, b, c]
+  // Inline array: [a, b, c] (single-line; multi-line handled by caller)
   if (trimmed.startsWith('[') && trimmed.endsWith(']')) {
-    const inner = trimmed.slice(1, -1);
-    if (!inner.trim()) return [];
-    return inner.split(',').map(item => {
-      const t = item.trim();
-      if ((t.startsWith('"') && t.endsWith('"')) || (t.startsWith("'") && t.endsWith("'"))) {
-        return t.slice(1, -1);
-      }
-      return t;
-    });
+    return splitArrayItems(trimmed.slice(1, -1));
   }
 
   // Boolean

@@ -1,0 +1,29 @@
+{
+  "project": "knowmarks",
+  "config_label": "glm-4.7-flash@t0.0+lean",
+  "model": "z-ai/glm-4.7-flash",
+  "temperature": 0,
+  "prompt_variant": "v4",
+  "sample": 3,
+  "digest": "Knowmarks is an open-source, local-first knowledge layer designed for the agentic era, serving as a shared substrate for humans and AI agents. The system ingests a wide range of content types—URLs, PDFs, Office documents, YouTube videos, GitHub repositories, Readwise highlights, browser clips, AI conversation threads, email, and local files—into a unified corpus. Over this corpus, three ownership-clean surfaces exist: user-authored Notes, an LLM-compiled Wiki with strict-compiler discipline, and a pipeline-extracted Graph with per-claim provenance. Users and agents compose knowledge through Spaces, which are named, composable subsets of the corpus defined by origin, membership rule, and lifetime intent. The primary agent interface is the MCP server, which offers 35 tools for CRUD and governance operations, while the Companion provides a conversational human surface for triage, intake mediation, and space management. The system is built on Python 3.11+, SQLite, and FastAPI, with pluggable embedding providers (fastembed, Ollama, OpenAI-compatible). Key features include automatic clustering, freshness monitoring with source-aware staleness probes, hybrid search, and a dashboard displaying a knowledge Pulse. The project includes a CLI, REST API, web dashboard, Chrome browser extension, and macOS desktop app. Persistent citations with verification states are supported, and automation rules allow for deterministic routing of incoming items. The Wiki and Graph layers, along with entity resolution and passage-level retrieval, are currently proposed features.",
+  "token_count": 394,
+  "matched_features": [
+    "MCP",
+    "Companion",
+    "Spaces",
+    "Wiki",
+    "Graph",
+    "fastembed",
+    "Notes",
+    "citation"
+  ],
+  "missing_features": [
+    "Milkdown",
+    "FTS5"
+  ],
+  "recall": 0.8,
+  "length_compliance": "under",
+  "duration_ms": 40085,
+  "cost_usd": null,
+  "error": null
+}

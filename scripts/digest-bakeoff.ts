@@ -100,10 +100,33 @@ Content requirements:
 
 Respond with only the digest text. Do not preface it, do not label it, do not wrap it in code fences or quotes.`;
 
+// v4: leaner. The 2026-04-27 named_terms work (schema v15) gives the
+// project_digests table a separate column that stores frontmatter-extracted
+// canary names — Milkdown, FTS5, fastembed, etc. — for FTS5/keyword
+// retrieval. The digest prose no longer has to pack canary names; its only
+// remaining job is to produce a tight semantic centroid for embedding-based
+// matching. v4 targets shorter digests (300–600 tokens vs v1's 500–800)
+// and drops the "name unbuilt sections explicitly" bullet because the
+// length pressure that bullet creates was a major driver of GLM's
+// thinking-budget overrun on rich specs.
+const SYSTEM_PROMPT_V4 = `You produce project essence summaries for the setlist project registry.
+
+Your job: read a project's fctry spec (or CLAUDE.md / README.md fallback, or concatenated markdown extracted from the project's documents) and write a dense, factual summary of what the project is today. The summary is stored as a free-form text blob and used for embedding, semantic matching against external references, and drop-in context for cross-project questions.
+
+Content requirements:
+- **Target 300–600 tokens.** Hard ceiling 1000. Stay inside the target range. If you need to trim, drop boilerplate first.
+- **Describe current state only.** Omit historical context, port origins, retired peer implementations, and claims about deprecated or archived components unless they constrain current behavior.
+- **Factual and dense; no marketing voice.** Claims must be concrete and capability-specific.
+- **Structure: multiple paragraphs, one per major surface area, separated by blank lines.** Do NOT emit a single mega-paragraph. Do NOT use bullet lists. Do NOT use section headers. No markdown.
+- **Do not invent facts.** If the source doesn't name something, don't name it.
+
+Respond with only the digest text. Do not preface it, do not label it, do not wrap it in code fences or quotes.`;
+
 const PROMPTS: Record<string, string> = {
   v1: SYSTEM_PROMPT_V1,
   v2: SYSTEM_PROMPT_V2,
   v3: SYSTEM_PROMPT_V3,
+  v4: SYSTEM_PROMPT_V4,
 };
 
 interface Fixture {
@@ -120,7 +143,7 @@ interface ModelConfig {
   label: string;
   model: string;
   temperature: number;
-  prompt_variant: 'v1' | 'v2' | 'v3';
+  prompt_variant: 'v1' | 'v2' | 'v3' | 'v4';
   is_current_prod: boolean;
 }
 
@@ -131,6 +154,7 @@ const CONFIGS: ModelConfig[] = [
   { label: 'flash@t0.0',                    model: 'google/gemini-2.5-flash',      temperature: 0.0, prompt_variant: 'v1', is_current_prod: false },
   { label: 'glm-4.7-flash@t0.0+propernoun', model: 'z-ai/glm-4.7-flash',           temperature: 0.0, prompt_variant: 'v2', is_current_prod: false },
   { label: 'glm-4.7-flash@t0.0+canary',     model: 'z-ai/glm-4.7-flash',           temperature: 0.0, prompt_variant: 'v3', is_current_prod: false },
+  { label: 'glm-4.7-flash@t0.0+lean',       model: 'z-ai/glm-4.7-flash',           temperature: 0.0, prompt_variant: 'v4', is_current_prod: false },
 ];
 
 const SAMPLES = [1, 2, 3];

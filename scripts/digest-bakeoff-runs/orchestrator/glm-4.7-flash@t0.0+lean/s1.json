@@ -1,0 +1,28 @@
+{
+  "project": "orchestrator",
+  "config_label": "glm-4.7-flash@t0.0+lean",
+  "model": "z-ai/glm-4.7-flash",
+  "temperature": 0,
+  "prompt_variant": "v4",
+  "sample": 1,
+  "digest": "Orchestrator is a reactive Claude Code skill that functions as a portfolio intelligence agent. It answers cross-project questions by reading specs, CLAUDE.md files, and code fresh on every query, using the project registry as a thin index. The user invokes it via `/orchestrator` followed by a question or `/orchestrator ref` for reference routing. It classifies questions as atomic or composite before assembling knowledge, ensuring answers are tight, cited, and transparent about speculation.\n\nThe skill handles seven core question types: dependency tracing, impact analysis, portfolio health and drift, pattern comparison, project briefings, disruptive opportunities, and connection scans. It reasons over sources by connecting explicit dependencies, inferring implicit ones like co-change coupling, and classifying facts temporally. Answers default to 3-5 sentences but allow drill-down. It validates spec claims mechanically and severity-tags health findings based on two axes of staleness: calendar time and commit activity.\n\nReference routing is a multi-stage pipeline that distills external references into structured \"insight cards\" stored in a local SQLite database. The orchestrator saves URLs to knowmarks first, extracts a thesis and patterns into a card, and then scores the card against project digests. It clusters cards into \"waves\" to surface emergent themes before per-item routing. The user confirms routings, which are then delegated to per-project `/fctry:ref` for spec incorporation. The system also supports project mode, which mines existing knowmarks for references relevant to a specific project using facet decomposition and iterative refinement.\n\nThe implementation relies on the project-registry and knowmarks MCPs, direct file reads, and extraction models like Gemini 2.5 Flash-Lite (default) or local Qwen3.6. It maintains a persistent card store at `~/Code/.cache/insight-cards.db` and a cost trace ledger. The current version is reactive only; it does not perform proactive monitoring or autonomous actions. It writes only to the registry via `retain`, the knowmarks service via `save`, and a bounded inbox handoff to per-project agents, avoiding direct spec modifications.",
+  "token_count": 552,
+  "matched_features": [
+    "portfolio",
+    "Claude Code skill",
+    "insight cards",
+    "knowmarks",
+    "reference routing",
+    "waves",
+    "SQLite",
+    "registry",
+    "speculation",
+    "facet"
+  ],
+  "missing_features": [],
+  "recall": 1,
+  "length_compliance": "in_range",
+  "duration_ms": 19712,
+  "cost_usd": null,
+  "error": null
+}

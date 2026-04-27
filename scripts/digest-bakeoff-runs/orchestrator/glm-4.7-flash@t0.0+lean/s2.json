@@ -1,0 +1,29 @@
+{
+  "project": "orchestrator",
+  "config_label": "glm-4.7-flash@t0.0+lean",
+  "model": "z-ai/glm-4.7-flash",
+  "temperature": 0,
+  "prompt_variant": "v4",
+  "sample": 2,
+  "digest": "Orchestrator is a reactive Claude Code skill that functions as a portfolio intelligence agent, answering cross-project questions by reading source files fresh at query time. It uses the project registry as a thin index to identify relevant projects and then selectively reads specs, CLAUDE.md files, and code to assemble answers. The skill classifies questions as atomic or composite before reading, ensuring efficient assembly. It supports dependency tracing, impact analysis, portfolio health assessment (mechanically validating spec claims and measuring staleness on calendar and commit axes), pattern comparison, project briefings, and disruptive opportunity identification grounded in user goals. The thin index separates navigation from reading, allowing the orchestrator to orient across the portfolio before committing to specific file reads. It traces implicit dependencies through co-change coupling and surfaces non-obvious connections between projects. Answers are concise, cited, and flag speculation, with the option to drill down into specific threads.\n\nReference routing is a primary mode of operation, triggered by `/orchestrator ref`. The orchestrator saves URLs to knowmarks, distills them into structured insight cards stored in a local SQLite database, and clusters these cards into waves to surface emergent themes before routing to specific projects. It supports three modes: inline routing for specific URLs, batch processing for GitHub stars, and project-specific mining of the existing knowledge base. Insight cards capture the source's thesis, intent tags, and named patterns, serving as durable distillations reused across scans. Wave detection collapses multiple item decisions into one when a theme emerges, matching how users save ideas in bursts. The skill delegates spec incorporation to per-project `/fctry:ref` after user confirmation and retains findings to the setlist portfolio memory. It relies on the project-registry and knowmarks MCPs, extraction models like Gemini 2.5 Flash-Lite or local Qwen, and maintains a stateless reasoning model with persistent extractions and retained findings. The current implementation is reactive only, with no background monitoring or proactive suggestions.",
+  "token_count": 558,
+  "matched_features": [
+    "portfolio",
+    "Claude Code skill",
+    "insight cards",
+    "knowmarks",
+    "reference routing",
+    "waves",
+    "SQLite",
+    "registry",
+    "speculation"
+  ],
+  "missing_features": [
+    "facet"
+  ],
+  "recall": 0.9,
+  "length_compliance": "in_range",
+  "duration_ms": 40737,
+  "cost_usd": null,
+  "error": null
+}

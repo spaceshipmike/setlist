@@ -1,0 +1,29 @@
+{
+  "project": "orchestrator",
+  "config_label": "glm-4.7-flash@t0.0+lean",
+  "model": "z-ai/glm-4.7-flash",
+  "temperature": 0,
+  "prompt_variant": "v4",
+  "sample": 3,
+  "digest": "Orchestrator is a reactive Claude Code skill that functions as a portfolio intelligence agent, answering questions about the entire project portfolio by classifying them as atomic or composite, scoping relevant projects, and assembling knowledge from live sources including the project registry, specs, CLAUDE.md files, and code. It reasons over this data to provide dependency tracing, impact analysis, portfolio health assessments, pattern comparisons, project briefings, disruptive opportunity identification, and connection scans. The system retains findings to the setlist portfolio memory and uses the project registry as a thin index for navigation.\n\nReference routing is a primary mode of operation, executed through three interfaces: inline URL routing, batch processing of saved items, and project-specific mining. The orchestrator distills above-floor knowmarks into structured \"insight cards\" stored in a local SQLite database, clusters these cards into \"waves\" to surface emergent themes before per-item routing, and registers confirmed routings as persistent \"reference-topics\" in setlist memory. This process relies on a hybrid extraction prompt and model tiers, defaulting to Gemini 2.5 Flash-Lite with a local Qwen fallback.\n\nThe skill supports seven core question types, each with a distinct assembly strategy. Dependency tracing identifies explicit and implicit dependencies through spec analysis and co-change coupling detection. Impact analysis assesses blast radius and severity. Portfolio health uses dual-axis staleness (calendar time vs. commit activity) and mechanical claim validation with severity tagging. Pattern comparison builds comparison matrices to identify convergence opportunities. Project briefings provide operational context. Disruptive opportunities are scored against user goals. Connection scans operate across three layers of abstraction: items, relationships, and connections.\n\nTechnically, the orchestrator is stateless for reasoning but maintains persistent extractions in its own SQLite store and a cost trace ledger. It integrates with the project-registry and knowmarks MCPs, uses the `codebase-memory` MCP for structural understanding, and reads files directly from disk. It is currently limited to reactive operation without proactive suggestions or sub-agent invocation for general reasoning, delegating only spec incorporation to per-project `/fctry:ref` workflows.",
+  "token_count": 605,
+  "matched_features": [
+    "portfolio",
+    "Claude Code skill",
+    "insight cards",
+    "knowmarks",
+    "reference routing",
+    "waves",
+    "SQLite",
+    "registry"
+  ],
+  "missing_features": [
+    "speculation",
+    "facet"
+  ],
+  "recall": 0.8,
+  "length_compliance": "in_range",
+  "duration_ms": 13838,
+  "cost_usd": null,
+  "error": null
+}
