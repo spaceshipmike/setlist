@@ -65,15 +65,21 @@ export function extractNamedTerms(sourceText: string): string[] {
 }
 
 function extractFrontmatter(content: string): string | null {
-  // Format 1: code-fenced YAML inside the markdown. Some specs include an
-  // inner `---\n` open delimiter (knowmarks/fctry/orchestrator); ensemble
-  // uses the bare ```yaml block. The optional `---\n` accommodates both.
-  const fenceMatch = content.match(/```ya?ml\s*\n(?:---\s*\n)?([\s\S]*?)```/);
-  if (fenceMatch) return fenceMatch[1].replace(/^---\s*$/gm, '');
-
-  // Format 2: bare frontmatter at the top of the file.
-  const bareMatch = content.match(/^---\s*\n([\s\S]*?)---\s*\n/);
+  // Format 1: bare frontmatter at the start of the file (emailer and
+  // similar). Detected first because `---\n` at offset 0 is unambiguous.
+  const bareMatch = content.match(/^---\s*\n([\s\S]*?)\n---\s*(?:\n|$)/);
   if (bareMatch) return bareMatch[1];
+
+  // Format 2: code-fenced YAML anchored to the file start, with at most
+  // one leading markdown heading + blank lines before it. This rejects
+  // ```yaml example blocks buried deep in the spec body (which were
+  // previously matching first and breaking emailer-style specs).
+  // Some specs include an inner `---\n` open delimiter
+  // (knowmarks/fctry/orchestrator); ensemble uses the bare ```yaml block.
+  const fenceMatch = content.match(
+    /^(?:#[^\n]*\n+)?```ya?ml\s*\n(?:---\s*\n)?([\s\S]*?)```/,
+  );
+  if (fenceMatch) return fenceMatch[1].replace(/^---\s*$/gm, '');
 
   return null;
 }

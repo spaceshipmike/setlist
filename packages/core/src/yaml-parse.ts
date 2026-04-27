@@ -23,7 +23,26 @@ export function parse(text: string): Record<string, unknown> {
     if (nestedKey && indent > currentIndent && nestedObj) {
       const kvMatch = trimmed.match(/^(\S+)\s*:\s*(.*)/);
       if (kvMatch) {
-        nestedObj[kvMatch[1]] = parseValue(kvMatch[2]);
+        const innerKey = kvMatch[1];
+        const innerValue = kvMatch[2];
+        if (!innerValue || innerValue === '') {
+          // No inline value — look ahead for a block array (`- item`).
+          // If found, initialize as an empty array so subsequent block
+          // items can be pushed into it; otherwise leave as empty string.
+          let isBlockArray = false;
+          if (i + 1 < lines.length) {
+            const nextLine = lines[i + 1];
+            const nextTrimmed = nextLine.trim();
+            const nextIndent = nextLine.length - nextLine.trimStart().length;
+            if (nextIndent > indent && nextTrimmed.startsWith('- ')) {
+              isBlockArray = true;
+            }
+          }
+          nestedObj[innerKey] = isBlockArray ? [] : '';
+        } else {
+          nestedObj[innerKey] = parseValue(innerValue);
+        }
+        currentKey = innerKey;
         continue;
       }
       // Array item in nested object
@@ -32,7 +51,13 @@ export function parse(text: string): Record<string, unknown> {
         if (currentKey && nestedObj[currentKey] !== undefined) {
           const arr = nestedObj[currentKey];
           if (Array.isArray(arr)) {
-            arr.push(trimmed.slice(2).trim());
+            // Strip optional surrounding quotes on block-array string items.
+            let item = trimmed.slice(2).trim();
+            if ((item.startsWith('"') && item.endsWith('"')) ||
+                (item.startsWith("'") && item.endsWith("'"))) {
+              item = item.slice(1, -1);
+            }
+            arr.push(item);
           }
         }
         continue;
