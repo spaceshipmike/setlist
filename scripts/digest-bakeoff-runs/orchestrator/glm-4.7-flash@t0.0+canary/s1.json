@@ -1,0 +1,29 @@
+{
+  "project": "orchestrator",
+  "config_label": "glm-4.7-flash@t0.0+canary",
+  "model": "z-ai/glm-4.7-flash",
+  "temperature": 0,
+  "prompt_variant": "v3",
+  "sample": 1,
+  "digest": "Orchestrator is a reactive Claude Code skill that functions as a portfolio intelligence agent. It is invoked via `/orchestrator` or `/portfolio` followed by a question. The skill relies on the `setlist` project registry MCP for the project index, portfolio memory (retain/recall), and capability queries. It reads project sources fresh on every query, prioritizing `.fctry/spec.md`, `CLAUDE.md`, and `.fctry/architecture.md`, to answer cross-project questions regarding dependencies, impact analysis, portfolio health, pattern comparison, and project briefings. Findings that meet a retention threshold are stored in setlist memory via the `retain` tool.\n\nReference routing is a primary mode, triggered by `/orchestrator ref` with arguments for a URL, a batch of recent saves, or a specific project. The orchestrator saves URLs to the knowmarks MCP first, then distills them into structured insight cards stored in `~/Code/.cache/insight-cards.db`. Extraction uses a hybrid prompt: a portfolio-agnostic core (producing thesis, intent tags, patterns, claims) plus a scan-time project overlay. Default extraction runs on Gemini 2.5 Flash-Lite via OpenRouter, with local Qwen3.6-35B-A3B-8bit on m4-pro as a fallback. The system performs wave detection to cluster cards by theme before per-item routing, scores items against project digests, and presents a tiered routing table (T1-T3). Confirmed routings are filed to knowmarks spaces and appended to target project `.fctry/inbox.json`. Reference topics are currently staged in the orchestrator SQLite until the setlist-side `reference_topic` memory type is implemented.\n\nThe skill classifies questions as atomic or composite before assembly. Dependency tracing identifies explicit imports and implicit co-change coupling via git history. Impact analysis assesses blast radius for changes. Portfolio health checks use mechanical claim extraction (verifying file paths, tool counts, version numbers) and dual-axis staleness (calendar time vs. commit activity). Pattern comparison surfaces transferable patterns from the cross-project catalog. Disruptive opportunity identification reasons about capability combinations and underexploited assets, scoring them against `~/Code/.plans/portfolio-goals.md`. Connection scans operate on three layers: recent changes, explicit relationships, and non-obvious connections.\n\nThe orchestrator does not modify specs directly; it delegates spec incorporation to per-project `/fctry:ref` after user confirmation. It maintains a bounded write surface including the inbox handoff and its own SQLite stores. Future autonomy is planned in stages: event-triggered suggestions and autonomous low-risk actions (autonomous monitoring). Unbuilt features include the `sqlite-vec` layer for wave detection and the setlist-side `reference_topic` memory type.",
+  "token_count": 707,
+  "matched_features": [
+    "portfolio",
+    "Claude Code skill",
+    "insight cards",
+    "knowmarks",
+    "reference routing",
+    "SQLite",
+    "registry"
+  ],
+  "missing_features": [
+    "waves",
+    "speculation",
+    "facet"
+  ],
+  "recall": 0.7,
+  "length_compliance": "in_range",
+  "duration_ms": 53655,
+  "cost_usd": null,
+  "error": null
+}

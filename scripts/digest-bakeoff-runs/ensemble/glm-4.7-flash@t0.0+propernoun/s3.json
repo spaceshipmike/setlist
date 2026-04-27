@@ -1,0 +1,29 @@
+{
+  "project": "ensemble",
+  "config_label": "glm-4.7-flash@t0.0+propernoun",
+  "model": "z-ai/glm-4.7-flash",
+  "temperature": 0,
+  "prompt_variant": "v2",
+  "sample": 3,
+  "digest": "Ensemble is a Claude-Code-first extension platform manager built as a TypeScript library with CLI and Electron desktop app presentation layers. It manages the full lifecycle of seven declarative artifact types for Claude Code: MCP servers, skills, plugins, subagents, slash commands, hooks, and managed settings.json values. The library-first architecture stores a central inventory at `~/.config/ensemble/library/` where every resource is owned regardless of install state. Install state is a per-client/per-project property of library resources, not a tier. Operations are pure functions using Zod schemas, and sync projects this state to client configs via non-destructive merge for settings.json and symlink fan-out for file-based resources like skills and agents. The project uses a monorepo structure with npm workspaces, TypeScript, Commander.js, Zod, Vitest, Biome, tsup, better-sqlite3, proper-lockfile, smol-toml, JSON config, Electron, React, Tailwind CSS, Playwright, fuzzysort, electron-trpc, superjson, zustand, @radix-ui/*, and @phosphor-icons/react.\n\nEvery library resource carries a source-owned `description` field and a user-authored `userNotes` field, with the latter never overwritten by re-import. Resources include MCP servers (stdio/HTTP/SSE transport), skills (SKILL.md files), plugins (managed via `enabledPlugins` in settings), subagents (`.claude/agents/*.md`), slash commands (`.claude/commands/*.md`), hooks (lifecycle events like PreToolUse and PostToolUse), and settings (declarative key management). Sync strategies vary: servers and plugins write config entries; skills, agents, and commands use symlink fan-out to client directories; hooks and settings use non-destructive key-level merge. The sync engine supports safe apply with rollback snapshots, atomic writes, and drift detection using artifact-level SHA-256 hashes. The desktop app provides a pivot-based sidebar and a Matrix view showing project × Claude Code installation states, while the CLI uses Commander.js for lifecycle verbs.\n\nEnsemble supports 17 AI clients (Claude Desktop, Claude Code, Cursor, VS Code, Windsurf, Zed, JetBrains, etc.) and mirrors MCPs and skills across 16 others. It integrates with the Official MCP Registry and Glama for discovery, offering search, show, and install capabilities. The registry subsystem uses an adapter pattern for extensibility. The desktop app features a tRPC bridge for type-safe IPC, a shared discovery engine for fuzzy search with `@marketplace-name` filter syntax, and a unified Explore surface. The CLI includes a `browse` command for TUI-grade discovery. The project integrates with the project-registry SQLite database and the setlist capability registry for portfolio awareness. Future work includes dynamic marketplace auto-discovery, unified installed-plus-discoverable fuzzy search, and additional registries like Smithery and PulseMCP.\n\nThe v2.0.1 target modules for `agents`, `commands`, `hooks`, `settings`, `snapshots`, and `browse` are built, but the CLI lifecycle verbs (`pull`, `add`, `install`, `uninstall`, `remove`) and the `ensemble import-legacy` one-shot translator are currently unbuilt, with the CLI still using a v1.3 stopgap surface. The migration from v1.3 to v2.0.1 involves a coordinated rename sweep of install-state verbs and deletion of `import-legacy.ts` after user verification. Unbuilt future features include multi-group assignments, project registry write-back, SkillsGate deep integration, virtual server mapping, capability-driven recommendations, and the `ensemble add <source>` unified source parser.",
+  "token_count": 897,
+  "matched_features": [
+    "Claude Code",
+    "MCP",
+    "skills",
+    "plugins",
+    "subagents",
+    "hooks",
+    "settings.json",
+    "library",
+    "snapshot"
+  ],
+  "missing_features": [
+    "multi-client"
+  ],
+  "recall": 0.9,
+  "length_compliance": "over_target",
+  "duration_ms": 33909,
+  "cost_usd": null,
+  "error": null
+}

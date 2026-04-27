@@ -1,0 +1,28 @@
+{
+  "project": "fctry",
+  "config_label": "glm-4.7-flash@t0.0+canary",
+  "model": "z-ai/glm-4.7-flash",
+  "temperature": 0,
+  "prompt_variant": "v3",
+  "sample": 3,
+  "digest": "",
+  "token_count": 0,
+  "matched_features": [],
+  "missing_features": [
+    "NLSpec",
+    "Claude Code plugin",
+    "scenarios",
+    "Executor",
+    "Observer",
+    "Voice Translator",
+    "Spec Writer",
+    "State Owner",
+    "viewer",
+    "kanban"
+  ],
+  "recall": 0,
+  "length_compliance": "under",
+  "duration_ms": 100242,
+  "cost_usd": null,
+  "error": "glm-4.7-flash@t0.0+canary returned empty content (finish=length, reasoning=29772 chars)"
+}

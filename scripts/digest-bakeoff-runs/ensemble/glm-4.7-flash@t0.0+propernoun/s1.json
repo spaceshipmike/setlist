@@ -1,0 +1,28 @@
+{
+  "project": "ensemble",
+  "config_label": "glm-4.7-flash@t0.0+propernoun",
+  "model": "z-ai/glm-4.7-flash",
+  "temperature": 0,
+  "prompt_variant": "v2",
+  "sample": 1,
+  "digest": "Ensemble is a TypeScript library, CLI, and Electron desktop app for managing Claude Code extensions. It is library-first, treating a flat canonical store at `~/.config/ensemble/library/` as the source of truth for owned resources (MCP servers, skills, plugins, subagents, slash commands, hooks, and managed settings.json values). Install state is a per-client/per-project property of these library resources, not a separate tier. Operations are pure functions using Zod schemas, and sync projects this state to client configs via additive writes, symlink fan-out for file-based resources, and non-destructive key-level merge for settings.json. The tech stack includes Commander.js, Zod, Vitest, Biome, tsup, npm, better-sqlite3, proper-lockfile, smol-toml, JSON config, Electron, React, Tailwind CSS, Playwright, fuzzysort, electron-trpc, @trpc/server, @trpc/client, @trpc/react-query, @tanstack/react-query, superjson, zustand, @radix-ui/*, and @phosphor-icons/react.\n\nEnsemble supports 17 AI clients (Claude Desktop, Claude Code, Cursor, VS Code, Windsurf, Zed, JetBrains, etc.) with 4 planned. It is Claude-Code-first, depth-first, managing all seven resource types for Claude Code before expanding other clients. MCP servers and skills currently mirror across the 16 additional clients (Claude Desktop, Cursor, VS Code, Windsurf, Zed, JetBrains, Antigravity, CodeBuddy, Qoder, Trae, and more). Other client types expand type-by-type after the Claude Code experience is complete. The desktop app provides a pivot-based sidebar (Library, By Project, By Group, By Client, Marketplace) and a Matrix view showing project × Claude Code resource types, with multi-client mirroring as a secondary dimension for MCPs and skills.\n\nThe CLI exposes lifecycle verbs (`pull`, `add`, `install`, `uninstall`, `remove`), library subcommands (`list`, `show`, `pivot`), and discovery (`browse` with `@marketplace-name` filter syntax). The Electron desktop app provides visual management with a collapsible Resources sidebar, Groups, Clients, Sync, Doctor, Registry, Profiles, and Rules sections. It features a shared discovery engine for fuzzy search, inline staged changes with diff preview, ambient state over navigation, and a pivot-based information architecture. The app uses tRPC for type-safe IPC between the main process and React renderer, with Playwright for E2E testing.\n\nSecurity features include secret scanning for hardcoded credentials, typed variables with `kind` (text, note, api-key, password) and 1Password `op://` references, and secret redaction at the serialization boundary. Sync operations are safe apply with rollback snapshots, atomic writes (write to temp, Zod validate, rename), and drift detection using SHA-256 content hashes. The project integrates with the setlist capability registry (read-only) and project-registry SQLite (read-only) for portfolio awareness. Unbuilt work includes the v1.3 → v2.0.1 migration (one-shot import and coordinated verb rename sweep), dynamic marketplace auto-discovery, unified installed-plus-discoverable fuzzy search, multi-group assignments, project registry write-back, and additional registries (Smithery, PulseMCP, SkillsGate).",
+  "token_count": 796,
+  "matched_features": [
+    "Claude Code",
+    "MCP",
+    "skills",
+    "plugins",
+    "subagents",
+    "hooks",
+    "settings.json",
+    "multi-client",
+    "library",
+    "snapshot"
+  ],
+  "missing_features": [],
+  "recall": 1,
+  "length_compliance": "in_range",
+  "duration_ms": 49422,
+  "cost_usd": null,
+  "error": null
+}

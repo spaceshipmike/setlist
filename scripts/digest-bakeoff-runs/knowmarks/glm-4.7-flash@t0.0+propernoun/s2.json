@@ -1,0 +1,28 @@
+{
+  "project": "knowmarks",
+  "config_label": "glm-4.7-flash@t0.0+propernoun",
+  "model": "z-ai/glm-4.7-flash",
+  "temperature": 0,
+  "prompt_variant": "v2",
+  "sample": 2,
+  "digest": "Knowmarks is a local-first, open-source knowledge layer for LLMs that ingests diverse formats—URLs, PDFs, Office documents, YouTube videos, GitHub repositories, Readwise highlights, browser clips, AI conversation threads, email, and local files—into a single format-agnostic corpus. Three ownership-clean surfaces sit over this corpus: user-authored Notes, an LLM-compiled Wiki with strict-compiler discipline (every claim traced to a source span), and a pipeline-extracted Graph with per-claim provenance. Spaces unify the previous project/cluster/collection model into a single type with attributes for origin, membership rule, and lifetime intent.\n\nThe MCP server is the primary agent interface, serving space-scoped retrieval via a surface cascade (wiki first, graph second, passages third) that honors token budgets. The Companion is the conversational human surface, wrapping MCP verbs in confirm-flow language and handling triage, intake mediation, and retrieval preview. CLI, REST API, web dashboard, browser extension, and macOS desktop app serve as peer surfaces. The system uses a pluggable embedding stack (fastembed, Ollama, OpenAI-compatible) and zvec for file-embedded ANN vector indexing.\n\nContent ingestion uses a content-type-aware pipeline with platform-specific processors (Reddit, Hacker News, Stack Exchange, Twitter/X via fxtwitter proxy, LinkedIn via OG tags + DOM capture) and optional Firecrawl for JS-heavy sites. Structured fact extraction and auto-summaries enrich items. Governance includes freshness monitoring via source-aware staleness probes, near-duplicate detection, and automation rules. The Knowledge Pulse dashboard surfaces stale alerts, gaps, and collection insights. Persistent citations use W3C Web Annotation selectors for drift-resilience.\n\nThe Notes editor uses Milkdown (ProseMirror + remark) for WYSIWYG markdown with lossless round-trip. The Companion supports `@` context mentions, hand-off artifacts as a persistent panel, and inline citation markers. The Global Launcher (⌘⇧K) enables system-wide paste. The system employs a fingerprint-driven reconciler for disposable derived state (vectors, entities, wiki articles) and an async-batch LLM inference router for cost savings. The tech stack includes Python 3.11+, SQLite (WAL + FTS5), spaCy + GLiNER ONNX for entity extraction, igraph for community detection, and FastAPI/FastMCP for the web layer.",
+  "token_count": 601,
+  "matched_features": [
+    "Milkdown",
+    "MCP",
+    "Companion",
+    "Spaces",
+    "Wiki",
+    "Graph",
+    "FTS5",
+    "fastembed",
+    "Notes",
+    "citation"
+  ],
+  "missing_features": [],
+  "recall": 1,
+  "length_compliance": "in_range",
+  "duration_ms": 117450,
+  "cost_usd": null,
+  "error": null
+}

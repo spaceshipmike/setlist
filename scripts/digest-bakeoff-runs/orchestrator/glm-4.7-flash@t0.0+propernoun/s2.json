@@ -1,0 +1,29 @@
+{
+  "project": "orchestrator",
+  "config_label": "glm-4.7-flash@t0.0+propernoun",
+  "model": "z-ai/glm-4.7-flash",
+  "temperature": 0,
+  "prompt_variant": "v2",
+  "sample": 2,
+  "digest": "Orchestrator is a reactive Claude Code skill that functions as a portfolio intelligence agent, invoked via `/orchestrator` or `/portfolio` to answer cross-project questions. It maintains a unified view of active projects—including their specs, architectures, dependencies, and shared patterns—by reading sources fresh on every query, citing specific evidence, and flagging speculation. The agent classifies questions as atomic or composite, ranks memories by importance over recency, and retains findings to the setlist portfolio memory for future recall. It supports dependency tracing (including implicit co-change coupling), impact analysis, portfolio health assessment (with claim extraction, dual-axis staleness, and severity tagging), pattern comparison, project briefings, and disruptive opportunity identification grounded in user priorities.\n\nReference routing is a primary mode, triggered by `/orchestrator ref` or `/orchestrator ref <url>`. The orchestrator saves URLs to knowmarks, extracts clean text via trafilatura, and distills them into structured \"insight cards\" stored in a local SQLite database at `~/Code/.cache/insight-cards.db`. It uses a hybrid extraction prompt (portfolio-agnostic core + scan-time project overlay) with Gemini 2.5 Flash-Lite as the default model and Qwen3.6-35B-A3B-8bit on m4-pro as a local fallback. Cards are clustered into \"waves\" to surface emergent themes before per-item routing. The orchestrator delegates confirmed routings to per-project `/fctry:ref` workflows and stages \"reference-topic\" state in its own SQLite until the setlist-side memory type is implemented.\n\nThe agent operates on a portfolio of approximately 14 active projects, including setlist, ensemble, homelab, fctry, chorus-app, knowmarks, and emailer. It relies on the project registry (setlist) as a thin index and reads files directly from disk, prioritizing `.fctry/spec.md`, `CLAUDE.md`, and `.fctry/architecture.md`. It uses the knowmarks MCP for ingestion and the codebase-memory MCP for single-project structural understanding. The system is stateless in reasoning but persistent in extractions, ensuring answers are fresh while reusing durable card distillations.\n\nUnbuilt sections include a graduated autonomy path moving from reactive to event-triggered suggestions and autonomous low-risk actions, governed by tiered self-modification rules. \"Reference-as-topic\" is a v2 feature currently staged in the orchestrator's SQLite. \"Wave detection\" currently relies on thesis content; semantic similarity via sqlite-vec is planned. The \"codebase-memory\" MCP is used for single-project analysis but is treated as a pattern study rather than a scope expansion.",
+  "token_count": 671,
+  "matched_features": [
+    "portfolio",
+    "Claude Code skill",
+    "insight cards",
+    "knowmarks",
+    "reference routing",
+    "waves",
+    "SQLite",
+    "registry",
+    "speculation"
+  ],
+  "missing_features": [
+    "facet"
+  ],
+  "recall": 0.9,
+  "length_compliance": "in_range",
+  "duration_ms": 14986,
+  "cost_usd": null,
+  "error": null
+}

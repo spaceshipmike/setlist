@@ -1,0 +1,28 @@
+{
+  "project": "orchestrator",
+  "config_label": "glm-4.7-flash@t0.0+canary",
+  "model": "z-ai/glm-4.7-flash",
+  "temperature": 0,
+  "prompt_variant": "v3",
+  "sample": 2,
+  "digest": "",
+  "token_count": 0,
+  "matched_features": [],
+  "missing_features": [
+    "portfolio",
+    "Claude Code skill",
+    "insight cards",
+    "knowmarks",
+    "reference routing",
+    "waves",
+    "SQLite",
+    "registry",
+    "speculation",
+    "facet"
+  ],
+  "recall": 0,
+  "length_compliance": "under",
+  "duration_ms": 22595,
+  "cost_usd": null,
+  "error": "glm-4.7-flash@t0.0+canary returned empty content (finish=unknown, reasoning=3734 chars)"
+}

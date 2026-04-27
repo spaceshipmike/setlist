@@ -1,0 +1,29 @@
+{
+  "project": "fctry",
+  "config_label": "glm-4.7-flash@t0.0+propernoun",
+  "model": "z-ai/glm-4.7-flash",
+  "temperature": 0,
+  "prompt_variant": "v2",
+  "sample": 2,
+  "digest": "fctry is a Claude Code plugin that orchestrates eight specialized agents to convert conversational user visions into complete NLSpec v2 specifications and then drive autonomous builds from them. The system enforces an experience-first contract where the spec captures what the user sees, does, and feels, and every user-facing surface speaks plain English through a single translation module, blocking factory-internal vocabulary. The user approves a build plan once, after which the system executes all chunks autonomously, handling failures and rearchitecting silently while resurfacing only for experience-level questions. The live spec viewer provides a multi-project dashboard with a recursive kanban board, real-time updates via WebSocket, and mission control during builds showing a visual dependency graph and activity feed. The system uses Node.js, SQLite, WebSocket, Mermaid.js, and the Claude Code Plugin API. Unbuilt features include background-worker execution for parallel chunk processing, a viewer-as-control-plane with a terminal emulator and MCP elicitation, cross-project synthesis, a self-improvement loop via `/fctry:reflect`, an arbiter-tier disagreement resolver for build-time verification, incremental build trace parsing, and an experimental fully-autonomous loop that runs the discover-incorporate-build-verify cycle without human direction.",
+  "token_count": 342,
+  "matched_features": [
+    "NLSpec",
+    "Claude Code plugin",
+    "viewer",
+    "kanban"
+  ],
+  "missing_features": [
+    "scenarios",
+    "Executor",
+    "Observer",
+    "Voice Translator",
+    "Spec Writer",
+    "State Owner"
+  ],
+  "recall": 0.4,
+  "length_compliance": "under",
+  "duration_ms": 25130,
+  "cost_usd": null,
+  "error": null
+}

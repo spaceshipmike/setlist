@@ -1,0 +1,29 @@
+{
+  "project": "ensemble",
+  "config_label": "glm-4.7-flash@t0.0+propernoun",
+  "model": "z-ai/glm-4.7-flash",
+  "temperature": 0,
+  "prompt_variant": "v2",
+  "sample": 2,
+  "digest": "Ensemble is a library-first TypeScript toolkit for centrally managing Claude Code extension artifacts across AI clients. The canonical store lives at `~/.config/ensemble/library/`, independent of client scopes. Library membership is controlled by `pull` and `add` operations, while install state is a per-client/per-project property of each library resource. Operations are pure functions using Zod schemas, and the CLI and desktop app are thin presentation layers over a shared operations and sync core. The project uses a monorepo structure with the library and CLI at the root and the Electron desktop app in `packages/desktop/`.\n\nThe platform manages seven declarative artifact types: MCP servers, skills, plugins, subagents, slash commands, hooks, and managed settings.json values. Every resource carries a source-owned `description` and a user-authored `userNotes` field. Sync projects install state into client configs using additive-only writes, non-destructive key-level merge for settings, and symlink fan-out for file-based resources (skills, agents, commands). Every sync run produces a rollback-capable snapshot stored in `~/.config/ensemble/snapshots/`. Drift detection uses SHA-256 content hashes to identify manual modifications outside Ensemble.\n\nEnsemble supports 17 AI clients including Claude Desktop, Claude Code, Cursor, VS Code, Windsurf, Zed, and JetBrains, with 4 more planned. The Electron desktop app provides a pivot-based sidebar (Library, By Project, By Group, By Client, Marketplace) and a Matrix view for project × Claude Code resource types. The app uses React, Tailwind CSS, and electron-trpc for IPC, with Playwright for E2E testing. The CLI uses Commander.js and exposes verbs for lifecycle management, discovery, and health auditing.\n\nSeveral v2.0.1 lifecycle verbs (`pull`, `install`, `uninstall`, `remove`, `library`, `browse`) are explicitly unbuilt and scheduled for deletion in a coordinated migration. The unified source parser for `ensemble add <source>` and dynamic marketplace auto-discovery are deferred to the future. The `ensemble import-legacy` subcommand is a throwaway one-shot translator for the v1.3 to v2.0.1 transition. Additional open questions include an optional tray/menu-bar companion, an AI compose panel with diff-accept gate, remote update subscriptions, context-budget-aware bundling, and a shared canonical `~/.agents/skills/` store convention.",
+  "token_count": 603,
+  "matched_features": [
+    "Claude Code",
+    "MCP",
+    "skills",
+    "plugins",
+    "subagents",
+    "hooks",
+    "settings.json",
+    "library",
+    "snapshot"
+  ],
+  "missing_features": [
+    "multi-client"
+  ],
+  "recall": 0.9,
+  "length_compliance": "in_range",
+  "duration_ms": 47371,
+  "cost_usd": null,
+  "error": null
+}

@@ -1,0 +1,29 @@
+{
+  "project": "orchestrator",
+  "config_label": "glm-4.7-flash@t0.0+propernoun",
+  "model": "z-ai/glm-4.7-flash",
+  "temperature": 0,
+  "prompt_variant": "v2",
+  "sample": 3,
+  "digest": "Orchestrator is a reactive Claude Code skill that functions as a portfolio intelligence agent, reasoning about active projects as a unified system. It is invoked via `/orchestrator` or `/portfolio` followed by a question, classifying inputs as atomic (single project) or composite (multi-project) before assembling answers from the project registry, specs, CLAUDE.md files, and code. The skill performs dependency tracing, impact analysis, portfolio health assessment with claim extraction and mechanical validation, pattern comparison, project briefings, and disruptive opportunity identification grounded in user priorities. It reads sources fresh on every query, prioritizing `.fctry/spec.md`, `CLAUDE.md`, and `.fctry/architecture.md` over code unless specifically asked, and retains findings to setlist portfolio memory via the `retain` MCP tool.\n\nThe orchestrator manages a persistent layer of insight cards extracted from the knowmarks corpus. It distills every above-floor knowmark into a structured card containing thesis, intent tags, named patterns, claims with evidence strength, counter-examples, source quality, confidence, and repo signals for GitHub URLs. These cards are stored in an orchestrator-owned SQLite database at `~/Code/.cache/insight-cards.db` with a schema mirroring setlist's `project_digests` conventions. During reference routing, the orchestrator clusters cards into waves to surface emergent themes before per-item routing, scores items against project digests, and presents tiered routings to the user. Confirmation dispatches the reference to the target project's `/fctry:ref` workflow. Extraction uses Gemini 2.5 Flash-Lite by default, with local Qwen3.6-35B-A3B-8bit on m4-pro as a fallback.\n\nThe project is currently reactive and stateless in its reasoning, though it outlines a graduated future autonomy path. Future stages include event-triggered suggestions and autonomous low-risk actions governed by tiered self-modification rules. The reference-as-topic feature, which would create persistent entities in setlist memory to track evidence over time, is currently staged in the orchestrator's SQLite and awaits a setlist evolve. The sqlite-vec layer for wave detection and cross-card similarity is studied but not built. The orchestrator does not write to project specs directly; it delegates spec incorporation to per-project `/fctry:ref` and limits its own writes to setlist memory, knowmarks saves, inbox handoffs, and its own card store. It does not invoke other skills for general reasoning and relies on the project-registry MCP and knowmarks MCP for cross-project data.",
+  "token_count": 655,
+  "matched_features": [
+    "portfolio",
+    "Claude Code skill",
+    "insight cards",
+    "knowmarks",
+    "reference routing",
+    "waves",
+    "SQLite",
+    "registry"
+  ],
+  "missing_features": [
+    "speculation",
+    "facet"
+  ],
+  "recall": 0.8,
+  "length_compliance": "in_range",
+  "duration_ms": 21073,
+  "cost_usd": null,
+  "error": null
+}

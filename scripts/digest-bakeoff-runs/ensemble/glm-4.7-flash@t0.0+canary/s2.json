@@ -1,0 +1,29 @@
+{
+  "project": "ensemble",
+  "config_label": "glm-4.7-flash@t0.0+canary",
+  "model": "z-ai/glm-4.7-flash",
+  "temperature": 0,
+  "prompt_variant": "v3",
+  "sample": 2,
+  "digest": "Ensemble is a Claude-Code-first extension platform manager that maintains a central library at `~/.config/ensemble/library/` containing all owned resources: MCP servers, skills, plugins, subagents, slash commands, hooks, and managed settings. The library is the source of truth; install state is a per-client property of each resource. The project is built with TypeScript, using Zod for validation, Commander.js for the CLI, and Electron + React for the desktop app. The core logic is organized into four layers: data model, operations, sync engine, and presentation. The CLI and desktop app are thin presentation layers over a shared operations and sync core.\n\nThe tech stack includes TypeScript, Commander.js, Zod, Vitest, Biome, tsup, npm, better-sqlite3, proper-lockfile, smol-toml, JSON config, Electron, React, Tailwind CSS, Playwright, fuzzysort, electron-trpc, @trpc/server, @trpc/client, @trpc/react-query, @tanstack/react-query, superjson, zustand, @radix-ui/*, and @phosphor-icons/react. Key modules include `src/discovery/library-store.ts` for the canonical store, `src/discovery/library.ts` for scanning, `src/discovery/wire.ts` for wiring, `src/sync.ts` for the sync engine, `src/operations.ts` for pure business logic, `src/schemas.ts` for Zod schemas, `src/registry.ts` for adapters, `src/doctor.ts` for health audits, `src/browse.ts` for the discovery engine, `src/lifecycle.ts` for verb dispatching, and `src/managed-settings.ts` for the settings store. The desktop app uses a tRPC bridge between the main process and React renderer.\n\nThe project is currently in an active state (v2.4.2). The v2.0.1 target modules for agents, commands, hooks, settings, snapshots, doctor, browse, and the desktop app are built. However, the v1.3 install-state verbs (`enableServer`, `installPlugin`, `enableSkill`, `disableSkill`, `installSkill`, `uninstallSkill`, `enablePlugin`, `disablePlugin`) remain exported in `operations.ts` pending a coordinated rename sweep. The CLI surface is a stopgap: it ships the v1.3-style group grammar (agents, commands, plugins, skills, hook groups) but the full noun-first lifecycle rewrite (`pull`, `add`, `install`, `uninstall`, `remove`, `library` subcommands) is unbuilt. The `ensemble import-legacy` subcommand is live but marked as a throwaway to be deleted after the migration. Several features are deferred, including dynamic marketplace auto-discovery, unified fuzzy search across installed and discoverable resources, an optional tray/menu-bar companion, an AI compose panel with diff-accept gate, remote update subscriptions, context-budget-aware bundling, a deploy primer, and a shared `~/.agents/skills/` store convention.",
+  "token_count": 669,
+  "matched_features": [
+    "MCP",
+    "skills",
+    "plugins",
+    "subagents",
+    "hooks",
+    "library",
+    "snapshot"
+  ],
+  "missing_features": [
+    "Claude Code",
+    "settings.json",
+    "multi-client"
+  ],
+  "recall": 0.7,
+  "length_compliance": "in_range",
+  "duration_ms": 64075,
+  "cost_usd": null,
+  "error": null
+}

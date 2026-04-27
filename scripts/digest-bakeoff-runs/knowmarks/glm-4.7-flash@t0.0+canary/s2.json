@@ -1,0 +1,29 @@
+{
+  "project": "knowmarks",
+  "config_label": "glm-4.7-flash@t0.0+canary",
+  "model": "z-ai/glm-4.7-flash",
+  "temperature": 0,
+  "prompt_variant": "v3",
+  "sample": 2,
+  "digest": "Knowmarks is an open-source, local-first knowledge layer for LLMs. It ingests URLs, PDFs, Office documents, YouTube, GitHub, Readwise, browser clips, AI conversation threads, email, and local files into a single format-agnostic corpus. The system offers three ownership-clean surfaces over this corpus: user-authored Notes (stored as portable markdown files), a Wiki compiled by the LLM under strict-compiler discipline with per-paragraph citations, and a Graph extracted by the pipeline with per-claim provenance. Users and agents compose knowledge through Spaces—named, composable subsets of the corpus defined by origin, membership rule, and lifetime intent. The primary agent interface is the MCP server, which serves space-scoped retrieval via a surface cascade (wiki first, graph second, passages third) and honors token budgets. The Companion is the conversational human surface, wrapping MCP verbs in confirm-flow language and handling triage, intake mediation, and proactive observations.\n\nContent ingestion uses a content-type-aware extraction pipeline that handles HTML, high-fidelity PDFs (tables, formulas, OCR), YouTube transcripts with visual capture, Office documents, and GitHub repositories. Platform-specific processors (Reddit, Hacker News, Stack Exchange, Twitter/X via fxtwitter proxy, LinkedIn) and optional Firecrawl backend enhance extraction. The system automatically classifies items into 12 content types using an LLM-first approach with regex fallback, generates auto-summaries and auto-connections, and extracts structured facts. Clustering and freshness monitoring use vitality scores derived from content type decay rates, modulated by project membership, connection density, and source-aware staleness probes (e.g., GitHub commits, npm publishes). The vector backend is pluggable, with zvec as the default file-embedded option, and search uses hybrid retrieval combining vector and FTS5 with Reciprocal Rank Fusion.\n\nThe web dashboard, built with Vite and TypeScript, features a Pulse view for collection health, a Companion rail for conversational triage and governance, and a Milkdown-based Notes editor supporting [[wikilink]] syntax and type-as-first-class chips. The CLI provides commands like km save, km find, and km doctor, while the REST API offers full parity with the MCP server. A Chrome browser extension supports full-page, selection, and article-only clip modes with DOM capture for auth-walled sites. The macOS desktop app (Electron + PyInstaller) bundles the full stack. The Global Launcher (⌘⇧K) enables system-wide search and paste. The system supports Automation Rules for deterministic routing and Persistent Citations with W3C Web Annotation selectors for verifiable references.\n\nThe system employs a fingerprint-driven Pipeline Orchestration engine to manage derived state, ensuring rebuildability. LLM inference routing distinguishes sync vs. async and fast vs. deep tiers, routing background work like auto-summaries and proactive observations through a batch queue. Spaces are the primary organizational unit, replacing the previous project/cluster/collection split. Knowledge gaps are detected via cluster density and project coverage, surfaced on Pulse. The Companion features a Memory Management surface for reviewing AI observations, Smart Action Blocks for entity interactions, and Hand-off Artifacts for pin sets, MCP prompts, and draft notes. The Alpha deployment runs on a shared NAS with per-user SQLite isolation, invite-only access, and Cloudflare Tunnel for HTTPS.",
+  "token_count": 884,
+  "matched_features": [
+    "Milkdown",
+    "MCP",
+    "Companion",
+    "Spaces",
+    "Wiki",
+    "Graph",
+    "FTS5",
+    "Notes",
+    "citation"
+  ],
+  "missing_features": [
+    "fastembed"
+  ],
+  "recall": 0.9,
+  "length_compliance": "over_target",
+  "duration_ms": 73573,
+  "cost_usd": null,
+  "error": null
+}

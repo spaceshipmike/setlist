@@ -1,0 +1,28 @@
+{
+  "project": "knowmarks",
+  "config_label": "glm-4.7-flash@t0.0+canary",
+  "model": "z-ai/glm-4.7-flash",
+  "temperature": 0,
+  "prompt_variant": "v3",
+  "sample": 3,
+  "digest": "Knowmarks is a local-first, open-source knowledge layer for LLMs built on Python 3.11+ and SQLite (WAL + FTS5). It ingests a unified corpus from URLs, PDFs, Office docs, YouTube, GitHub, Readwise, browser clips, AI conversation threads, email, and local files. Three ownership-clean surfaces sit over this corpus: user-authored **Notes** (file-backed markdown with a **Milkdown** WYSIWYG editor and `[[target]]` wikilink system), an **Wiki** (LLM-compiled topic articles with strict-compiler discipline and per-paragraph citations), and a **Graph** (pipeline-extracted entities, edges, and communities with per-claim provenance). **Spaces** (named, composable subsets of the corpus) replace the older project/cluster/collection split, defined by origin, membership rule, and lifetime intent.\n\nThe **MCP server** is the primary agent surface, exposing 35 tools for CRUD, governance, and search. Retrieval follows a **surface cascade** (wiki first, graph second, passages third) to honor token budgets and ground citations. The **Companion** is the conversational human interface, wrapping MCP verbs in confirm-flow language, rendering the **Brief** (change-driven narrative synthesis), and handling triage, intake mediation, and hand-off artifacts. The **REST API** provides full parity with MCP for non-agent clients. **CLI** commands (`km save`, `km find`, `km cite`) and a **browser extension** (Chrome, with DOM capture for auth-walled sites) are peer surfaces. The **desktop app** (Electron + PyInstaller) bundles the full stack for macOS.\n\nContent ingestion uses a **platform-specific processor registry** (trafilatura, kreuzberg, yt-dlp) and optional **Firecrawl** for JS-heavy sites. **Structured fact extraction** and **auto-summaries** run during ingest. **Hybrid search** combines vector (pluggable via **fastembed**, **Ollama**, or OpenAI-compatible API) and FTS5 with RRF ranking. **Automatic clustering** and **vitality scores** (exponential decay modulated by source-aware staleness probes) drive governance. **Active projects** and **curated collections** use keyword-seeded semantic matching. **Automation rules** provide deterministic routing. The **dashboard** features a **knowledge pulse** (Pulse) with stale alerts, gap analysis, and the **Brief**. **Settings** and **documentation** (MkDocs Material) complete the user experience.\n\nSeveral major components are proposed but not yet built. The **Wiki compilation** pipeline (diff, summarize, extract, write, link) and the **Entity Resolution Layer** (canonical IDs, aliases, merge/split history) are target behavior. The **Graph algorithms** (community detection, centrality, path finding) and **passage-level retrieval** (chunking long-form items) are not yet implemented. The **vector backend** is currently numpy cosine over SQLite BLOBs; **zvec** (file-embedded ANN) is a proposed upgrade. **Disposable derived state** (fingerprint-driven rebuilds) and the **reconciler** mechanism are proposed. **Email** and **filesystem connectors** are proposed. The **global launcher** (⌘⇧K), **AI conversation thread import**, **Docling** extraction, **health-checks-as-research contradiction sweep**, and **inference routing** (async batch queue) are proposed. **Persistent citations** with **W3C Web Annotation selectors** and **in-document highlighting** (recogito) are proposed.",
+  "token_count": 837,
+  "matched_features": [
+    "Milkdown",
+    "MCP",
+    "Companion",
+    "Spaces",
+    "Wiki",
+    "Graph",
+    "FTS5",
+    "fastembed",
+    "Notes",
+    "citation"
+  ],
+  "missing_features": [],
+  "recall": 1,
+  "length_compliance": "over_target",
+  "duration_ms": 70234,
+  "cost_usd": null,
+  "error": null
+}

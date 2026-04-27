@@ -1,0 +1,29 @@
+{
+  "project": "ensemble",
+  "config_label": "glm-4.7-flash@t0.0+canary",
+  "model": "z-ai/glm-4.7-flash",
+  "temperature": 0,
+  "prompt_variant": "v3",
+  "sample": 3,
+  "digest": "Ensemble is a TypeScript library, CLI, and Electron desktop application for centrally managing Claude Code extension artifacts across AI clients. The core architecture is library-first, with a canonical inventory stored at `~/.config/ensemble/library/` that serves as the single source of truth. Install state is a property of library resources rather than a separate tier. The project manages seven declarative resource types: MCP servers, skills, plugins, subagents, slash commands, hooks, and managed settings.json values. The CLI is built with Commander.js and exposes pure-function operations validated by Zod schemas. The Electron desktop app uses React, Tailwind CSS, and tRPC for IPC, featuring a pivot-based sidebar (Library, By Project, By Group, By Client, Marketplace) and a Matrix view for project × Claude Code resource types. The discovery engine, shared by the CLI and desktop Registry, uses fuzzysort for fuzzy search with `@marketplace-name` filter syntax. The tech stack includes Vitest, Biome, tsup, npm, better-sqlite3, proper-lockfile, smol-toml, JSON config, Electron, React, Tailwind CSS, Playwright, electron-trpc, @trpc/server, @trpc/client, @trpc/react-query, @tanstack/react-query, superjson, zustand, @radix-ui/*, and @phosphor-icons/react. Ensemble integrates with the setlist capability registry via `@setlist/core` and the project-registry SQLite database via better-sqlite3 for portfolio-wide capability awareness. It supports 17 clients including Claude Desktop, Claude Code, Cursor, VS Code, Windsurf, Zed, JetBrains, and others, with 4 planned clients (Antigravity, CodeBuddy, Qoder, Trae). Unbuilt sections include the v2.0.1 CLI lifecycle verbs (`pull`, `install`, `uninstall`, `remove`, `library` subcommands), the `ensemble import-legacy` one-shot translator, the unified source parser for `ensemble add <source>`, dynamic marketplace auto-discovery, the unified installed-plus-discoverable fuzzy search, and the Profile-as-Plugin packaging feature. Additionally, the VS Code (Copilot) skills directory mapping and Zed skills directory mapping are unbuilt, as are the optional tray/menu-bar peek companion, the AI compose panel with diff-accept gate, the remote update subscription with pin, the context-budget-aware bundling, the `ensemble run <profile>` deploy primer, and the shared canonical `~/.agents/skills/` store convention.",
+  "token_count": 594,
+  "matched_features": [
+    "Claude Code",
+    "MCP",
+    "skills",
+    "plugins",
+    "subagents",
+    "hooks",
+    "settings.json",
+    "library"
+  ],
+  "missing_features": [
+    "multi-client",
+    "snapshot"
+  ],
+  "recall": 0.8,
+  "length_compliance": "in_range",
+  "duration_ms": 57432,
+  "cost_usd": null,
+  "error": null
+}

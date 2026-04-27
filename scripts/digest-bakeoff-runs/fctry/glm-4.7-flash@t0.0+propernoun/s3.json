@@ -1,0 +1,29 @@
+{
+  "project": "fctry",
+  "config_label": "glm-4.7-flash@t0.0+propernoun",
+  "model": "z-ai/glm-4.7-flash",
+  "temperature": 0,
+  "prompt_variant": "v2",
+  "sample": 3,
+  "digest": "fctry is a Claude Code plugin that orchestrates eight specialized agents to convert conversational user visions into complete NLSpec v2 specifications and then drive autonomous builds from them. The system enforces a strict experience-first contract where the spec describes what the user sees, does, and feels, while the coding agent decides all implementation details including technology stack, architecture, and data model. The user approves a build plan once, after which the system executes autonomously, handling failures, retries, and rearchitecting silently while resurfacing only for experience-level questions. The plugin manages a version registry for semantic versioning, maintains a lessons file for cross-session build learnings, and provides a global memory store for conversation digests and decision records. It operates as a single-user, local-first tool with no human code review, relying entirely on scenario satisfaction as the validation mechanism. The tech stack includes Node.js, SQLite, WebSocket, Mermaid.js, and the Claude Code Plugin API.\n\nThe spec is stored in `.fctry/spec.md` and scenarios in `.fctry/scenarios.md`, with the spec index backed by a SQLite database for efficient querying. The system conducts conversational interviews via the Interviewer agent, which asks follow-up questions based on user responses and tracks coverage across four experience dimensions. Users can pause and resume interviews, and the system saves interview state with explicit uncertainty markers. The Spec Writer updates specific sections in isolation, showing diffs, while the Scenario Crafter generates holdout scenarios. The system enforces a two-register operational voice: technical register for internal agent communication and user-facing experience register for all user-visible surfaces like build plans, error messages, and status line labels, ensuring factory-internal vocabulary never leaks to the user. The spec viewer is a local web UI that renders markdown directly, supports dark mode, and provides real-time updates via WebSocket. It includes a multi-project dashboard, kanban board, and mission control view during builds.\n\nThe Executor agent proposes a build plan broken into discrete chunks tied to scenarios, which the user approves once. After approval, the system executes chunks autonomously in dependency order, using a context budget gate to prevent degradation. The Observer agent performs post-chunk verification, checking file scope compliance, scenario satisfaction, and behavioral quality, with a quality ratchet ensuring changes only commit if they improve or maintain quality. The system tracks build state in `.fctry/state.json` for checkpointing and resumption, and emits typed lifecycle events to the mission control view. The build includes a mandatory post-build retro that extracts causal learnings into the lessons file, and the experience report maps completed work to concrete user actions rather than satisfaction scores. The system supports background-worker execution as a future direction and an experimental fully-autonomous loop for continuous improvement. It also features an async inbox for processing evolve ideas and references in the background.",
+  "token_count": 804,
+  "matched_features": [
+    "NLSpec",
+    "Claude Code plugin",
+    "scenarios",
+    "Executor",
+    "Observer",
+    "Spec Writer",
+    "viewer",
+    "kanban"
+  ],
+  "missing_features": [
+    "Voice Translator",
+    "State Owner"
+  ],
+  "recall": 0.8,
+  "length_compliance": "over_target",
+  "duration_ms": 47299,
+  "cost_usd": null,
+  "error": null
+}

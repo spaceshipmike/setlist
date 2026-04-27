@@ -1,0 +1,28 @@
+{
+  "project": "knowmarks",
+  "config_label": "glm-4.7-flash@t0.0+propernoun",
+  "model": "z-ai/glm-4.7-flash",
+  "temperature": 0,
+  "prompt_variant": "v2",
+  "sample": 3,
+  "digest": "Knowmarks is a local-first, open-source knowledge layer for LLMs built on Python 3.11+ and SQLite (WAL + FTS5). It ingests a unified corpus from URLs, PDFs, Office docs, YouTube, GitHub, Readwise, browser clips, AI conversation threads, email, and local files. Three ownership-clean surfaces sit over this corpus: user-authored Notes, an LLM-compiled Wiki, and a pipeline-extracted Graph. Spaces serve as composable subsets of the corpus, replacing the previous three-way split of projects/clusters/collections with a unified type defined by origin, membership rule, and lifetime intent.\n\nRetrieval is handled by an MCP server that employs a surface cascade (wiki first, graph second, passages third) to serve token-efficient results to agents. The system uses hybrid search combining vector embeddings (pluggable via fastembed, Ollama, or OpenAI-compatible APIs) with FTS5 and RRF ranking. Passage-level retrieval is active for long-form items, while the Wiki and Graph layers are currently proposed and not yet implemented in the codebase. Spaces are the primary unit for space-scoped retrieval.\n\nIntake supports a wide range of formats through a content-type-aware extraction pipeline. Platform-specific processors handle Reddit, Hacker News, Stack Exchange, Twitter/X (via fxtwitter proxy), LinkedIn, and newsletter platforms (Ghost, Beehiiv, ConvertKit). Optional Firecrawl backend handles JS-heavy sites. Structured fact extraction and auto-summaries are generated during ingest. Email and filesystem connectors are proposed for v6.0. The system uses a fingerprint-driven reconciler (active) to manage derived state like embeddings and clusters, ensuring rebuildability.\n\nThe dashboard serves as the primary human interface, featuring a Knowledge Pulse (active), Spaces overview (active), and a Conversational Companion (active). The Companion mediates triage and intake via confirm-flow mutations, wrapping existing MCP verbs. Notes are authored in a Milkdown editor (active) supporting WYSIWYG markdown with `[[target]]` wikilink autocomplete. Persistent citations (active) use W3C Web Annotation selectors for drift-resilient anchoring. The global launcher (proposed) and browser extension (active) provide capture surfaces.\n\nThe stack includes FastAPI and FastMCP for the API, zvec for ANN vector indexing (proposed), and igraph for community detection. The CLI, REST API, and MCP server provide full parity. The system supports Docker deployment and a hosted alpha mode with per-user SQLite isolation. Observability includes Sentry error tracking and PostHog analytics. The Wiki compilation pipeline and Entity Resolution layer are proposed features.",
+  "token_count": 666,
+  "matched_features": [
+    "Milkdown",
+    "MCP",
+    "Companion",
+    "Spaces",
+    "Wiki",
+    "Graph",
+    "FTS5",
+    "fastembed",
+    "Notes",
+    "citation"
+  ],
+  "missing_features": [],
+  "recall": 1,
+  "length_compliance": "in_range",
+  "duration_ms": 118138,
+  "cost_usd": null,
+  "error": null
+}

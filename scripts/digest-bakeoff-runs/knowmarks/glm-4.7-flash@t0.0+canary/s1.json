@@ -1,0 +1,28 @@
+{
+  "project": "knowmarks",
+  "config_label": "glm-4.7-flash@t0.0+canary",
+  "model": "z-ai/glm-4.7-flash",
+  "temperature": 0,
+  "prompt_variant": "v3",
+  "sample": 1,
+  "digest": "Knowmarks is an open-source, local-first knowledge layer for LLMs. It ingests a unified corpus from URLs, PDFs, Office documents, YouTube, GitHub, Readwise, browser clips, AI conversation threads, email, and local files. The system maintains three ownership-clean surfaces over this corpus: user-authored Notes (stored as portable markdown files), a Wiki compiled by the LLM under strict-compiler discipline (every claim traced to a source span), and a Graph extracted by the pipeline (entities, edges, communities with per-claim provenance). Spaces act as composable subsets of the corpus, replacing the older three-way split of projects, clusters, and curated collections with a single type defined by origin, membership rule, and lifetime intent.\n\nThe MCP server is the primary agent-facing surface, serving space-scoped retrieval via a surface cascade that prioritizes the wiki (most token-efficient), falls back to graph traversal for structural questions, and lands on passage-level retrieval for open-ended semantic queries. Retrieval is token-budget-aware and grounded by passage-fingerprint verification. The system uses a pluggable embedding backend (default fastembed/ONNX, with Ollama and OpenAI-compatible API support) and a file-embedded vector index (zvec) for hybrid dense+sparse search. zvec is the chosen default for v1, with LEANN and faiss as measured alternatives.\n\nThe Companion is the conversational human surface, a narrow rail in the dashboard that wraps MCP verbs in confirm-flow language, renders the Brief (change-driven narrative synthesis), and surfaces proactive observations. It handles triage, intake mediation, and space management through dialogue, hand-off to the user's chosen frontier LLM for heavy synthesis, and the ability to save outputs back as notes. Intake is frictionless across surfaces via a drop into a space verb, supported by a browser extension (Chrome, with full-page/selection/article-only clip modes and DOM capture for auth-walled platforms) and connectors (browser bookmarks, GitHub, Readwise, Reddit, RSS, Raindrop.io, Pinboard, Feedly, HN). Extraction uses trafilatura with platform-specific processors (Reddit .json, Hacker News Algolia, Stack Exchange API v2.3, Twitter/X via fxtwitter proxy) and optional Firecrawl for JS-heavy sites.\n\nThe system runs on Python 3.11+ with FastAPI and FastMCP. Data is stored in SQLite (WAL + FTS5) with a pluggable embedding provider. The Notes editor is Milkdown (ProseMirror + remark) for WYSIWYG markdown editing with lossless round-trip. Persistent citations use the W3C Web Annotation selectors envelope (text-quote with prefix/suffix, text-position with start/end) for drift-resilient anchoring. Docling is conditionally adopted for structured PDF/Office extraction if it preserves table structure and section hierarchy. Recogito (vanilla TypeScript) provides in-document highlighting on read-only surfaces. Governance includes source-aware staleness probes (GitHub commits, npm publishes, HTTP headers), vitality scores with exponential decay, and a reconciler that enforces disposable derived state by fingerprinting vectors, entities, edges, and wiki articles for rebuildable state.",
+  "token_count": 797,
+  "matched_features": [
+    "Milkdown",
+    "MCP",
+    "Companion",
+    "Spaces",
+    "Wiki",
+    "Graph",
+    "FTS5",
+    "fastembed",
+    "Notes",
+    "citation"
+  ],
+  "missing_features": [],
+  "recall": 1,
+  "length_compliance": "in_range",
+  "duration_ms": 45523,
+  "cost_usd": null,
+  "error": null
+}

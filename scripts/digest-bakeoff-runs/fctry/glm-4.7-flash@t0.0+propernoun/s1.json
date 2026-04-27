@@ -1,0 +1,29 @@
+{
+  "project": "fctry",
+  "config_label": "glm-4.7-flash@t0.0+propernoun",
+  "model": "z-ai/glm-4.7-flash",
+  "temperature": 0,
+  "prompt_variant": "v2",
+  "sample": 1,
+  "digest": "fctry is a Claude Code plugin that orchestrates eight specialized agents to convert conversational user visions into experience-first specifications in NLSpec v2 format and drive autonomous builds from them. The system enforces a strict experience language contract where the spec describes what the user sees, does, and feels, while all user-facing surfaces speak plain English through a single translation module. The eight commands—init, evolve, ref, review, execute, next, view, and stop—manage the full lifecycle from spec creation to autonomous execution. The spec is stored in `.fctry/spec.md` with a version registry in `.fctry/config.json` that auto-manages semver and propagates version changes to declared targets. The live spec viewer is a multi-project-aware local web server that renders markdown directly in the browser, supports real-time WebSocket updates, and transforms into mission control during builds to show progress, dependency graphs, and activity feeds. It features a kanban board for prioritization, dark mode, fuzzy search, and auto-generated Mermaid diagrams for entity relationships, user flows, and section dependencies.\n\nThe build process is plan-gated and autonomous after a single approval. The Executor breaks work into discrete chunks, manages context fidelity between dependent chunks, and handles retries and rearchitecting silently. The Observer agent verifies post-chunk output using browser automation tools like Rodney, Surf, and Peekaboo, or file inspection when those are unavailable. Build traces, lessons, and memory are persisted to support resumption and cross-session learning. The system enforces a quality ratchet that only accepts changes that improve scenario satisfaction or structural metrics, and it uses a four-tier severity vocabulary for findings. Tool validation checks for required tools like ripgrep, ast-grep, and MCP servers at startup.\n\nThe system is constrained by hard rules including experience language only, scenario holdout separation, and no human code review. Future directions include background-worker execution for parallel chunk processing, the viewer evolving into a control plane with a terminal emulator and MCP elicitation, a self-improvement loop via `/fctry:reflect`, and an experimental fully-autonomous loop. It also plans to add an arbiter-tier disagreement resolver for build-time verification, cross-project synthesis, and incremental build trace parsing.",
+  "token_count": 611,
+  "matched_features": [
+    "NLSpec",
+    "Claude Code plugin",
+    "Executor",
+    "Observer",
+    "viewer",
+    "kanban"
+  ],
+  "missing_features": [
+    "scenarios",
+    "Voice Translator",
+    "Spec Writer",
+    "State Owner"
+  ],
+  "recall": 0.6,
+  "length_compliance": "in_range",
+  "duration_ms": 79092,
+  "cost_usd": null,
+  "error": null
+}

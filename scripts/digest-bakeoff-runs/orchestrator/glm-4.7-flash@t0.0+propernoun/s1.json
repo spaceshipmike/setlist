@@ -1,0 +1,29 @@
+{
+  "project": "orchestrator",
+  "config_label": "glm-4.7-flash@t0.0+propernoun",
+  "model": "z-ai/glm-4.7-flash",
+  "temperature": 0,
+  "prompt_variant": "v2",
+  "sample": 1,
+  "digest": "Orchestrator is a reactive Claude Code skill that functions as a portfolio intelligence agent, reasoning about active projects as a unified system. It classifies questions as atomic or composite, uses the setlist project-registry MCP as a thin index, and reads specs, CLAUDE.md files, and code directly from disk to answer cross-project queries. The skill handles dependency tracing, impact analysis, portfolio health (with claim extraction, dual-axis staleness, and severity tagging), pattern comparison, project briefings, disruptive opportunity identification grounded in portfolio goals, and connection scans. Reference routing is a primary mode, where the orchestrator distills knowmarks saves into structured insight cards stored in a local SQLite database at `~/Code/.cache/insight-cards.db`. It employs a hybrid extraction prompt with a portfolio-agnostic core and a scan-time project overlay, using Gemini 2.5 Flash-Lite as the default extraction model and Qwen3.6-35B-A3B-8bit on m4-pro as a local fallback. Cards are clustered into waves before per-item routing, and confirmed routings are delegated to per-project `/fctry:ref` workflows. The orchestrator retains findings to setlist portfolio memory via `retain` and stages reference-topic state in its own SQLite until a setlist evolve adds the `reference_topic` memory type. Unbuilt work includes graduated autonomous monitoring (event-triggered suggestions and low-risk actions) and the eventual migration of the card store and reference-topic stage to setlist.",
+  "token_count": 382,
+  "matched_features": [
+    "portfolio",
+    "Claude Code skill",
+    "insight cards",
+    "knowmarks",
+    "reference routing",
+    "waves",
+    "SQLite",
+    "registry"
+  ],
+  "missing_features": [
+    "speculation",
+    "facet"
+  ],
+  "recall": 0.8,
+  "length_compliance": "under",
+  "duration_ms": 32175,
+  "cost_usd": null,
+  "error": null
+}

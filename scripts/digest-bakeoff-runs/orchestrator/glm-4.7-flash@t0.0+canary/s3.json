@@ -1,0 +1,29 @@
+{
+  "project": "orchestrator",
+  "config_label": "glm-4.7-flash@t0.0+canary",
+  "model": "z-ai/glm-4.7-flash",
+  "temperature": 0,
+  "prompt_variant": "v3",
+  "sample": 3,
+  "digest": "Orchestrator is a reactive Claude Code skill that functions as a portfolio intelligence agent, answering cross-project questions by assembling knowledge from the project registry, specs, CLAUDE.md files, and code fresh on every query. It classifies questions as atomic or composite, identifies scope, reads relevant sources, reasons with citations, and retains non-obvious findings to setlist memory. The skill is invoked via `/orchestrator` or `/portfolio` from any project directory and provides default 3-5 sentence answers with specific citations and speculation flags.\n\nReference routing is handled by the `/orchestrator ref` mode, which uses the knowmarks MCP to save and extract URLs, then distills above-floor saves into structured **insight cards** stored in `~/Code/.cache/insight-cards.db`. Extraction defaults to **Gemini 2.5 Flash-Lite** via OpenRouter, with **Qwen3.6-35B-A3B-8bit** on m4-pro as a local fallback. Cards capture thesis, intent tags, named patterns, claims with evidence strength, counter-examples, and repo signals. The orchestrator clusters cards into **waves** (emergent themes) before per-item routing, scores them against project digests, and delegates confirmed routings to per-project `/fctry:ref` inboxes. **Reference-topic** state is currently staged in the orchestrator's SQLite until the setlist-side memory type lands.\n\nThe agent handles seven core question types: dependency tracing (including co-change coupling), impact analysis, portfolio health (using mechanical claim extraction and dual-axis staleness), pattern comparison, project briefings, disruptive opportunities (grounded in `~/Code/.plans/portfolio-goals.md`), and connection scans. It relies on the **Registry MCP** for the project index and cross-project queries, reading `.fctry/spec.md`, `CLAUDE.md`, `.fctry/architecture.md`, and git state selectively. It does not maintain its own state for reasoning, instead using the registry as a thin index and retaining findings to setlist memory.\n\nThe current implementation is reactive only. Future **autonomous monitoring** stages include event-triggered suggestions (periodic health checks, connection scans, inbox triage) and autonomous low-risk actions. **Wave detection** currently uses intent-tag overlap; future versions will use sqlite-vec. The system is governed by tiered self-modification rules to prevent scope creep.",
+  "token_count": 596,
+  "matched_features": [
+    "portfolio",
+    "Claude Code skill",
+    "insight cards",
+    "knowmarks",
+    "reference routing",
+    "waves",
+    "SQLite",
+    "registry",
+    "speculation"
+  ],
+  "missing_features": [
+    "facet"
+  ],
+  "recall": 0.9,
+  "length_compliance": "in_range",
+  "duration_ms": 26150,
+  "cost_usd": null,
+  "error": null
+}

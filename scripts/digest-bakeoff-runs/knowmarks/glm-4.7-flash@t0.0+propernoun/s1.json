@@ -1,0 +1,28 @@
+{
+  "project": "knowmarks",
+  "config_label": "glm-4.7-flash@t0.0+propernoun",
+  "model": "z-ai/glm-4.7-flash",
+  "temperature": 0,
+  "prompt_variant": "v2",
+  "sample": 1,
+  "digest": "Knowmarks is an open-source, local-first knowledge layer designed for LLM agents and humans. It ingests any format—URLs, PDFs, Office docs, YouTube, GitHub, Readwise, browser clips, AI conversation threads, email, and local files—into a single unified corpus. Over this corpus sit three ownership-clean surfaces: user-authored **Notes**, an **Wiki** compiled by the LLM under strict-compiler discipline (every claim traced to a source span), and a **Graph** extracted by the pipeline with per-claim provenance. **Spaces**—named, composable subsets of the corpus—serve as the unit of retrieval, replacing the older three-way split of projects/clusters/collections. The system serves agents via the **MCP server** (primary interface) and humans via the **Companion** conversational surface, CLI, REST API, web dashboard, browser extension, and native macOS desktop app.\n\nRetrieval follows a **surface cascade** (wiki first for token efficiency, then graph traversal, then passage-level retrieval) with token budgets honored. The **MCP server** exposes 35 tools covering CRUD, governance, and automation, while the **REST API** provides universal integration. The backend runs on Python 3.11+, SQLite (WAL + FTS5), and **FastAPI**. Embeddings use a pluggable provider abstraction (default **fastembed** with ONNX, plus **Ollama** and OpenAI-compatible APIs) backed by the **zvec** file-embedded ANN vector backend (hybrid dense+sparse, RabitQ quantization). Entity extraction uses **spaCy** + **GLiNER ONNX**. The dashboard uses **Vite** + **TypeScript** + **vitest** and the **Milkdown** WYSIWYG markdown editor (ProseMirror + remark) for Notes. The desktop app is built with **Electron** and **PyInstaller**.\n\nGovernance includes source-aware staleness probes (checking GitHub commits, npm publishes, HTTP headers), vitality scoring with exponential decay, and triage via the Companion. **Spaces** are a unified type with attributes for origin, membership rule, and lifetime intent, featuring score-gap detection and auto-routing. **Citations** are first-class persistent references using **W3C Web Annotation selectors** for drift-resilience, with verification states (valid, drifted, broken, orphaned). The system supports **automation rules** for deterministic routing, **RSS export** for curated collections, and **structured fact extraction** during ingestion. The **Companion** mediates triage and intake, wrapping MCP verbs in confirm-flow language, while the **Pulse** dashboard provides a knowledge briefing. The **inference routing** system separates fast/deep capability and sync/async timing, routing expensive synthesis to a durable per-user batch queue to optimize LLM costs.",
+  "token_count": 672,
+  "matched_features": [
+    "Milkdown",
+    "MCP",
+    "Companion",
+    "Spaces",
+    "Wiki",
+    "Graph",
+    "FTS5",
+    "fastembed",
+    "Notes",
+    "citation"
+  ],
+  "missing_features": [],
+  "recall": 1,
+  "length_compliance": "in_range",
+  "duration_ms": 120394,
+  "cost_usd": null,
+  "error": null
+}

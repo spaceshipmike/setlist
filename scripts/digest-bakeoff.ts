@@ -41,9 +41,9 @@ const TARGET_MIN = 500;
 const TARGET_MAX = 800;
 const CEILING = 1200;
 
-// Lifted verbatim from packages/cli/src/digest.ts so the bake-off measures
+// v1: lifted verbatim from packages/cli/src/digest.ts so the bake-off measures
 // what production measures.
-const SYSTEM_PROMPT = `You produce project essence summaries for the setlist project registry.
+const SYSTEM_PROMPT_V1 = `You produce project essence summaries for the setlist project registry.
 
 Your job: read a project's fctry spec (or CLAUDE.md / README.md fallback, or concatenated markdown extracted from the project's documents) and write a dense, factual summary of what the project is today. The summary is stored as a free-form text blob and used for embedding, semantic matching against external references, and drop-in context for cross-project questions.
 
@@ -56,6 +56,55 @@ Content requirements:
 - **Do not invent facts.** If the source doesn't name something, don't name it. If you're uncertain whether a capability is current or historical, omit it.
 
 Respond with only the digest text. Do not preface it, do not label it, do not wrap it in code fences or quotes.`;
+
+// v2: v1 plus a proper-noun nudge. The 2026-04-27 bake-off found that named
+// tools/libraries buried in tech-stack/patterns frontmatter arrays (e.g.
+// "Milkdown" at position 17 of knowmarks's patterns list) are systematically
+// skipped by digest models — even at temp=0, even on Flash. v2 adds an
+// explicit instruction to surface proper nouns by name rather than
+// paraphrasing their category.
+const SYSTEM_PROMPT_V2 = `You produce project essence summaries for the setlist project registry.
+
+Your job: read a project's fctry spec (or CLAUDE.md / README.md fallback, or concatenated markdown extracted from the project's documents) and write a dense, factual summary of what the project is today. The summary is stored as a free-form text blob and used for embedding, semantic matching against external references, and drop-in context for cross-project questions.
+
+Content requirements:
+- **Target ${TARGET_MIN}–${TARGET_MAX} tokens.** Hard ceiling ${CEILING}. Stay inside the target range. If you need to trim, drop boilerplate first.
+- **Describe current state only.** Omit historical context, port origins, retired peer implementations, and claims about deprecated or archived components unless they constrain current behavior. If the source contains port-era framing or "originally a port of X" language, reflect what the project *is today*, not what it *came from*.
+- **Factual and dense; no marketing voice.** Strip phrases like "at the center of the user's personal ecosystem," "directly operable," "invisible infrastructure." Claims must be concrete and capability-specific.
+- **Name unbuilt sections explicitly.** The digest is used to match external references against projects that could benefit from them; references are most valuable for unbuilt work, so call out what's specced-but-not-built, what's in progress, and what's explicitly deferred.
+- **Name specific tools, libraries, products, and proper nouns rather than paraphrasing their category.** When the source names a particular technology — even when buried inside a tech-stack list, patterns array, or capability enumeration — include the literal name in the digest if it's load-bearing for what the project is today (e.g. "Milkdown editor for notes" not "a WYSIWYG editor for notes"; "FTS5 + RRF hybrid search" not "full-text search"; "Voice Translator agent" not "a voice-handling agent"). Categories are easy to infer from anything; specific names are what make the digest useful for matching external references.
+- **Structure: multiple paragraphs, one per major surface area, separated by blank lines.** Do NOT emit a single mega-paragraph. Do NOT use bullet lists. Do NOT use section headers. No markdown.
+- **Do not invent facts.** If the source doesn't name something, don't name it. If you're uncertain whether a capability is current or historical, omit it.
+
+Respond with only the digest text. Do not preface it, do not label it, do not wrap it in code fences or quotes.`;
+
+// v3: v2 widened to include named agents/roles/components alongside
+// tools/libraries/products. The 2026-04-27 v2 bake-off found that v2 fully
+// resolved knowmarks (Milkdown 1/3 → 3/3, FTS5/fastembed/citation all 3/3)
+// but regressed fctry by 13pp because the model interpreted "tools,
+// libraries, products" narrowly enough to drop named agent roles like
+// State Owner, Observer, Spec Writer. v3 explicitly names roles/agents/
+// components in the same bullet and adds role-style examples.
+const SYSTEM_PROMPT_V3 = `You produce project essence summaries for the setlist project registry.
+
+Your job: read a project's fctry spec (or CLAUDE.md / README.md fallback, or concatenated markdown extracted from the project's documents) and write a dense, factual summary of what the project is today. The summary is stored as a free-form text blob and used for embedding, semantic matching against external references, and drop-in context for cross-project questions.
+
+Content requirements:
+- **Target ${TARGET_MIN}–${TARGET_MAX} tokens.** Hard ceiling ${CEILING}. Stay inside the target range. If you need to trim, drop boilerplate first.
+- **Describe current state only.** Omit historical context, port origins, retired peer implementations, and claims about deprecated or archived components unless they constrain current behavior. If the source contains port-era framing or "originally a port of X" language, reflect what the project *is today*, not what it *came from*.
+- **Factual and dense; no marketing voice.** Strip phrases like "at the center of the user's personal ecosystem," "directly operable," "invisible infrastructure." Claims must be concrete and capability-specific.
+- **Name unbuilt sections explicitly.** The digest is used to match external references against projects that could benefit from them; references are most valuable for unbuilt work, so call out what's specced-but-not-built, what's in progress, and what's explicitly deferred.
+- **Name specific tools, libraries, products, agents, roles, and components rather than paraphrasing their category.** When the source names a particular technology, agent, role, or named component — even when buried inside a tech-stack list, patterns array, agent table, or capability enumeration — include the literal name in the digest if it's load-bearing for what the project is today (e.g. "Milkdown editor for notes" not "a WYSIWYG editor for notes"; "FTS5 + RRF hybrid search" not "full-text search"; "State Owner agent runs first" not "a briefing agent runs first"; "Voice Translator and Spec Writer agents" not "voice-handling and synthesis agents"). Categories are easy to infer from anything; specific names are what make the digest useful for matching external references.
+- **Structure: multiple paragraphs, one per major surface area, separated by blank lines.** Do NOT emit a single mega-paragraph. Do NOT use bullet lists. Do NOT use section headers. No markdown.
+- **Do not invent facts.** If the source doesn't name something, don't name it. If you're uncertain whether a capability is current or historical, omit it.
+
+Respond with only the digest text. Do not preface it, do not label it, do not wrap it in code fences or quotes.`;
+
+const PROMPTS: Record<string, string> = {
+  v1: SYSTEM_PROMPT_V1,
+  v2: SYSTEM_PROMPT_V2,
+  v3: SYSTEM_PROMPT_V3,
+};
 
 interface Fixture {
   project: string;
@@ -71,14 +120,17 @@ interface ModelConfig {
   label: string;
   model: string;
   temperature: number;
+  prompt_variant: 'v1' | 'v2' | 'v3';
   is_current_prod: boolean;
 }
 
 const CONFIGS: ModelConfig[] = [
-  { label: 'glm-4.7-flash@t0.2', model: 'z-ai/glm-4.7-flash',           temperature: 0.2, is_current_prod: true  },
-  { label: 'glm-4.7-flash@t0.0', model: 'z-ai/glm-4.7-flash',           temperature: 0.0, is_current_prod: false },
-  { label: 'flash-lite@t0.0',    model: 'google/gemini-2.5-flash-lite', temperature: 0.0, is_current_prod: false },
-  { label: 'flash@t0.0',         model: 'google/gemini-2.5-flash',      temperature: 0.0, is_current_prod: false },
+  { label: 'glm-4.7-flash@t0.2',            model: 'z-ai/glm-4.7-flash',           temperature: 0.2, prompt_variant: 'v1', is_current_prod: true  },
+  { label: 'glm-4.7-flash@t0.0',            model: 'z-ai/glm-4.7-flash',           temperature: 0.0, prompt_variant: 'v1', is_current_prod: false },
+  { label: 'flash-lite@t0.0',               model: 'google/gemini-2.5-flash-lite', temperature: 0.0, prompt_variant: 'v1', is_current_prod: false },
+  { label: 'flash@t0.0',                    model: 'google/gemini-2.5-flash',      temperature: 0.0, prompt_variant: 'v1', is_current_prod: false },
+  { label: 'glm-4.7-flash@t0.0+propernoun', model: 'z-ai/glm-4.7-flash',           temperature: 0.0, prompt_variant: 'v2', is_current_prod: false },
+  { label: 'glm-4.7-flash@t0.0+canary',     model: 'z-ai/glm-4.7-flash',           temperature: 0.0, prompt_variant: 'v3', is_current_prod: false },
 ];
 
 const SAMPLES = [1, 2, 3];
@@ -91,6 +143,7 @@ interface CellResult {
   config_label: string;
   model: string;
   temperature: number;
+  prompt_variant: string;
   sample: number;
   digest: string;
   token_count: number;
@@ -144,10 +197,12 @@ async function callModel(config: ModelConfig, projectName: string, sourceText: s
   const apiKey = process.env.SETLIST_OPENROUTER_API_KEY ?? process.env.OPENROUTER_API_KEY ?? '';
   if (!apiKey) throw new Error('SETLIST_OPENROUTER_API_KEY (or OPENROUTER_API_KEY) is not set');
 
+  const systemPrompt = PROMPTS[config.prompt_variant];
+  if (!systemPrompt) throw new Error(`unknown prompt_variant: ${config.prompt_variant}`);
   const body = {
     model: config.model,
     messages: [
-      { role: 'system', content: SYSTEM_PROMPT },
+      { role: 'system', content: systemPrompt },
       { role: 'user', content: `Project: ${projectName}\n\nSource:\n\n${sourceText}` },
     ],
     temperature: config.temperature,
@@ -199,6 +254,7 @@ async function runCell(fixture: Fixture, config: ModelConfig, sample: number, so
       config_label: config.label,
       model: config.model,
       temperature: config.temperature,
+      prompt_variant: config.prompt_variant,
       sample,
       digest,
       token_count: tokens,
@@ -216,6 +272,7 @@ async function runCell(fixture: Fixture, config: ModelConfig, sample: number, so
       config_label: config.label,
       model: config.model,
       temperature: config.temperature,
+      prompt_variant: config.prompt_variant,
       sample,
       digest: '',
       token_count: 0,
