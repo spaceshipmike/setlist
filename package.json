@@ -27,5 +27,8 @@
     "vitest": "^3.0.0",
     "@types/better-sqlite3": "^7.6.0",
     "@types/node": "^24.0.0"
+  },
+  "volta": {
+    "node": "24.15.0"
   }
 }
