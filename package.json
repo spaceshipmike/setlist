@@ -19,10 +19,13 @@
     "typecheck": "tsc --noEmit -p packages/core/tsconfig.json && tsc --noEmit -p packages/cli/tsconfig.json && tsc --noEmit -p packages/mcp/tsconfig.json",
     "verify:mcp-abi": "bash scripts/verify-mcp-abi.sh"
   },
+  "engines": {
+    "node": ">=24"
+  },
   "devDependencies": {
     "typescript": "^5.7.0",
     "vitest": "^3.0.0",
     "@types/better-sqlite3": "^7.6.0",
-    "@types/node": "^22.0.0"
+    "@types/node": "^24.0.0"
   }
 }

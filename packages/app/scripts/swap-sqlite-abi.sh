@@ -31,7 +31,8 @@ if [[ ! -f "$BINARY_PATH" ]]; then
   exit 1
 fi
 
-NODE_CACHE="$CACHE_DIR/better_sqlite3.node22.node"
+NODE_ABI="$(node -p 'process.versions.modules')"
+NODE_CACHE="$CACHE_DIR/better_sqlite3.abi-$NODE_ABI.node"
 ELECTRON_CACHE="$CACHE_DIR/better_sqlite3.electron.node"
 
 target_cache() {
