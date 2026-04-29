@@ -72,10 +72,10 @@ describe('Schema v16', () => {
 });
 
 describe('Built-in primitives seed', () => {
-  it('seeds all four built-ins on a fresh database', () => {
+  it('seeds all five built-ins on a fresh database (S164)', () => {
     const all = listPrimitives(db);
     const builtins = all.filter((p) => p.is_builtin);
-    expect(builtins.length).toBe(4);
+    expect(builtins.length).toBe(5);
     const keys = builtins.map((p) => p.builtin_key).sort();
     expect(keys).toEqual([...BUILTIN_PRIMITIVE_KEYS].sort());
   });
@@ -86,7 +86,7 @@ describe('Built-in primitives seed', () => {
     db = new Database(dbPath);
     const all = listPrimitives(db);
     const builtins = all.filter((p) => p.is_builtin);
-    expect(builtins.length).toBe(4);
+    expect(builtins.length).toBe(5);
   });
 
   it('built-in primitives have parsed definitions matching their shape', () => {
@@ -99,6 +99,21 @@ describe('Built-in primitives seed', () => {
     expect(gi?.definition.shape).toBe('shell-command');
     if (gi?.definition.shape === 'shell-command') {
       expect(gi.definition.command).toContain('git init');
+    }
+  });
+
+  it('mail-create-mailbox is seeded with shape=shell-command and an osascript command (S164)', () => {
+    const mm = getBuiltinPrimitiveByKey(db, 'mail-create-mailbox');
+    expect(mm).not.toBeNull();
+    expect(mm?.shape).toBe('shell-command');
+    expect(mm?.is_builtin).toBe(true);
+    if (mm?.definition.shape === 'shell-command') {
+      // Heredoc-style AppleScript via osascript stdin, with {account} and
+      // {mailbox_path} param placeholders the shell executor substitutes.
+      expect(mm.definition.command).toContain('osascript');
+      expect(mm.definition.command).toContain('{account}');
+      expect(mm.definition.command).toContain('{mailbox_path}');
+      expect(mm.definition.command).toContain('Mail');
     }
   });
 });
@@ -128,6 +143,24 @@ describe('Built-in recipe seeds', () => {
       .get() as { id: number };
     const recipe = getRecipe(db, codeType.id);
     expect(recipe.steps.map((s) => s.position)).toEqual([0, 1, 2, 3]);
+  });
+
+  it('mail-create-mailbox is NOT in the seeded Code project recipe (S164)', () => {
+    const codeType = db
+      .prepare(`SELECT id FROM project_types WHERE name = 'Code project'`)
+      .get() as { id: number };
+    const recipe = getRecipe(db, codeType.id);
+    const keys = recipe.steps.map((s) => s.primitive.builtin_key);
+    expect(keys).not.toContain('mail-create-mailbox');
+  });
+
+  it('mail-create-mailbox is NOT in the seeded Non-code project recipe (S164)', () => {
+    const ncType = db
+      .prepare(`SELECT id FROM project_types WHERE name = 'Non-code project'`)
+      .get() as { id: number };
+    const recipe = getRecipe(db, ncType.id);
+    const keys = recipe.steps.map((s) => s.primitive.builtin_key);
+    expect(keys).not.toContain('mail-create-mailbox');
   });
 });
 

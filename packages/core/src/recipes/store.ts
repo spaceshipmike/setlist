@@ -23,8 +23,53 @@ import type {
 import { BUILTIN_PRIMITIVE_KEYS } from './types.js';
 
 /**
- * The four built-in primitives that ship with setlist. Definitions match the
- * v0.27 hardcoded behavior so seeded recipes reproduce pre-evolve semantics.
+ * Shell command for the `mail-create-mailbox` built-in primitive (spec 0.29).
+ *
+ * Runs an AppleScript via heredoc that:
+ * - Resolves the account by name, splits the path on `/`, and walks each
+ *   segment, creating mailboxes that don't exist and traversing into ones
+ *   that do (silent idempotence on duplicate paths — S163).
+ * - Errors verbatim (unknown account, etc.) come back through stderr and
+ *   are surfaced as Step-failed in the Retry/Skip/Abandon dialog (S161).
+ *
+ * The `{account}` and `{mailbox_path}` placeholders are substituted from the
+ * recipe step's resolved_params before the shell executor's project-token
+ * pass runs (see executors/shell.ts).
+ */
+// `{{...}}` escapes the literal `{...}` so the project-token resolver leaves
+// AppleScript record syntax (e.g. `{name:segName}`) intact. The shell
+// executor's param-substitution pass runs first, replacing `{account}` and
+// `{mailbox_path}` with the resolved values; then the project-token pass
+// runs, decoding `{{` → `{` and `}}` → `}` for the literal AppleScript braces.
+export const MAIL_CREATE_MAILBOX_COMMAND = String.raw`osascript - "{account}" "{mailbox_path}" <<'OSAEND'
+on run argv
+  set acctName to item 1 of argv
+  set fullPath to item 2 of argv
+  tell application "Mail"
+    set targetAccount to first account whose name is acctName
+    set AppleScript's text item delimiters to "/"
+    set segs to text items of fullPath
+    set AppleScript's text item delimiters to ""
+    set parentRef to targetAccount
+    repeat with seg in segs
+      set segName to seg as string
+      if segName is not "" then
+        try
+          set parentRef to mailbox segName of parentRef
+        on error
+          set parentRef to (make new mailbox with properties {{name:segName} at parentRef)
+        end try
+      end if
+    end repeat
+  end tell
+end run
+OSAEND`;
+
+/**
+ * The five built-in primitives that ship with setlist. Definitions of the
+ * first four match the v0.27 hardcoded behavior so seeded recipes reproduce
+ * pre-evolve semantics; `mail-create-mailbox` (spec 0.29) is the fifth and
+ * is seeded but NOT in any default recipe (S164).
  */
 const BUILTIN_PRIMITIVES: {
   builtin_key: BuiltinPrimitiveKey;
@@ -75,6 +120,37 @@ const BUILTIN_PRIMITIVES: {
       shape: 'filesystem-op',
       operation: 'append-to-file',
       defaults: { path: '{project.parent_path}/.gitignore', line: '{project.name}/' },
+    },
+  },
+  // Spec 0.29 (S155–S168): mail-create-mailbox is a shell-command built-in
+  // that drives Mail.app via osascript to create a nested mailbox under a
+  // named account. Seeded but NOT in any default recipe — the user opts in
+  // by adding it to a project type's recipe in Settings (S164).
+  //
+  // The AppleScript:
+  //   - Splits the resolved mailbox path on "/" into parent/leaf segments
+  //     so Mail.app's nested-mailbox convention (mailbox-of-mailbox) is
+  //     honored: "Projects/alpha" creates mailbox `alpha` under `Projects`.
+  //   - Walks segments, creating each missing parent on the way down. If
+  //     every segment already exists, the script is a no-op and exits 0
+  //     (S163: silent idempotence on duplicate names).
+  //   - Returns no stdout on success; on unknown-account or other Mail.app
+  //     errors, osascript exits non-zero with the error on stderr — the
+  //     shell executor surfaces it verbatim through Retry/Skip/Abandon (S161).
+  //
+  // No setlist-managed credentials: Mail.app's running session is the trust
+  // boundary. Closed three-shape invariant preserved (this is shell-command,
+  // not a new shape).
+  {
+    builtin_key: 'mail-create-mailbox',
+    name: 'Create Mail.app mailbox',
+    description:
+      "Creates a nested mailbox under the resolved Mail.app account at the resolved path. Idempotent on duplicate names. Mail.app must be running; setlist does not auto-launch it.",
+    shape: 'shell-command',
+    definition: {
+      shape: 'shell-command',
+      command: MAIL_CREATE_MAILBOX_COMMAND,
+      workingDirectory: '{project.path}',
     },
   },
 ];

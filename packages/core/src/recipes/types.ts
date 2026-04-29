@@ -16,20 +16,23 @@ export type PrimitiveShape = 'filesystem-op' | 'shell-command' | 'mcp-tool';
 
 /**
  * Built-in primitive keys. Read-only in shape; bindable in parameters per
- * recipe step. The four built-ins refactor the v0.27 hardcoded steps into
- * the recipe runner.
+ * recipe step. The first four refactor the v0.27 hardcoded steps into the
+ * recipe runner; `mail-create-mailbox` (spec 0.29) is the fifth — seeded
+ * but NOT in any default recipe; users opt in via Settings → Project types.
  */
 export type BuiltinPrimitiveKey =
   | 'create-folder'
   | 'copy-template'
   | 'git-init'
-  | 'update-parent-gitignore';
+  | 'update-parent-gitignore'
+  | 'mail-create-mailbox';
 
 export const BUILTIN_PRIMITIVE_KEYS: readonly BuiltinPrimitiveKey[] = [
   'create-folder',
   'copy-template',
   'git-init',
   'update-parent-gitignore',
+  'mail-create-mailbox',
 ] as const;
 
 /**

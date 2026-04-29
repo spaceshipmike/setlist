@@ -320,6 +320,49 @@ describe('shellExecutor', () => {
     expect(result.status).toBe('succeeded');
     expect(result.output).toBe(process.env.PATH);
   });
+
+  // Spec 0.29: shell-command commands can reference recipe-step params
+  // via {paramKey} placeholders, substituted before project-token resolve.
+  it('substitutes recipe-step params in the command before project tokens resolve', async () => {
+    const custom = registry.createPrimitive({
+      name: 'echo-account',
+      description: '',
+      definition: { shape: 'shell-command', command: 'echo "{account}-{project.name}"' },
+    });
+    mkdirSync(projectPath, { recursive: true });
+    const ctx: ExecutorContext = {
+      project: projectCtx,
+      resolved_params: { account: 'm@h3r3.com', working_directory: projectPath },
+    };
+    const result = await shellExecutor.execute(custom, makeStep(custom, 0, {}), ctx);
+    expect(result.status).toBe('succeeded');
+    expect(result.output).toBe('m@h3r3.com-space-tracker-v2');
+  });
+});
+
+// Spec 0.29 (S159, S163, S164): mail-create-mailbox built-in pre-flight.
+// Note: end-to-end Mail.app integration cannot be tested in CI — these
+// tests cover the structural behavior (probe, primitive shape).
+describe('shellExecutor — mail-create-mailbox pre-flight (S159)', () => {
+  it('pre-flight surfaces a Mail-not-running message OR passes (S159)', async () => {
+    const mm = registry.getBuiltinByKey('mail-create-mailbox')!;
+    const ctx: ExecutorContext = {
+      project: { ...projectCtx, email_account: 'm@h3r3.com' },
+      resolved_params: { account: 'm@h3r3.com', mailbox_path: 'Projects/space-tracker-v2', working_directory: projectPath },
+    };
+    const result = await shellExecutor.preflight(mm, ctx);
+    // The probe is environment-dependent — Mail may or may not be running
+    // on the build host. The contract: when ok=false, the reason names
+    // Mail.app explicitly (S159 satisfaction criterion: actionable wording).
+    if (!result.ok) {
+      expect(result.reason).toMatch(/Mail\.app must be running/);
+    }
+  });
+
+  it('the seeded primitive is shape=shell-command (closed-set invariant)', () => {
+    const mm = registry.getBuiltinByKey('mail-create-mailbox')!;
+    expect(mm.shape).toBe('shell-command');
+  });
 });
 
 describe('mcpExecutor', () => {

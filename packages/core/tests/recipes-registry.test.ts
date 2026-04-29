@@ -34,10 +34,10 @@ afterEach(() => {
 });
 
 describe('PrimitivesRegistry', () => {
-  it('lists the four built-ins on a fresh registry', () => {
+  it('lists the five built-ins on a fresh registry (S164)', () => {
     const all = registry.listPrimitives();
     const builtins = all.filter((p) => p.is_builtin);
-    expect(builtins.length).toBe(4);
+    expect(builtins.length).toBe(5);
   });
 
   it('returns null for getPrimitive on unknown id', () => {
