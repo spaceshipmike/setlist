@@ -404,6 +404,40 @@ describe('shellExecutor — external_side_effects envelope shape (S162)', () => 
   });
 });
 
+// Spec 0.29 (S161): mid-recipe failure of mail-create-mailbox routes
+// through the shared shell-command failure path. We can't actually
+// invoke osascript with a typo'd account in CI, so simulate the failure
+// shape with a stand-in command that mirrors AppleScript's exit-and-stderr
+// pattern.
+describe('shellExecutor — AppleScript-style failure routing (S161)', () => {
+  it('captures osascript-shaped stderr verbatim into error_output', async () => {
+    // Mirror the wording AppleScript would emit for an unknown account.
+    const fakeOsascript = registry.createPrimitive({
+      name: 'fake mail',
+      description: '',
+      definition: {
+        shape: 'shell-command',
+        command:
+          `bash -c 'echo "execution error: Mail got an error: Can'"'"'t get account \\"typo@h3r3.com\\". (-1728)" >&2; exit 1'`,
+      },
+    });
+    mkdirSync(projectPath, { recursive: true });
+    const ctx: ExecutorContext = {
+      project: projectCtx,
+      resolved_params: { working_directory: projectPath },
+      cleanup_log: newCleanupLog(),
+    };
+    const result = await shellExecutor.execute(fakeOsascript, makeStep(fakeOsascript, 2, {}), ctx);
+    expect(result.status).toBe('failed');
+    expect(result.error_output).toBeDefined();
+    expect(result.error_output).toContain("Can't get account");
+    expect(result.error_output).toContain('typo@h3r3.com');
+    // No external-side-effect entry because the step failed (S161 — only
+    // succeeded steps record side effects for Abandon to surface).
+    expect(ctx.cleanup_log!.external_side_effects).toHaveLength(0);
+  });
+});
+
 describe('mcpExecutor', () => {
   it('preflight fails when no MCP caller is connected (S143)', async () => {
     const tool = registry.createPrimitive({
