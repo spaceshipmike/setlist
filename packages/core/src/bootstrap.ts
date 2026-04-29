@@ -789,11 +789,19 @@ export class Bootstrap {
    * Resolve a pending bootstrap with Abandon (S147). Undoes the
    * filesystem and git work the engine itself performed, leaves
    * external side effects in place, and returns a labelled report.
+   *
+   * Spec 0.29 (S162): the return shape now includes a structured
+   * `external_side_effects` array alongside the human-readable
+   * `left_in_place` strings, so MCP-tool consumers can iterate
+   * programmatically. The string list keeps the user-readable wording
+   * ("Mail.app account 'X' has new mailbox 'Y/Z'") and the structured
+   * array carries the same data with explicit fields.
    */
   abandonBootstrap(pending: BootstrapPendingState): {
     kind: 'abandoned';
     cleaned_up: string[];
     left_in_place: string[];
+    external_side_effects: { step: number; primitive: string; summary: string }[];
   } {
     const cleanedUp: string[] = [];
     const leftInPlace: string[] = [];
@@ -833,15 +841,21 @@ export class Bootstrap {
 
     // External side effects (mcp-tool, shell-command) are NOT undone
     // (#hard-constraints 4.3 / S147 — engine cannot unilaterally undo
-    // external API calls).
+    // external API calls). Spec 0.29 (S162): each entry already carries
+    // a structured {step, primitive, summary} envelope.
     for (const ext of pending.cleanup.external_side_effects) {
-      leftInPlace.push(`Left in place: ${ext.label} (clean up manually if needed)`);
+      leftInPlace.push(`Left in place: ${ext.summary} (clean up manually if needed)`);
     }
 
     // Note: register-in-registry never ran for a pending bootstrap, so
     // no registry row exists to clean up (verified by the contract that
     // the trailer is the LAST step).
-    return { kind: 'abandoned', cleaned_up: cleanedUp, left_in_place: leftInPlace };
+    return {
+      kind: 'abandoned',
+      cleaned_up: cleanedUp,
+      left_in_place: leftInPlace,
+      external_side_effects: [...pending.cleanup.external_side_effects],
+    };
   }
 
   // -------------------------------------------------------------------------

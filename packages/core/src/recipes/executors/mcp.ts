@@ -89,13 +89,14 @@ export const mcpExecutor: ShapeExecutor = {
     if (result.ok) {
       base.status = 'succeeded';
       base.output = result.summary ?? `Called ${def.toolName} successfully`;
-      // Track for "left in place" semantic on Abandon — MCP tool side
-      // effects (Todoist project created, gh repo created, etc.) are not
-      // auto-undone.
+      // Spec 0.29: structured external-side-effect entry (S162). MCP tool
+      // side effects (Todoist project created, gh repo created, etc.) are
+      // not auto-undone — Abandon lists them in the cleanup report.
       if (ctx.cleanup_log) {
         ctx.cleanup_log.external_side_effects.push({
-          step_position: step.position,
-          label: `${primitive.name} (MCP tool: ${def.toolName})`,
+          step: step.position + 1,
+          primitive: primitive.name,
+          summary: result.summary ?? `MCP tool: ${def.toolName}`,
         });
       }
     } else {

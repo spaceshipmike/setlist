@@ -328,9 +328,17 @@ describe('Abandon (S147)', () => {
     expect(existsSync(projectPath)).toBe(false);
     // Parent gitignore reverted
     expect(readFileSync(gitignorePath, 'utf8')).toBe('node_modules\n');
-    // External side effect listed in left_in_place
+    // External side effect listed in left_in_place — spec 0.29 (S162):
+    // human-readable summary in the prose list, structured envelope on
+    // result.external_side_effects.
     const leftLabels = result.left_in_place.join('|');
-    expect(leftLabels).toContain('fake todoist');
+    expect(leftLabels).toContain('Created Todoist project');
+    expect(result.external_side_effects.length).toBe(1);
+    expect(result.external_side_effects[0]).toMatchObject({
+      step: expect.any(Number),
+      primitive: expect.stringContaining('fake todoist'),
+      summary: 'Created Todoist project',
+    });
     // Cleaned-up list is non-empty and labels are honest
     expect(result.cleaned_up.some((s) => s.includes(projectPath))).toBe(true);
     // Registry still has no row (S147 — never registered)

@@ -48,6 +48,18 @@ function substituteParams(command: string, params: Record<string, string>): stri
 }
 
 /**
+ * Spec 0.29 (S162): mail-create-mailbox external-side-effect summary —
+ * the user-visible line that appears in Abandon's "Left in place" report.
+ * Names the account and resolved mailbox path so the user can clean up
+ * manually in Mail.app's UI.
+ */
+function formatMailboxSummary(params: Record<string, string>): string {
+  const account = params.account ?? '?';
+  const path = params.mailbox_path ?? '?';
+  return `Mail.app account '${account}' has new mailbox '${path}'`;
+}
+
+/**
  * Spec 0.29 (S159): Mail.app process probe. Read-only check via
  * `pgrep -x Mail` — does NOT launch the application. Returns true when
  * Mail.app is running, false otherwise. Used by the pre-flight hook on
@@ -198,20 +210,27 @@ export const shellExecutor: ShapeExecutor = {
       });
       base.output = stdout.toString().trim() || `(exit 0; no output)`;
       base.status = 'succeeded';
-      // Track for "left in place" semantic on Abandon (shell side effects
-      // are not auto-undone).
-      if (ctx.cleanup_log) {
-        ctx.cleanup_log.external_side_effects.push({
-          step_position: step.position,
-          label: `${primitive.name} (shell command: ${command})`,
-        });
-      }
       // git-init special case: track the repo for Abandon cleanup so we can
-      // remove the .git directory we created.
+      // remove the .git directory we created. Filesystem-undoable, NOT an
+      // external side effect.
       if (primitive.builtin_key === 'git-init') {
         if (ctx.cleanup_log) {
           ctx.cleanup_log.inited_git_repos.push(cwdResolved);
         }
+      } else if (ctx.cleanup_log) {
+        // Spec 0.29: structured external-side-effect entry (S162). The
+        // mail-create-mailbox primitive renders as a Mail.app mailbox line
+        // the user can clean up manually; other shell-command primitives
+        // get a generic "<command>" summary.
+        const summary =
+          primitive.builtin_key === 'mail-create-mailbox'
+            ? formatMailboxSummary(params)
+            : `shell command: ${command}`;
+        ctx.cleanup_log.external_side_effects.push({
+          step: step.position + 1,
+          primitive: primitive.name,
+          summary,
+        });
       }
     } catch (err) {
       base.status = 'failed';

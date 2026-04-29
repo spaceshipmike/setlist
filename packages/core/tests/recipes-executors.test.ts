@@ -365,6 +365,45 @@ describe('shellExecutor — mail-create-mailbox pre-flight (S159)', () => {
   });
 });
 
+// Spec 0.29 (S162): structured external_side_effects envelope.
+describe('shellExecutor — external_side_effects envelope shape (S162)', () => {
+  it('shell-command non-builtin emits {step, primitive, summary} on success', async () => {
+    const custom = registry.createPrimitive({
+      name: 'pinger',
+      description: '',
+      definition: { shape: 'shell-command', command: 'echo ok' },
+    });
+    mkdirSync(projectPath, { recursive: true });
+    const ctx: ExecutorContext = {
+      project: projectCtx,
+      resolved_params: { working_directory: projectPath },
+      cleanup_log: newCleanupLog(),
+    };
+    const result = await shellExecutor.execute(custom, makeStep(custom, 3, {}), ctx);
+    expect(result.status).toBe('succeeded');
+    expect(ctx.cleanup_log!.external_side_effects).toHaveLength(1);
+    const entry = ctx.cleanup_log!.external_side_effects[0];
+    expect(entry).toMatchObject({
+      step: 4, // 1-based
+      primitive: 'pinger',
+      summary: expect.stringContaining('echo ok'),
+    });
+  });
+
+  it('git-init does NOT emit an external-side-effect entry (filesystem-undoable)', async () => {
+    const gi = registry.getBuiltinByKey('git-init')!;
+    mkdirSync(projectPath, { recursive: true });
+    const ctx: ExecutorContext = {
+      project: projectCtx,
+      resolved_params: { working_directory: projectPath },
+      cleanup_log: newCleanupLog(),
+    };
+    await shellExecutor.execute(gi, makeStep(gi, 2, {}), ctx);
+    expect(ctx.cleanup_log!.external_side_effects).toHaveLength(0);
+    expect(ctx.cleanup_log!.inited_git_repos).toEqual([projectPath]);
+  });
+});
+
 describe('mcpExecutor', () => {
   it('preflight fails when no MCP caller is connected (S143)', async () => {
     const tool = registry.createPrimitive({
@@ -442,8 +481,12 @@ describe('mcpExecutor', () => {
     const result = await mcpExecutor.execute(tool, makeStep(tool, 0, {}), ctx);
     expect(result.status).toBe('succeeded');
     expect(capturedArgs?.msg).toBe('space-tracker-v2');
+    // Spec 0.29 (S162): structured envelope { step, primitive, summary }.
     expect(ctx.cleanup_log!.external_side_effects.length).toBe(1);
-    expect(ctx.cleanup_log!.external_side_effects[0].label).toContain('echo tool');
+    const entry = ctx.cleanup_log!.external_side_effects[0];
+    expect(entry.primitive).toContain('echo tool');
+    expect(typeof entry.step).toBe('number');
+    expect(typeof entry.summary).toBe('string');
   });
 
   it('execute reports failure verbatim from the caller', async () => {

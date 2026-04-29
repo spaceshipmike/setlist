@@ -88,14 +88,27 @@ export interface ShapeExecutor {
  * Cleanup log used by Abandon (S147) to undo filesystem and git work the
  * runner itself performed. External side effects (mcp-tool, shell-command)
  * are reported as "left in place" rather than rolled back.
+ *
+ * Spec 0.29: external_side_effects entries carry a structured shape so
+ * MCP-tool consumers can iterate over them programmatically (S162) and
+ * mail-create-mailbox can surface a parseable mailbox-still-exists entry.
+ *   - step:      1-based step position in the recipe (matches surface UI).
+ *   - primitive: human-readable name of the primitive that produced it.
+ *   - summary:   one-line, user-facing description of the side effect.
  */
+export interface ExternalSideEffect {
+  step: number;
+  primitive: string;
+  summary: string;
+}
+
 export interface CleanupLog {
   created_folders: string[];
   inited_git_repos: string[];
   /** Parent .gitignore appends — { path, original_content } per mutation. */
   gitignore_appends: { path: string; original_content: string }[];
-  /** Per-step external-side-effect labels for the "Left in place" report. */
-  external_side_effects: { step_position: number; label: string }[];
+  /** Spec 0.29: structured per-step external-side-effect entries (S162). */
+  external_side_effects: ExternalSideEffect[];
 }
 
 export function newCleanupLog(): CleanupLog {
