@@ -58,6 +58,12 @@ export class Registry {
     // spec 0.13: optional structural area + parent
     area?: AreaName | string | null;
     parent_project?: string | null;
+    // spec 0.29 (schema v16): optional email account driving the
+    // mail-create-mailbox bootstrap primitive's {project.email_account} token.
+    // Empty strings are coerced to NULL — the resolver treats null and "" the
+    // same (unresolved), but storing NULL keeps the contract that the field
+    // is either set to a non-empty value or absent.
+    email_account?: string | null;
   }): number {
     // spec 0.13: type is narrowed to 'project' — callers may still pass it but
     // legacy 'area_of_focus' is rejected at the DB CHECK and surfaced here.
@@ -98,9 +104,13 @@ export class Registry {
         parentIdForInsert = prow.id;
       }
 
+      // spec 0.29: NULL on missing or empty; stored verbatim (no normalization).
+      const emailAccountForInsert =
+        opts.email_account == null || opts.email_account === '' ? null : opts.email_account;
+
       const result = db.prepare(
-        `INSERT INTO projects (name, display_name, type, status, description, goals, area_id, parent_project_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
-      ).run(opts.name, displayName, type, opts.status, opts.description ?? '', this._serializeGoals(opts.goals), areaIdForInsert, parentIdForInsert);
+        `INSERT INTO projects (name, display_name, type, status, description, goals, area_id, parent_project_id, email_account) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      ).run(opts.name, displayName, type, opts.status, opts.description ?? '', this._serializeGoals(opts.goals), areaIdForInsert, parentIdForInsert, emailAccountForInsert);
 
       const projectId = Number(result.lastInsertRowid);
 
@@ -318,6 +328,8 @@ export class Registry {
     // spec 0.13: structural area + parent on update. Use null to clear.
     area?: AreaName | string | null;
     parent_project?: string | null;
+    // spec 0.29: optional email account. null or "" clears (writes NULL).
+    email_account?: string | null;
   }): void {
     const db = this.open();
     try {
@@ -338,6 +350,13 @@ export class Registry {
       if (updates.status !== undefined) { sets.push('status = ?'); params.push(updates.status); }
       if (updates.description !== undefined) { sets.push('description = ?'); params.push(updates.description); }
       if (updates.goals !== undefined) { sets.push('goals = ?'); params.push(this._serializeGoals(updates.goals)); }
+      if (updates.email_account !== undefined) {
+        // spec 0.29: null or empty string clears to NULL (S165, S168).
+        const next =
+          updates.email_account == null || updates.email_account === '' ? null : updates.email_account;
+        sets.push('email_account = ?');
+        params.push(next);
+      }
 
       // area/parent handled below via dedicated setters so we get validation + cycle check
       const touchedCore = sets.length > 0;
@@ -1694,6 +1713,7 @@ export class Registry {
       children,
       project_type_id: projectTypeId,
       project_type_name: projectTypeName,
+      email_account: (row.email_account as string | null) ?? null,
       created_at: row.created_at as string,
       updated_at: row.updated_at as string,
     };

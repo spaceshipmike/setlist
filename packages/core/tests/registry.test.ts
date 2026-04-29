@@ -78,6 +78,61 @@ describe('Registry', () => {
       expect(() => registry.register({ name: 'bad-area', type: 'project', status: 'active', area: 'NotARealArea' }))
         .toThrow(/INVALID_AREA.*NotARealArea/);
     });
+
+    // spec 0.29 (S157, S168): optional email_account at registration; NULL when omitted.
+    it('stores email_account when supplied at registration (S157)', () => {
+      registry.register({
+        name: 'mail-proj',
+        type: 'project',
+        status: 'active',
+        email_account: 'work@example.com',
+      });
+      const p = registry.getProject('mail-proj', 'full')!;
+      expect(p.email_account).toBe('work@example.com');
+    });
+
+    it('omitting email_account at registration leaves it NULL (S168)', () => {
+      registry.register({ name: 'no-mail', type: 'project', status: 'active' });
+      const p = registry.getProject('no-mail', 'full')!;
+      expect(p.email_account).toBeNull();
+    });
+
+    it('empty-string email_account is coerced to NULL (S168)', () => {
+      registry.register({ name: 'empty-mail', type: 'project', status: 'active', email_account: '' });
+      const p = registry.getProject('empty-mail', 'full')!;
+      expect(p.email_account).toBeNull();
+    });
+  });
+
+  // spec 0.29: email_account update behavior (S165, S168)
+  describe('email_account on updateCore (S165)', () => {
+    it('sets email_account on a previously-NULL project', () => {
+      registry.register({ name: 'em-set', type: 'project', status: 'active' });
+      registry.updateCore('em-set', { email_account: 'm@h3r3.com' });
+      const p = registry.getProject('em-set', 'full')!;
+      expect(p.email_account).toBe('m@h3r3.com');
+    });
+
+    it('clears email_account when null is passed (returns to NULL, not "")', () => {
+      registry.register({ name: 'em-clear', type: 'project', status: 'active', email_account: 'a@b.com' });
+      registry.updateCore('em-clear', { email_account: null });
+      const p = registry.getProject('em-clear', 'full')!;
+      expect(p.email_account).toBeNull();
+    });
+
+    it('clears email_account when empty string is passed (returns to NULL)', () => {
+      registry.register({ name: 'em-clear-2', type: 'project', status: 'active', email_account: 'a@b.com' });
+      registry.updateCore('em-clear-2', { email_account: '' });
+      const p = registry.getProject('em-clear-2', 'full')!;
+      expect(p.email_account).toBeNull();
+    });
+
+    it('leaves email_account untouched when the field is omitted from the patch', () => {
+      registry.register({ name: 'em-keep', type: 'project', status: 'active', email_account: 'keep@me.com' });
+      registry.updateCore('em-keep', { description: 'updated' });
+      const p = registry.getProject('em-keep', 'full')!;
+      expect(p.email_account).toBe('keep@me.com');
+    });
   });
 
   // ── S04: Progressive Disclosure ────────────────────────────

@@ -2839,3 +2839,308 @@ Validates: `#capability-declarations` (2.11), `#project-bootstrap` (2.13), `#con
 - Authoring against a tool that the spec considers ambient (e.g., setlist's own `register_project`) is technically possible but explicitly out-of-scope for v1 — recipes are not the place to invoke setlist's own registration; the trailer covers it
 
 Difficulty: hard
+
+---
+
+## Mail.app Mailbox Bootstrap Primitive (S155–S168)
+
+These scenarios cover the email-bootstrap evolve (spec 0.29): a fifth seeded built-in
+primitive `mail-create-mailbox` of shape `shell-command` (driving Mail.app via
+`osascript`), a new optional `email_account` field on projects (schema v15), per-type
+defaults configured in Settings, the new `{project.email_account}` resolver token, and
+idempotent-on-duplicate creation semantics. The closed three-shape primitive invariant
+is preserved (this is a `shell-command`, not a new shape) and the no-credentials stance
+is preserved (Mail.app's own session is the trust boundary). The new primitive is seeded
+but **not** included in any default recipe — users opt in by adding it to a project
+type's recipe in Settings. Sibling lifecycle behaviors (filing existing mail, archive-on-
+completion, mailbox rename, mailbox delete) are explicitly deferred to a later evolve.
+
+## S155: Mail Mailbox Created at Bootstrap Using Default Template {#s155}
+**Given** a Code project type whose recipe includes `mail-create-mailbox` with the default mailbox-name template `Projects/{project.name}` and `account` bound to `{project.email_account}`, Mail.app running with an account named `m@h3r3.com` configured, and a registration call for a new project `space-tracker-v2` whose `email_account` is set to `m@h3r3.com`
+**When** the user (or an agent) bootstraps the project
+**Then** a new mailbox `Projects/space-tracker-v2` exists in Mail.app under the `m@h3r3.com` account, the bootstrap result lists `mail-create-mailbox` as a succeeded step with the resolved mailbox path, and the `register-in-registry` trailer runs afterwards as usual.
+
+Validates: `#project-bootstrap` (2.13), `#connections` (3.4)
+
+**Satisfaction criteria:**
+- After bootstrap completes, Mail.app contains a mailbox at the path `Projects/space-tracker-v2` under the account `m@h3r3.com` — visible in the Mail.app sidebar under that account
+- The bootstrap trace shows `mail-create-mailbox` as an executed step with status `succeeded`, the resolved account (`m@h3r3.com`), and the resolved mailbox path (`Projects/space-tracker-v2`)
+- The mailbox is created at the nested path implied by the `/` in the template — `Projects` is the parent mailbox container and `space-tracker-v2` is its child, matching Mail.app's nested-mailbox convention
+- The step runs in execution order alongside the rest of the recipe — it does not block, parallelize, or reorder relative to other user-droppable steps
+- The `register-in-registry` trailer runs after the mailbox step succeeds; the project is registered in setlist with the same identity as if the step were absent
+- The bootstrap does not create any second mailbox, sibling mailbox, or unintended folder under the account — exactly one mailbox at the resolved path is created
+- A subsequent `get_project('space-tracker-v2')` returns the project with `email_account` field populated as `m@h3r3.com`
+
+Difficulty: medium
+
+---
+
+## S156: Custom Mailbox Template Authored at Recipe-Step Time {#s156}
+**Given** a Code project type whose `mail-create-mailbox` recipe step has been authored with a custom mailbox-name template `Code/{project.type}/{project.name}` (instead of the default `Projects/{project.name}`), and a new project `alpha` of type `Code` with `email_account` set to `m@h3r3.com`
+**When** the user bootstraps `alpha`
+**Then** the mailbox is created at the resolved nested path `Code/Code/alpha` under the `m@h3r3.com` account, with all three template tokens substituted from the project's actual values.
+
+Validates: `#project-bootstrap` (2.13), `#project-types` (3.2)
+
+**Satisfaction criteria:**
+- The recipe-step editor for `mail-create-mailbox` exposes the mailbox-name template as a user-editable text field, with the documented available tokens (`{project.name}`, `{project.type}`, `{project.email_account}`) listed near the field as guidance
+- Saving a custom template persists it on the project type's recipe step (not on the primitive itself, so two project types can use the same primitive with different templates)
+- At bootstrap, the resolver substitutes every token from the project's actual values — `{project.type}` resolves to the project's type label, `{project.name}` to its name, `{project.email_account}` to its account
+- The resolved path is what's passed to AppleScript — Mail.app sees `Code/Code/alpha` as a nested-mailbox path under the named account
+- Tokens that don't apply to a given project (e.g., a template referencing `{project.parent}` where the project has no parent) are surfaced in pre-flight (S160) — they do not silently render as empty strings
+- A custom template containing literal text alongside tokens (e.g., `Inbox/{project.email_account}/{project.name}`) resolves all tokens and preserves the literal segments verbatim
+- Editing the template after a bootstrap has run does not retroactively rename existing mailboxes (this is consistent with S151's "recipes are evaluated at bootstrap time" rule)
+
+Difficulty: medium
+
+---
+
+## S157: email_account Set at Registration Drives Mailbox Account at Bootstrap {#s157}
+**Given** a project type whose recipe includes `mail-create-mailbox` with `account` bound to `{project.email_account}` and no per-type default account configured, and a `register_project` call that supplies `email_account: "work@example.com"` alongside the usual identity fields
+**When** the project is then bootstrapped
+**Then** the mailbox is created under the `work@example.com` account in Mail.app — the value supplied at registration is what the resolver uses, with no override or fallback consulted.
+
+Validates: `#project-bootstrap` (2.13), `#entities` (3.2)
+
+**Satisfaction criteria:**
+- `register_project` accepts an optional `email_account` parameter and stores it on the project row
+- A subsequent `get_project` returns `email_account: "work@example.com"` exactly as supplied — no normalization, lowercasing, or trimming beyond what is documented for general string fields
+- At bootstrap, `{project.email_account}` resolves to `work@example.com` and is passed to the AppleScript as the target account name
+- Mail.app shows the new mailbox under the `work@example.com` account, not under any other configured account
+- If both `email_account` is set on the project AND a per-type default is configured, the project-level value wins — defaults are only consulted when the project-level field is null (see S158)
+- `email_account` is optional at registration — projects registered without it are created with the field as NULL, not as an empty string (see S168)
+- The field is not constrained against Mail.app's actual account list at registration time — setlist does not validate the account exists; that check happens at pre-flight (S160) when the recipe actually references it
+
+Difficulty: easy
+
+---
+
+## S158: Per-Type Default email_account Used When Project Field Is Empty {#s158}
+**Given** a Code project type configured in Settings with a per-type default email account `m@h3r3.com`, a recipe that includes `mail-create-mailbox`, and a new Code project `beta` registered without an `email_account` value
+**When** the user bootstraps `beta`
+**Then** the recipe-step's `{project.email_account}` token resolves to the per-type default `m@h3r3.com`, the mailbox is created under that account, and the project's own `email_account` field remains unchanged (still null) — defaults are read at bootstrap time, not copied onto the project.
+
+Validates: `#project-bootstrap` (2.13), `#project-types` (3.2), `#entities` (3.2)
+
+**Satisfaction criteria:**
+- The bootstrap trace for the `mail-create-mailbox` step shows the resolved account as `m@h3r3.com` with a notation that the value came from the per-type default (not the project field)
+- After bootstrap, `get_project('beta')` returns `email_account: null` (or equivalent unset) — the default is not materialized onto the project
+- Removing the per-type default later does not affect `beta`'s already-created mailbox, but a future bootstrap of a project of the same type without a project-level value would fail pre-flight (or fall through to whatever the resolver's documented behavior is when neither source is set — see S160)
+- Setting `email_account` on the project later (via `update_project` / desktop edit form) shadows the default for any future bootstrap run referencing that project (though a project is only bootstrapped once, this matters for re-running the recipe via Retry)
+- The lookup precedence is documented and consistent: project-level `email_account` first, per-type default second, unresolved third — pre-flight surfaces the third case as a failure with a recognisable message (S160)
+- Two projects of the same type, one with an explicit `email_account` and one relying on the default, both bootstrap correctly — each mailbox is created under the appropriate account
+- The per-type default is per project type — Code's default does not apply to Non-code projects
+
+Difficulty: medium
+
+---
+
+## S159: Pre-Flight Fails Cleanly When Mail.app Is Not Running {#s159}
+**Given** a project type whose recipe includes `mail-create-mailbox`, a project ready to bootstrap, and Mail.app is not currently running on the user's machine
+**When** the user (or an agent) initiates bootstrap
+**Then** pre-flight fails with the message "Mail.app must be running to create a mailbox.", no folder is created, no git is initialized, no AppleScript is invoked, and Mail.app is NOT auto-launched by setlist.
+
+Validates: `#project-bootstrap` (2.13), `#hard-constraints` (4.3), `#connections` (3.4)
+
+**Satisfaction criteria:**
+- Pre-flight detects Mail.app's running state via a non-side-effecting probe (e.g., process enumeration via `System Events`); detection is read-only and does not start the application
+- The pre-flight failure message is exactly "Mail.app must be running to create a mailbox." (or wording substantively equivalent in intent — explicit, actionable, names the application)
+- The failed step is identified by its 1-based index in the recipe and its primitive name `mail-create-mailbox`, consistent with S143's pre-flight surface shape
+- No filesystem mutation occurs — the project folder is not created, the parent .gitignore is unchanged
+- No git mutation occurs — no `git init` runs against any directory
+- No AppleScript / `osascript` invocation runs — Mail.app is not contacted at all on the failure path
+- Mail.app is not launched by setlist — neither implicitly via `tell application "Mail" to activate` nor via `open -a Mail.app` nor by any other mechanism. Auto-launch would be a silent side effect and is explicitly forbidden
+- The user can launch Mail.app themselves and re-run Bootstrap; the second attempt re-runs pre-flight and proceeds
+- The same check fires regardless of whether the call originates from the desktop dialog, the MCP `bootstrap_project` tool, or the CLI — there is one engine path (consistent with S143)
+- Pre-flight does not fail solely because Mail.app is not configured with the target account — the account-existence check is a separate concern (the AppleScript itself surfaces unknown-account errors at execution time, which then routes through the standard Retry/Skip/Abandon dialog as in S161)
+
+Difficulty: medium
+
+---
+
+## S160: Unknown {project.email_account} Token Fails Pre-Flight Like Any Unresolvable Token {#s160}
+**Given** a project type whose recipe includes `mail-create-mailbox` with the mailbox-name template referencing `{project.email_account}`, a project registered without an `email_account` value, and no per-type default configured for this type
+**When** the user initiates bootstrap
+**Then** pre-flight fails with a message identifying the unresolvable token `{project.email_account}` and the offending step, surfacing the same error shape as any other unresolvable template token (e.g., `{project.parent}` on a parentless project) — and no step in the recipe executes.
+
+Validates: `#project-bootstrap` (2.13), `#error-handling` (2.5.1), `#hard-constraints` (4.3)
+
+**Satisfaction criteria:**
+- The pre-flight failure surface names the unresolvable token (`{project.email_account}`) and the step that referenced it (`Step N: mail-create-mailbox`), consistent with S143's "parameters resolve to non-empty strings" check
+- The error shape is structurally identical to other unresolvable-token failures — same fields, same wording template, same UI rendering — so a user (or agent) who has seen one of these errors recognises this one immediately
+- The check fires at pre-flight, not at execution — no `osascript` is invoked, no Mail.app communication occurs
+- Setting `email_account` on the project (via `update_project` or the desktop edit form) AND/OR adding a per-type default in Settings resolves the token for the next bootstrap attempt — fixing either source unblocks pre-flight
+- The same failure shape applies whether the unresolvable token appears in the `account` parameter, the mailbox-name template, or any other parameter binding on the step — wherever the token resolver runs, it surfaces the same diagnostic
+- An empty-string value (as opposed to null/missing) on the project's `email_account` field is treated as unresolved — the resolver does not silently accept an empty string as a valid account name
+- The pre-flight failure does not roll any prior recipe step's side-effects forward — pre-flight runs *before* any execution, so there is nothing to roll back (consistent with S143)
+
+Difficulty: medium
+
+---
+
+## S161: Mid-Recipe Failure of mail-create-mailbox Routes Through Retry/Skip/Abandon {#s161}
+**Given** a recipe whose `create-folder` and `git-init` steps have succeeded and the next step `mail-create-mailbox` fails at execution (e.g., AppleScript reports "Can't get account 'typo@h3r3.com'" because the resolved account name does not match a configured Mail.app account)
+**When** the bootstrap engine reaches the failed step
+**Then** execution halts, the user is shown the same Retry / Skip / Abandon surface as S144, with the failed step labelled `mail-create-mailbox` and the AppleScript error surfaced verbatim — and the project is NOT yet registered.
+
+Validates: `#project-bootstrap` (2.13), `#error-handling` (2.5.1)
+
+**Satisfaction criteria:**
+- The failure surface reads "Step N of M failed: mail-create-mailbox: <AppleScript error verbatim>" — the underlying error from `osascript` is preserved, not rewritten or summarised
+- Common failure causes (account not found, AppleScript permission denied, Mail.app exited mid-recipe between pre-flight and execution) all funnel into the same surface — no special-case dialog
+- Retry / Skip / Abandon controls are presented exactly as in S144 — `mail-create-mailbox` is treated as any other `shell-command` primitive at this layer
+- Retry resumes from the failed step (S145 semantics): if the user fixes the cause (e.g., corrects the account name on the project, then re-runs), the engine re-invokes the AppleScript and proceeds on success
+- Skip marks the step as `skipped` and continues with the remaining recipe (S146 semantics); the project gets registered with no mailbox, and the result envelope makes the skip explicit so the user knows no mailbox was created
+- Abandon cleans up filesystem-and-git state per S147 — the folder and git repo created by prior steps are removed; no mailbox cleanup is needed because `mail-create-mailbox` itself failed (no mailbox to remove)
+- The AppleScript stderr is captured into the bootstrap trace, not silently dropped, so the user can diagnose in the failure surface itself without launching Console.app
+- This scenario does not introduce new failure machinery — it exercises the existing `shell-command` primitive failure path against the new built-in
+
+Difficulty: medium
+
+---
+
+## S162: Abandon After mail-create-mailbox Succeeded Records Mailbox in External Side-Effects {#s162}
+**Given** a recipe in which `create-folder`, `git-init`, and `mail-create-mailbox` have succeeded (a mailbox `Projects/space-tracker-v2` now exists in Mail.app under `m@h3r3.com`), and a subsequent `mcp-tool` step fails
+**When** the user clicks Abandon on the resulting Retry/Skip/Abandon dialog
+**Then** setlist removes the folder and the git repo it created (per S147), leaves the Mail.app mailbox in place, and the cleanup report's "Left in place" list explicitly names the mailbox by account and path so the user can clean it up manually if desired.
+
+Validates: `#project-bootstrap` (2.13), `#error-handling` (2.5.1), `#hard-constraints` (4.3)
+
+**Satisfaction criteria:**
+- Abandon does NOT invoke any compensating AppleScript, does NOT delete the mailbox via `osascript`, and does NOT undo the Mail.app side effect in any way
+- The cleanup report's "Left in place — clean up manually if needed:" list contains an entry for the mailbox in the form `Mail.app account 'm@h3r3.com' has new mailbox 'Projects/space-tracker-v2'` (or wording substantively equivalent — names both the account and the resolved path)
+- The mailbox entry is shaped consistently with how other external side-effects (e.g., a created Todoist project from S147) are reported — same list, same labelling pattern, no special section just for Mail.app
+- The Abandon flow does not register the project in setlist — `register-in-registry` does not run (consistent with S147)
+- After Abandon, opening Mail.app and inspecting the account shows the mailbox is still present — the user can delete it themselves via Mail.app's UI if they choose
+- The cleanup report is structured (not just prose) so an MCP-tool consumer parsing the response can iterate over the "left in place" list programmatically — same envelope shape as S147 produces for other external side effects
+- A second bootstrap attempt with the same project name does not collide with the leftover mailbox — the AppleScript's silent idempotence on duplicate names (S163) means the next run of `mail-create-mailbox` re-uses the existing mailbox without error
+- The user can also manually delete the mailbox in Mail.app and re-bootstrap — both paths are supported and neither requires setlist intervention
+
+Difficulty: hard
+
+---
+
+## S163: Mailbox-Already-Exists Is Treated as Success (Silent Idempotence) {#s163}
+**Given** a Mail.app account `m@h3r3.com` that already contains a mailbox at `Projects/alpha` (created by a prior bootstrap, by the user manually, or by a prior abandoned run as in S162), and a fresh bootstrap of a project named `alpha` whose recipe includes `mail-create-mailbox` resolving to the same account-and-path
+**When** the bootstrap engine runs the `mail-create-mailbox` step
+**Then** the step completes with status `succeeded`, no second mailbox is created, no error is raised, and the bootstrap continues normally — Mail.app's `make new mailbox` is silently idempotent on duplicate names within the same account, and the primitive treats this as success.
+
+Validates: `#project-bootstrap` (2.13), `#rules` (3.3)
+
+**Satisfaction criteria:**
+- After the second bootstrap, Mail.app shows exactly one mailbox at `Projects/alpha` under `m@h3r3.com` — not two, not a `Projects/alpha (1)`, not a renamed sibling
+- The bootstrap trace shows the `mail-create-mailbox` step as `succeeded` (not `skipped`, not a special `idempotent-noop` status — the surface treats it the same as a fresh-create success)
+- No error is raised by AppleScript or by setlist's wrapper — `osascript` exits zero, the step's stderr is empty (or contains only Mail.app's own diagnostic noise), and the engine treats the exit as success
+- Mail content already in the existing mailbox is not modified — the messages, flags, and mailbox metadata are untouched
+- Subsequent steps in the recipe run normally — the trailer registers the project, fields are written, etc.
+- This idempotence applies whether the prior mailbox was created by setlist, by a prior abandoned bootstrap (S162), or by the user manually in Mail.app — the source of the prior mailbox does not change the behavior
+- The same idempotence does NOT extend to changing nested-mailbox structure: if the existing mailbox is at `Projects/alpha` but the new resolved path is `Code/alpha`, the engine creates a new mailbox at `Code/alpha` and leaves `Projects/alpha` in place — the idempotence key is the resolved path, not just the leaf name
+
+Difficulty: medium
+
+---
+
+## S164: mail-create-mailbox Is a Seeded Built-in Visible in Settings, Not in Any Default Recipe {#s164}
+**Given** a fresh setlist install (or a v15 schema migration from v14) and the Settings → Primitives panel
+**When** the user opens Settings → Primitives and Settings → Project types → Code (or any seeded type)
+**Then** `mail-create-mailbox` is listed among the seeded built-in primitives in the Primitives panel (alongside `create-folder`, `copy-template`, `git-init`, `update-parent-gitignore`), but no project type's default recipe includes the step — the user must explicitly add it to opt in.
+
+Validates: `#project-bootstrap` (2.13), `#desktop-app` (2.14), `#scope` (4.1)
+
+**Satisfaction criteria:**
+- The Primitives panel lists exactly five built-ins on a fresh install: `create-folder`, `copy-template`, `git-init`, `update-parent-gitignore`, `mail-create-mailbox` — each marked with the "Built-in" indicator from S140
+- `mail-create-mailbox` displays with shape badge `shell-command` (consistent with the closed-shape invariant — this is not a new shape)
+- The primitive's editor shows its underlying AppleScript-driving command as read-only (consistent with S140 — built-ins' shape and underlying command cannot be edited)
+- Its parameters are bindable per recipe: `account` binds to a token like `{project.email_account}` and the mailbox-name template defaults to `Projects/{project.name}`
+- The seeded Code project type's default recipe does NOT include `mail-create-mailbox` — opening Settings → Project types → Code → Edit → Steps shows the same recipe as before this evolve (no additional step)
+- The seeded Non-code project type's default recipe does NOT include `mail-create-mailbox` either — every shipped default recipe is unchanged
+- A fresh bootstrap of a project of any seeded type does NOT create a mailbox unless the user has explicitly added the step to that type's recipe — the evolve adds capability without changing default behavior
+- Adding `mail-create-mailbox` via Settings → Project types → <type> → Edit → Steps → `+ Add step` shows the primitive in the picker grouped under "Built-in" alongside the other four
+- Deletion of `mail-create-mailbox` is rejected the same way the other built-ins reject delete (S140) — "Built-in primitive cannot be deleted"
+
+Difficulty: medium
+
+---
+
+## S165: email_account Is Editable in the Desktop Project Detail/Edit Form {#s165}
+**Given** the desktop app open to a project's detail view, with the project's `email_account` either set to a value or null
+**When** the user opens the Edit form, types or clears a value in the `email_account` field, and saves
+**Then** the value persists, `get_project` returns the updated value, and a subsequent re-open of the detail view shows the new value — including the case where the user clears the field, returning it to null (not empty string).
+
+Validates: `#desktop-app` (2.14), `#entities` (3.2)
+
+**Satisfaction criteria:**
+- The project detail/edit form exposes `email_account` as a labelled, editable text field — placed alongside the other identity fields (description, area, type) in a position consistent with the existing form's information architecture
+- The field accepts a free-text email-shaped string — validation is presence-only (or absent); setlist does not validate the address against Mail.app's account list at edit time
+- Saving with a value persists it via `update_project`/`write_fields` and returns the user to the detail view with the new value visible
+- Clearing the field (deleting all text and saving) sets the underlying value to NULL, not to an empty string — `get_project` after a clear returns `email_account: null` (consistent with S168)
+- Re-opening the desktop app fully (quit and relaunch) shows the saved value — persistence is durable, not session-local
+- The MCP `update_project` tool also accepts `email_account` as an updatable field, so an agent can perform the same edit programmatically and observe the same result
+- The detail view (read-only) shows the current `email_account` value when set, and shows nothing or a clear "—" placeholder when null — there is no confusing rendering of null as the literal string `"null"` or as an empty quoted value
+- Editing `email_account` does not alter any other field — no side-effects on area, type, status, description, or memory routing
+
+Difficulty: easy
+
+---
+
+## S166: Per-Type email_account Default Is Visible and Editable in Settings → Project Types {#s166}
+**Given** the Settings → Project types panel listing the user's project types
+**When** the user opens a type's editor
+**Then** the editor exposes a per-type default email account field — readable when set, editable, and clearable — and saving the change persists it so future bootstraps of projects of that type fall through to the default when the project's own `email_account` is null (per S158).
+
+Validates: `#desktop-app` (2.14), `#project-types` (3.2)
+
+**Satisfaction criteria:**
+- The Project type editor exposes the per-type default email account as a labelled field, placed in a stable location alongside the type's other fields (default_directory, git_init, template_directory, color)
+- The field is editable, clearable, and persists across saves and app restarts
+- A type with no per-type default shows the field empty (or with a clear "—" placeholder) — null, not the literal string "null"
+- Setting the default and bootstrapping a new project of that type without an `email_account` causes `mail-create-mailbox` to use the default (linked to S158)
+- Clearing the default for a type whose recipe references `{project.email_account}` does not retroactively affect already-bootstrapped projects (consistent with S151), but does cause new bootstraps without a project-level `email_account` to fall through to pre-flight failure (S160)
+- The default is distinct per project type — Code's default does not bleed into Non-code's default, and changing one does not affect the other
+- The setting is reachable from the existing Settings panel structure (Areas → Project types → View → Bootstrap → Updates → Primitives — see S134), without introducing a new top-level panel just for email defaults
+- Whether the per-type default is stored on the `project_types` row or on the `project_type_recipe_steps.params_json` is an implementation detail not surfaced to the user — the user-facing edit-and-persist behavior is the contract, the storage choice is left to the spec writer
+
+Difficulty: medium
+
+---
+
+## S167: Authoring mail-create-mailbox Into a Recipe Persists Across Sessions {#s167}
+**Given** a Settings → Project types → Code editor with a recipe that does not yet include `mail-create-mailbox`
+**When** the user clicks `+ Add step`, picks `mail-create-mailbox` from the Built-in group, configures its mailbox-name template (default or custom), positions it in the recipe via drag-and-drop, and saves — then quits and relaunches the desktop app
+**Then** the recipe persists exactly as authored: same step set, same order, same parameter bindings — and a subsequent bootstrap of a project of that type runs the recipe with `mail-create-mailbox` in the saved position.
+
+Validates: `#desktop-app` (2.14), `#project-types` (3.2), `#project-bootstrap` (2.13)
+
+**Satisfaction criteria:**
+- After Save, the recipe row for `mail-create-mailbox` renders with its shape badge (`shell-command`), its parameter summary (e.g., `account: {project.email_account}, mailbox: Projects/{project.name}`), and a drag handle on the user-droppable side
+- After a full quit and relaunch of the app, opening the same project type's editor shows the same recipe in the same order — including the new step's position, its bound parameters, and any custom mailbox-name template
+- The MCP `get_recipe` tool, called for the same project type, returns the same persisted recipe — UI and tool surface agree on the persisted state
+- A bootstrap of a new project of that type after relaunch executes the recipe in the saved order, including `mail-create-mailbox` at the saved position (consistent with S142's "user-defined order")
+- Editing a saved recipe to remove or reorder `mail-create-mailbox` and saving the change persists the edit; relaunching shows the new state
+- The `register-in-registry` trailer remains at the bottom of the recipe regardless of where the user positions `mail-create-mailbox` (consistent with S150)
+- Two project types each authored to include `mail-create-mailbox` with different mailbox-name templates persist their bindings independently — editing one does not mutate the other (consistent with S140's "primitive itself is not mutated by either binding")
+
+Difficulty: medium
+
+---
+
+## S168: Schema v15 Migration Adds email_account Column With NULL for Existing Projects {#s168}
+**Given** a setlist installation running schema v14 with a populated registry — multiple projects, recipes, primitives, areas, project types — and a setlist binary upgraded to a build that ships schema v15
+**When** the upgraded setlist starts up against the v14 database
+**Then** the database is migrated in place to v15, the new `email_account` column is added to the `projects` table with NULL for every pre-existing row, no other data is altered, and post-migration reads of any existing project show `email_account: null` (not `""`, not a default value).
+
+Validates: `#data-model` (5.2), `#entities` (3.2)
+
+**Satisfaction criteria:**
+- The schema_meta table reports version 15 after the first startup of the upgraded binary against a v14 database
+- The `projects` table has a new column named `email_account` of a string-shaped type (TEXT) that allows NULL
+- Every project that existed before the migration has `email_account = NULL` after migration — no rows are populated with a default value, an empty string, or any heuristic guess from other fields
+- All other tables are unchanged in row count and content — areas, project types, recipes, primitives, memories, ports, capabilities, digests, tasks all carry forward intact
+- A subsequent `register_project` call without `email_account` continues to work, producing a row with `email_account = NULL`
+- A `register_project` call WITH `email_account` produces a row with the supplied value
+- A subsequent `update_project` can set `email_account` on a previously-NULL row, and clearing it restores NULL (consistent with S165)
+- The migration is idempotent — running the v15 binary against an already-v15 database is a no-op (no error, no schema thrash)
+- A v15 database opened by an older v14 binary either fails fast with a clear "schema too new" message or refuses to open — it does not silently downgrade or corrupt
+- The migration runs once on first startup of the upgraded binary, not on every startup — the second startup against the now-v15 database does not re-run the migration
+
+Difficulty: medium

@@ -98,6 +98,10 @@ export interface ProjectRecord {
   // project_type_name is the resolved display name (joined at read time).
   project_type_id: number | null;
   project_type_name: string | null;
+  // spec 0.29 (schema v16): optional email account driving the
+  // mail-create-mailbox bootstrap primitive's {project.email_account} token.
+  // NULL means unset; never an empty string.
+  email_account: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -248,6 +252,9 @@ export function toSummary(record: ProjectRecord): Record<string, unknown> {
     // Spec 0.26: project_type is the resolved user-managed type name (or null).
     project_type: record.project_type_name,
     project_type_id: record.project_type_id,
+    // Spec 0.29: optional email account — always present so callers can
+    // distinguish "unset" (null) from "not loaded" (missing key).
+    email_account: record.email_account,
   };
   if (record.description) result.description = record.description;
   if (record.parent_project && record.parent_archived) result.parent_archived = true;
@@ -301,6 +308,9 @@ export function toFull(record: ProjectRecord): Record<string, unknown> {
     // Spec 0.26: user-managed project type, resolved name and id.
     project_type: record.project_type_name,
     project_type_id: record.project_type_id,
+    // Spec 0.29: optional email account — always present so callers can
+    // distinguish "unset" (null) from "not loaded" (missing key).
+    email_account: record.email_account,
   };
   if (record.parent_project && record.parent_archived) result.parent_archived = true;
   if (record.description) result.description = record.description;

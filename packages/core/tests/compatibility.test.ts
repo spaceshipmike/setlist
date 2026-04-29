@@ -27,7 +27,7 @@ describe('Schema Compatibility (S02)', () => {
     initDb(dbPath);
     const db = connect(dbPath);
     const meta = db.prepare("SELECT value FROM schema_meta WHERE key = 'schema_version'").get() as { value: string };
-    expect(meta.value).toBe('15');
+    expect(meta.value).toBe('16');
     db.close();
   });
 
@@ -115,7 +115,7 @@ describe('Schema Compatibility (S02)', () => {
     initDb(dbPath);
     const db2 = connect(dbPath);
     const meta = db2.prepare("SELECT value FROM schema_meta WHERE key = 'schema_version'").get() as { value: string };
-    expect(meta.value).toBe('15');
+    expect(meta.value).toBe('16');
 
     // display_name column should exist now
     const row = db2.prepare('SELECT display_name FROM projects WHERE name = ?').get('old-project') as { display_name: string };
@@ -183,7 +183,7 @@ describe('Library Import (S22)', () => {
     expect(MemoryReflection).toBeDefined();
     expect(initDb).toBeDefined();
     expect(connect).toBeDefined();
-    expect(SCHEMA_VERSION).toBe(15);
+    expect(SCHEMA_VERSION).toBe(16);
     expect(scanLocations).toBeDefined();
     expect(applyProposals).toBeDefined();
     expect(discoverPortsInPath).toBeDefined();

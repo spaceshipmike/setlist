@@ -37,9 +37,9 @@ beforeEach(() => {
   db.pragma('foreign_keys = ON');
 });
 
-describe('Schema v15', () => {
-  it('reports SCHEMA_VERSION = 14', () => {
-    expect(SCHEMA_VERSION).toBe(15);
+describe('Schema v16', () => {
+  it('reports SCHEMA_VERSION = 16', () => {
+    expect(SCHEMA_VERSION).toBe(16);
   });
 
   it('has bootstrap_primitives table', () => {
@@ -56,11 +56,18 @@ describe('Schema v15', () => {
     expect(tables.length).toBe(1);
   });
 
-  it('records schema_version = 14 in schema_meta', () => {
+  it('records schema_version = 16 in schema_meta', () => {
     const row = db
       .prepare(`SELECT value FROM schema_meta WHERE key = 'schema_version'`)
       .get() as { value: string };
-    expect(row.value).toBe('15');
+    expect(row.value).toBe('16');
+  });
+
+  it('has email_account column on projects (NULL for fresh-init existing-pattern test)', () => {
+    const cols = db
+      .prepare(`PRAGMA table_info(projects)`)
+      .all() as { name: string }[];
+    expect(cols.some((c) => c.name === 'email_account')).toBe(true);
   });
 });
 

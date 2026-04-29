@@ -6,7 +6,7 @@ import { seedAreas as seedAreasFromModule, SEED_AREAS } from './areas.js';
 import { seedProjectTypes } from './project-types.js';
 import { seedBuiltinPrimitives, seedBuiltinRecipes } from './recipes/store.js';
 
-export const SCHEMA_VERSION = 15;
+export const SCHEMA_VERSION = 16;
 
 /**
  * Legacy alias kept for any callers that still expect the constant name.
@@ -53,6 +53,7 @@ CREATE TABLE IF NOT EXISTS projects (
     area_id INTEGER REFERENCES areas(id),
     parent_project_id INTEGER REFERENCES projects(id) ON DELETE SET NULL,
     project_type_id INTEGER REFERENCES project_types(id),
+    email_account TEXT,
     created_at TEXT NOT NULL DEFAULT (datetime('now')),
     updated_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
@@ -470,6 +471,15 @@ function ensureColumns(db: Database.Database): void {
   if (!projColNames.has('project_type_id')) {
     db.exec(`ALTER TABLE projects ADD COLUMN project_type_id INTEGER REFERENCES project_types(id)`);
   }
+  // v16 (spec 0.29): optional email_account on projects, used by the
+  // mail-create-mailbox bootstrap primitive's {project.email_account} token.
+  // Free-text email-shaped string with presence-only validation; NULL means
+  // unset (not the literal empty string). The spec text named v15 for this
+  // column, but v15 was already taken by project_digests.named_terms — see
+  // the experience report for the spec-text reconciliation note.
+  if (!projColNames.has('email_account')) {
+    db.exec(`ALTER TABLE projects ADD COLUMN email_account TEXT`);
+  }
   // Indexes that depend on v11/v13 columns must be created after the columns exist
   // (SCHEMA_SQL can't assume the columns are present when upgrading from v0).
   db.exec(`CREATE INDEX IF NOT EXISTS idx_projects_area_id ON projects(area_id)`);
@@ -754,6 +764,15 @@ function upgradeSchema(db: Database.Database): void {
     // Defensive: if any residual rows still claim type='area_of_focus'
     // (from a registry that skipped the v10→v11 path), demote them now.
     db.prepare(`UPDATE projects SET type = 'project', updated_at = datetime('now') WHERE type = 'area_of_focus'`).run();
+  }
+
+  if (currentVersion >= 15 && currentVersion < 16) {
+    // v15 → v16 (spec 0.29): optional email_account column on projects for
+    // the mail-create-mailbox bootstrap primitive's {project.email_account}
+    // token. Idempotent ALTER guarded by ensureColumns above; this block
+    // exists to cement the version bump and trigger the on-disk backup
+    // that upgradeSchema's preamble takes for any non-zero pre-bump version.
+    // No data migration: every pre-existing row gets NULL for email_account.
   }
 
   if (currentVersion >= 13 && currentVersion < 14) {
