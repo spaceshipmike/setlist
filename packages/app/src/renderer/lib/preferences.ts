@@ -36,6 +36,8 @@ export const DEFAULT_DENSITY: RowDensity = 'spacious';
 export const DEFAULT_LANDING: LandingView = 'grouped';
 export const DEFAULT_SORT_KEY: SortKey = 'updated_at';
 export const DEFAULT_SORT_DIR: SortDir = 'desc';
+/** Spec 0.29 (user-added polish): default Home view to active-only. */
+export const DEFAULT_STATUS_FILTERS: readonly string[] = ['active'];
 
 const KEYS = {
   columns: 'setlist.prefs.columns',
@@ -43,6 +45,7 @@ const KEYS = {
   landing: 'setlist.prefs.landing',
   sortKey: 'setlist.prefs.sortKey',
   sortDir: 'setlist.prefs.sortDir',
+  statusFilters: 'setlist.prefs.statusFilters',
 } as const;
 
 function safeRead(key: string): string | null {
@@ -98,3 +101,24 @@ export function getSortDir(): SortDir {
 }
 
 export function setSortDir(d: SortDir): void { safeWrite(KEYS.sortDir, d); }
+
+/**
+ * Spec 0.29 (user-added polish): persist the Home view's status filter
+ * across sessions and default to ['active'] on first launch — most of
+ * the time the user is looking at their active work, not archived/idea
+ * rows. Toggling 'archived' on or clearing the chip persists the change.
+ */
+export function getStatusFilters(): string[] {
+  const raw = safeRead(KEYS.statusFilters);
+  if (raw === null) return [...DEFAULT_STATUS_FILTERS];
+  try {
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed.filter((s) => typeof s === 'string') : [];
+  } catch {
+    return [...DEFAULT_STATUS_FILTERS];
+  }
+}
+
+export function setStatusFilters(values: string[]): void {
+  safeWrite(KEYS.statusFilters, JSON.stringify(values));
+}

@@ -7,6 +7,7 @@ import { UpdateToast } from './components/UpdateToast';
 import type { SortField, SortDir } from './hooks/useProjects';
 import {
   getSortKey, setSortKey, getSortDir, setSortDir as savePrefSortDir,
+  getStatusFilters, setStatusFilters as saveStatusFilters,
 } from './lib/preferences';
 
 type View =
@@ -20,14 +21,17 @@ export function App() {
   const refreshRef = useRef<(() => void) | null>(null);
 
   // Persistent filter/sort state — sort persisted to localStorage (spec 0.26).
+  // Spec 0.29 (user-added): status filter also persisted, defaults to ['active'].
   const [filter, setFilter] = useState('');
-  const [statusFilters, setStatusFilters] = useState<string[]>([]);
+  const [statusFilters, setStatusFilters] = useState<string[]>(() => getStatusFilters());
   const [sort, setSort] = useState<SortField>(() => getSortKey() as SortField);
   const [sortDir, setSortDir] = useState<SortDir>(() => getSortDir());
 
   // Spec 0.26 §S121: persist sort across sessions.
   useEffect(() => { setSortKey(sort); }, [sort]);
   useEffect(() => { savePrefSortDir(sortDir); }, [sortDir]);
+  // Spec 0.29 (user-added): persist Home status filter across sessions.
+  useEffect(() => { saveStatusFilters(statusFilters); }, [statusFilters]);
 
   // Spec 0.26 §S123: Cmd-, fires the menu accelerator → main process sends
   // navigate-to-settings → preload forwards to this listener.
