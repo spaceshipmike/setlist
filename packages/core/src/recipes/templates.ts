@@ -22,6 +22,13 @@ export interface ProjectContext {
   parent_path: string;
   /** The project type's template_directory (or null when unset). */
   template_directory?: string | null;
+  /**
+   * Spec 0.29: optional email account driving mail-create-mailbox's
+   * `{project.email_account}` token. Null or empty string surfaces as an
+   * unresolved-token failure at pre-flight (S160) — the resolver does NOT
+   * silently substitute the empty string.
+   */
+  email_account?: string | null;
 }
 
 /**
@@ -35,6 +42,7 @@ export const EXAMPLE_CONTEXT: ProjectContext = {
   type: '<example-type>',
   parent_path: '<example-parent-path>',
   template_directory: '<example-template-directory>',
+  email_account: '<example-email-account>',
 };
 
 /** Tokens supported by the resolver. Adding a new one updates this list. */
@@ -44,6 +52,8 @@ export const SUPPORTED_TOKENS: readonly string[] = [
   'project.type',
   'project.parent_path',
   'project.type.template_directory',
+  // Spec 0.29: project's optional email account, drives mail-create-mailbox.
+  'project.email_account',
 ] as const;
 
 export interface ResolveSuccess {
@@ -74,6 +84,13 @@ export type ResolveResult = ResolveSuccess | ResolveFailure;
  * — only structural unresolvability is a failure. Pre-flight then decides
  * whether an empty value is acceptable for the operation (e.g., empty path
  * is rejected by create-folder).
+ *
+ * Spec 0.29: a token reference may carry a literal fallback after `|`.
+ * `{project.email_account|m@h3r3.com}` resolves to the project field when
+ * present and non-empty, falls through to the literal `m@h3r3.com` when
+ * the project field is null/empty, and is unresolved only when no fallback
+ * is given. The fallback is the per-type default surface for S158/S166 —
+ * stored on the recipe step's `params_json` as part of the binding string.
  */
 export function resolveTemplate(template: string, ctx: ProjectContext): ResolveResult {
   let out = '';
@@ -92,9 +109,20 @@ export function resolveTemplate(template: string, ctx: ProjectContext): ResolveR
       if (close === -1) {
         return { ok: false, token: '<unterminated>', template, reason: 'malformed-brace' };
       }
-      const tokenName = template.slice(i + 1, close);
+      const inner = template.slice(i + 1, close);
+      // Spec 0.29: split on the first `|` for token-with-fallback syntax.
+      // Everything left of `|` is the token name; everything right is a
+      // literal fallback (no nested resolution — keep it simple).
+      const pipeIdx = inner.indexOf('|');
+      const tokenName = pipeIdx === -1 ? inner : inner.slice(0, pipeIdx);
+      const fallback = pipeIdx === -1 ? undefined : inner.slice(pipeIdx + 1);
       const value = lookupToken(tokenName, ctx);
       if (value === undefined) {
+        if (fallback !== undefined && fallback !== '') {
+          out += fallback;
+          i = close + 1;
+          continue;
+        }
         return { ok: false, token: tokenName, template, reason: 'unknown-token' };
       }
       out += value;
@@ -119,6 +147,14 @@ function lookupToken(name: string, ctx: ProjectContext): string | undefined {
       return ctx.parent_path;
     case 'project.type.template_directory':
       return ctx.template_directory ?? '';
+    case 'project.email_account':
+      // Spec 0.29 (S160): null or empty string is "unresolved" — return
+      // undefined so the resolver surfaces a pre-flight unknown-token
+      // failure rather than silently substituting "". The fallback to a
+      // recipe-step per-type default happens in resolveParams (precedence
+      // layer below); the raw token resolver only knows about the project.
+      if (ctx.email_account == null || ctx.email_account === '') return undefined;
+      return ctx.email_account;
     default:
       return undefined;
   }

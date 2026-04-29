@@ -75,6 +75,14 @@ export interface BootstrapProjectOpts {
   area?: string | null;
   parent_project?: string | null;
   /**
+   * Spec 0.29: optional email_account drives the mail-create-mailbox
+   * primitive's `{project.email_account}` token at bootstrap time. Stored
+   * on the project on register-in-registry. Null/empty means "no project-
+   * level email" — recipe steps fall back to the per-type default encoded
+   * in the binding (see templates.ts for the `{name|fallback}` syntax).
+   */
+  email_account?: string | null;
+  /**
    * Spec 0.28: optional dry-run mode — runs pre-flight + symbolic walk
    * without touching disk, the registry, or external systems (S148).
    */
@@ -425,6 +433,8 @@ export class Bootstrap {
           producer: opts.producer ?? 'bootstrap',
           area: opts.area ?? undefined,
           parent_project: opts.parent_project ?? undefined,
+          // Spec 0.29: persist email_account when supplied via bootstrap.
+          email_account: opts.email_account ?? null,
         });
 
         // Spec 0.26: stamp project_type_id onto the new row (the public
@@ -604,12 +614,16 @@ export class Bootstrap {
     const targetPath = opts.path_override ?? join(typeRoot, opts.name);
 
     // Build the project context the runner uses for token resolution.
+    // Spec 0.29: email_account drives mail-create-mailbox; per-type defaults
+    // arrive via the recipe-step binding's `|fallback` syntax in templates.ts,
+    // not via context state, so the context only carries the project value.
     const project: ProjectContext = {
       name: opts.name,
       path: targetPath,
       type: typeRow.name,
       parent_path: dirname(targetPath),
       template_directory: typeRow.template_directory,
+      email_account: opts.email_account ?? null,
     };
 
     // Snapshot the recipe for this attempt (S151).
@@ -727,6 +741,7 @@ export class Bootstrap {
       type: pending.snapshot.steps[0]?.primitive ? this._typeName(pending.project_type_id) : '',
       parent_path: dirname(pending.path),
       template_directory: this._typeTemplateDir(pending.project_type_id),
+      email_account: pending.original_opts.email_account ?? null,
     };
 
     const env = await resumeWalk({
@@ -753,6 +768,7 @@ export class Bootstrap {
       type: this._typeName(pending.project_type_id),
       parent_path: dirname(pending.path),
       template_directory: this._typeTemplateDir(pending.project_type_id),
+      email_account: pending.original_opts.email_account ?? null,
     };
 
     const env = await resumeWalk({
@@ -951,6 +967,9 @@ export class Bootstrap {
         producer: opts.producer ?? 'bootstrap',
         area: opts.area ?? undefined,
         parent_project: opts.parent_project ?? undefined,
+        // Spec 0.29: persist the bootstrap-time email_account on the
+        // project row so a subsequent get_project surfaces it (S155).
+        email_account: opts.email_account ?? null,
       });
 
       // Stamp project_type_id (Registry.register doesn't accept it directly).
