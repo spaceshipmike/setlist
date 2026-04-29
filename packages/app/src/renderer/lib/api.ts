@@ -117,6 +117,8 @@ export interface ProjectSummary {
   // spec 0.26: resolved user-managed project type name + id
   project_type?: string | null;
   project_type_id?: number | null;
+  // spec 0.29: optional email account driving mail-create-mailbox.
+  email_account?: string | null;
 }
 
 export interface ProjectFull extends ProjectSummary {
@@ -212,6 +214,8 @@ const api = {
     paths?: string[];
     area?: AreaName | null;
     parent_project?: string | null;
+    // spec 0.29: optional email account at registration.
+    email_account?: string | null;
   }) => window.setlist.register(opts) as Promise<number>,
 
   updateCore: (name: string, updates: {
@@ -221,6 +225,8 @@ const api = {
     display_name?: string;
     area?: AreaName | null;
     parent_project?: string | null;
+    // spec 0.29: null clears to NULL on the project row.
+    email_account?: string | null;
   }) => window.setlist.updateCore(name, updates),
 
   // spec 0.13: areas + sub-projects
@@ -271,6 +277,8 @@ const api = {
     skip_git?: boolean;
     area?: AreaName | null;
     parent_project?: string | null;
+    // spec 0.29
+    email_account?: string | null;
   }) => window.setlist.bootstrapProject(opts) as Promise<BootstrapResult>,
 
   pickDirectory: (opts?: { defaultPath?: string; title?: string }) =>

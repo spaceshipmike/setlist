@@ -69,6 +69,8 @@ export function ProjectDetailView({ projectName, onBack, onNavigate }: ProjectDe
               goals: Array.isArray(project.goals) ? project.goals.join(', ') : (project.goals ?? ''),
               area: project.area ?? null,
               parent_project: project.parent_project ?? null,
+              // spec 0.29: optional email_account (S165).
+              email_account: project.email_account ?? null,
             }}
             projectType={project.type}
             onSave={() => { setEditing(false); refresh(); }}

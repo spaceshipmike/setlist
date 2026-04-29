@@ -12,6 +12,8 @@ interface EditProjectFormProps {
     // spec 0.13
     area: AreaName | null;
     parent_project: string | null;
+    // spec 0.29: optional email account driving mail-create-mailbox.
+    email_account: string | null;
   };
   projectType: string;
   onSave: () => void;
@@ -30,6 +32,8 @@ export function EditProjectForm({ name, currentValues, onSave, onCancel }: EditP
   // spec 0.13: area + parent fields
   const [area, setArea] = useState<string>(currentValues.area ?? UNASSIGNED);
   const [parentProject, setParentProject] = useState<string>(currentValues.parent_project ?? '');
+  // spec 0.29: optional email_account.
+  const [emailAccount, setEmailAccount] = useState<string>(currentValues.email_account ?? '');
   const [parentOptions, setParentOptions] = useState<ProjectSummary[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -51,6 +55,10 @@ export function EditProjectForm({ name, currentValues, onSave, onCancel }: EditP
       const currentParent = currentValues.parent_project ?? null;
       const newArea: AreaName | null = area === UNASSIGNED ? null : (area as AreaName);
       const newParent: string | null = parentProject.trim() || null;
+      // spec 0.29 (S165): empty input clears to NULL — get_project after a
+      // clear returns email_account: null, not "".
+      const currentEmail = currentValues.email_account ?? null;
+      const newEmail: string | null = emailAccount.trim() || null;
 
       await api.updateCore(name, {
         display_name: displayName !== currentValues.display_name ? displayName : undefined,
@@ -59,6 +67,7 @@ export function EditProjectForm({ name, currentValues, onSave, onCancel }: EditP
         goals: goals !== currentValues.goals ? goals : undefined,
         area: newArea !== currentArea ? newArea : undefined,
         parent_project: newParent !== currentParent ? newParent : undefined,
+        email_account: newEmail !== currentEmail ? newEmail : undefined,
       });
       onSave();
     } catch (e) {
@@ -172,6 +181,21 @@ export function EditProjectForm({ name, currentValues, onSave, onCancel }: EditP
           </datalist>
         </label>
       </div>
+
+      {/* spec 0.29 (S165): optional email_account driving mail-create-mailbox.
+          Empty input clears to NULL on save. */}
+      <label className="block">
+        <span className="text-xs text-[var(--color-text-tertiary)] mb-1 block">
+          Email account <span className="text-[var(--color-text-quaternary)]">(optional — drives mail-create-mailbox)</span>
+        </span>
+        <input
+          type="text"
+          value={emailAccount}
+          onChange={(e) => setEmailAccount(e.target.value)}
+          placeholder="m@example.com"
+          className="input-field"
+        />
+      </label>
 
       {error && (
         <div className="text-sm text-[var(--color-error)] bg-[var(--color-bg-elevated)] rounded-md p-2">

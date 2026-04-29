@@ -68,10 +68,10 @@ function getCodeTypeId(): number {
 }
 
 describe('list_primitives / get_primitive', () => {
-  it('list_primitives returns the four built-ins', async () => {
+  it('list_primitives returns the five built-ins (S164)', async () => {
     const result = (await callTool('list_primitives')) as { is_builtin: boolean }[];
     expect(Array.isArray(result)).toBe(true);
-    expect(result.filter((p) => p.is_builtin).length).toBe(4);
+    expect(result.filter((p) => p.is_builtin).length).toBe(5);
   });
 
   it('get_primitive returns one row by id', async () => {

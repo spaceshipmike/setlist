@@ -27,6 +27,8 @@ const api = {
     paths?: string[];
     area?: string | null;
     parent_project?: string | null;
+    // spec 0.29
+    email_account?: string | null;
   }) => ipcRenderer.invoke('register', opts),
   updateCore: (name: string, updates: {
     status?: string;
@@ -35,6 +37,8 @@ const api = {
     display_name?: string;
     area?: string | null;
     parent_project?: string | null;
+    // spec 0.29
+    email_account?: string | null;
   }) => ipcRenderer.invoke('updateCore', name, updates),
   updateFields: (name: string, fields: Record<string, unknown>, producer?: string) =>
     ipcRenderer.invoke('updateFields', name, fields, producer),
@@ -98,6 +102,8 @@ const api = {
     skip_git?: boolean;
     area?: string | null;
     parent_project?: string | null;
+    // spec 0.29
+    email_account?: string | null;
   }) => ipcRenderer.invoke('bootstrapProject', opts),
 
   // Areas (spec 0.26)

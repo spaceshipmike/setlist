@@ -33,7 +33,9 @@ export function OverviewTab({ project, onNavigate }: OverviewTabProps) {
   const parent = project.parent_project ?? null;
   const parentArchived = Boolean(project.parent_archived);
   const children = Array.isArray(project.children) ? project.children : [];
-  const hasStructural = area || parent || children.length > 0;
+  // spec 0.29: optional email_account driving mail-create-mailbox.
+  const emailAccount = project.email_account ?? null;
+  const hasStructural = area || parent || children.length > 0 || emailAccount;
 
   return (
     <div className="space-y-6">
@@ -78,6 +80,14 @@ export function OverviewTab({ project, onNavigate }: OverviewTabProps) {
                     </button>
                   ))}
                 </div>
+              </div>
+            )}
+            {/* spec 0.29 (S165 detail-view criterion): email account when set;
+                null/unset is omitted entirely so the field doesn't read as empty. */}
+            {emailAccount && (
+              <div className="flex gap-3">
+                <span className="text-[var(--color-text-tertiary)] min-w-[80px] shrink-0">Email</span>
+                <span className="text-[var(--color-text-secondary)]">{emailAccount}</span>
               </div>
             )}
           </div>

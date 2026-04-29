@@ -228,6 +228,8 @@ export function registerIpcHandlers(ipcMain: IpcMain): void {
     skip_git?: boolean;
     area?: string | null;
     parent_project?: string | null;
+    // spec 0.29
+    email_account?: string | null;
   }) => {
     const bootstrap = new Bootstrap(reg.dbPath);
     return bootstrap.bootstrapProject({

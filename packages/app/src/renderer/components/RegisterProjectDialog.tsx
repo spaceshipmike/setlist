@@ -34,6 +34,8 @@ export function RegisterProjectDialog({ open, onOpenChange, onSuccess }: Registe
   const [parentProject, setParentProject] = useState<string>('');
   const [parentQuery, setParentQuery] = useState<string>('');
   const [parentOptions, setParentOptions] = useState<ProjectSummary[]>([]);
+  // spec 0.29: optional email_account drives mail-create-mailbox.
+  const [emailAccount, setEmailAccount] = useState<string>('');
   const [error, setError] = useState<string | null>(null);
   const [nameWarning, setNameWarning] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -106,6 +108,8 @@ export function RegisterProjectDialog({ open, onOpenChange, onSuccess }: Registe
       // spec 0.13: resolve area + parent_project from local UI state
       const resolvedArea: AreaName | null = area === UNASSIGNED ? null : (area as AreaName);
       const resolvedParent: string | null = parentProject.trim() || null;
+      // spec 0.29: empty input → NULL on the project row (S168).
+      const resolvedEmail: string | null = emailAccount.trim() || null;
 
       if (createFolder) {
         // Bootstrap: register + create folder + templates + git init
@@ -118,6 +122,7 @@ export function RegisterProjectDialog({ open, onOpenChange, onSuccess }: Registe
           skip_git: skipGit || type !== 'code_project',
           area: resolvedArea,
           parent_project: resolvedParent,
+          email_account: resolvedEmail,
         });
       } else {
         // Register only (no filesystem changes). spec 0.13: db type is always 'project'.
@@ -130,6 +135,7 @@ export function RegisterProjectDialog({ open, onOpenChange, onSuccess }: Registe
           paths: existingFolder ? [existingFolder] : undefined,
           area: resolvedArea,
           parent_project: resolvedParent,
+          email_account: resolvedEmail,
         });
       }
 
@@ -141,6 +147,7 @@ export function RegisterProjectDialog({ open, onOpenChange, onSuccess }: Registe
       setArea(UNASSIGNED);
       setParentProject('');
       setParentQuery('');
+      setEmailAccount('');
       setCreateFolder(true);
       setSkipGit(false);
       setExistingFolder(null);
@@ -252,6 +259,17 @@ export function RegisterProjectDialog({ open, onOpenChange, onSuccess }: Registe
                   No project named &quot;{parentProject}&quot; — registration will fail unless it exists.
                 </div>
               )}
+            </Field>
+
+            {/* spec 0.29: optional email account driving mail-create-mailbox. */}
+            <Field label="Email account (optional — drives mail-create-mailbox)">
+              <input
+                type="text"
+                value={emailAccount}
+                onChange={(e) => setEmailAccount(e.target.value)}
+                placeholder="m@example.com"
+                className="input-field"
+              />
             </Field>
 
             {/* Bootstrap toggle */}
