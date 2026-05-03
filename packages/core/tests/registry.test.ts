@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
-import { tmpdir } from 'node:os';
+import { homedir, tmpdir } from 'node:os';
 import { Registry, MemoryStore, MemoryRetrieval } from '../src/index.js';
 
 describe('Registry', () => {
@@ -40,6 +40,51 @@ describe('Registry', () => {
       expect(project!.description).toBe('A test project');
       expect(project!.goals).toEqual(['Test goals']);
       expect(project!.paths).toEqual(['/Users/test/Code/my-project']);
+    });
+
+    it('expands ~ in paths to absolute on insert', () => {
+      registry.register({
+        name: 'tilde-proj',
+        type: 'project',
+        status: 'active',
+        paths: ['~/Code/tilde-proj'],
+      });
+      const p = registry.getProject('tilde-proj', 'full');
+      expect(p!.paths).toEqual([join(homedir(), 'Code/tilde-proj')]);
+    });
+
+    it('resolves bare ~ in paths to homedir', () => {
+      registry.register({
+        name: 'home-proj',
+        type: 'project',
+        status: 'active',
+        paths: ['~'],
+      });
+      const p = registry.getProject('home-proj', 'full');
+      expect(p!.paths).toEqual([homedir()]);
+    });
+
+    it('resolves relative paths to absolute on insert', () => {
+      registry.register({
+        name: 'rel-proj',
+        type: 'project',
+        status: 'active',
+        paths: ['./somewhere'],
+      });
+      const p = registry.getProject('rel-proj', 'full');
+      expect(p!.paths![0].startsWith('/')).toBe(true);
+      expect(p!.paths![0].endsWith('/somewhere')).toBe(true);
+    });
+
+    it('leaves already-absolute paths unchanged', () => {
+      registry.register({
+        name: 'abs-proj',
+        type: 'project',
+        status: 'active',
+        paths: ['/Users/test/Code/abs-proj'],
+      });
+      const p = registry.getProject('abs-proj', 'full');
+      expect(p!.paths).toEqual(['/Users/test/Code/abs-proj']);
     });
 
     it('defaults display_name to name', () => {

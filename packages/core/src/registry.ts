@@ -1,4 +1,6 @@
 import Database from 'better-sqlite3';
+import { resolve as resolvePath } from 'node:path';
+import { homedir } from 'node:os';
 import { initDb, connect, getDbPath, getTemplateFields } from './db.js';
 import {
   type ProjectRecord, type ProjectType, type ProjectStatus, type QueryDepth,
@@ -25,6 +27,15 @@ import { computeNextSteps, type NextStep, type ProjectEnrichmentSnapshot } from 
 
 export const PORT_RANGE_MIN = 3000;
 export const PORT_RANGE_MAX = 9999;
+
+// Normalize a project path before storage: expand ~ to $HOME and resolve to
+// absolute. Without this, literal "~/Code/foo" gets persisted and downstream
+// consumers (digest CLI, health checks) treat it as a real directory and miss.
+export function normalizeProjectPath(p: string): string {
+  if (p === '~') return homedir();
+  if (p.startsWith('~/')) return resolvePath(homedir(), p.slice(2));
+  return resolvePath(p);
+}
 
 export class Registry {
   private _dbPath: string;
@@ -119,7 +130,7 @@ export class Registry {
           `INSERT INTO project_paths (project_id, path, added_by) VALUES (?, ?, ?)`
         );
         for (const p of opts.paths) {
-          insertPath.run(projectId, p, producer);
+          insertPath.run(projectId, normalizeProjectPath(p), producer);
         }
       }
 
@@ -863,7 +874,7 @@ export class Registry {
         const insertPath = db.prepare(
           `INSERT OR IGNORE INTO project_paths (project_id, path, added_by) VALUES (?, ?, ?)`
         );
-        for (const p of paths) insertPath.run(row.id, p, producer);
+        for (const p of paths) insertPath.run(row.id, normalizeProjectPath(p), producer);
       }
 
       db.prepare("UPDATE projects SET updated_at = datetime('now') WHERE id = ?").run(row.id);
